@@ -1,8 +1,3 @@
-/*
-* @Author: J. Farley
-* @Date: 2019-05-19
-* @Description: Basic chrome native messaging host example.
- */
 package main
 
 import (
@@ -271,7 +266,7 @@ func main() {
 
 	log.Default().SetOutput(f)
 
-	if err := NewRootCmd().Execute(); err != nil {
+	if err := Execute(); err != nil {
 		os.Exit(1)
 	}
 }

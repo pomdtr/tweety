@@ -73,7 +73,7 @@ type Tab struct {
 	WindowID int    `json:"windowId"`
 }
 
-func NewCmdTabList() *cobra.Command {
+func NewCmdTabList(printer tableprinter.TablePrinter) *cobra.Command {
 	cmd := &cobra.Command{
 		Use: "list",
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -99,12 +99,8 @@ func NewCmdTabList() *cobra.Command {
 				return nil
 			}
 
-			printer, err := getPrinter()
-			if err != nil {
-				return err
-			}
-
 			for _, tab := range tabs {
+				printer.AddField(strconv.Itoa(tab.ID))
 				printer.AddField(tab.Title)
 				printer.AddField(tab.URL)
 				printer.EndRow()
@@ -187,8 +183,15 @@ func NewCmdTabClose() *cobra.Command {
 	}
 }
 
-func NewCmdWindowList() *cobra.Command {
-	return &cobra.Command{
+type Window struct {
+	ID      int  `json:"id"`
+	Focused bool `json:"focused"`
+	Height  int  `json:"height"`
+	Width   int  `json:"width"`
+}
+
+func NewCmdWindowList(printer tableprinter.TablePrinter) *cobra.Command {
+	cmd := &cobra.Command{
 		Use: "list",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			res, err := sendMessage(map[string]string{
@@ -198,13 +201,40 @@ func NewCmdWindowList() *cobra.Command {
 				return err
 			}
 
-			if _, err := os.Stdout.Write(res); err != nil {
+			var windows []Window
+			if err := json.Unmarshal(res, &windows); err != nil {
+				return err
+			}
+
+			outputJSON, _ := cmd.Flags().GetBool("json")
+			if outputJSON {
+				encoder := json.NewEncoder(os.Stdout)
+				encoder.SetIndent("", "  ")
+				if err := encoder.Encode(windows); err != nil {
+					return err
+				}
+
+				return nil
+			}
+
+			for _, window := range windows {
+				printer.AddField(strconv.Itoa(window.ID))
+				printer.AddField(strconv.Itoa(window.Width))
+				printer.AddField(strconv.Itoa(window.Height))
+				printer.EndRow()
+			}
+
+			if err := printer.Render(); err != nil {
 				return err
 			}
 
 			return nil
 		},
 	}
+
+	cmd.Flags().Bool("json", false, "json output")
+
+	return cmd
 }
 
 func NewCmdHistorySearch() *cobra.Command {
@@ -250,8 +280,28 @@ func NewCmdBookmarkList() *cobra.Command {
 	}
 }
 
-func NewCmdDownloadList() *cobra.Command {
-	return &cobra.Command{
+type Download struct {
+	BytesReceived int    `json:"bytesReceived"`
+	CanResume     bool   `json:"canResume"`
+	Danger        string `json:"danger"`
+	EndTime       string `json:"endTime"`
+	Exists        bool   `json:"exists"`
+	FileSize      int    `json:"fileSize"`
+	Filename      string `json:"filename"`
+	FinalURL      string `json:"finalUrl"`
+	ID            int    `json:"id"`
+	Incognito     bool   `json:"incognito"`
+	MIME          string `json:"mime"`
+	Paused        bool   `json:"paused"`
+	Referrer      string `json:"referrer"`
+	StartTime     string `json:"startTime"`
+	State         string `json:"state"`
+	TotalBytes    int    `json:"totalBytes"`
+	URL           string `json:"url"`
+}
+
+func NewCmdDownloadList(printer tableprinter.TablePrinter) *cobra.Command {
+	cmd := &cobra.Command{
 		Use: "list",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			res, err := sendMessage(map[string]string{
@@ -261,21 +311,47 @@ func NewCmdDownloadList() *cobra.Command {
 				return err
 			}
 
-			if _, err := os.Stdout.Write(res); err != nil {
+			var downloads []Download
+			if err := json.Unmarshal(res, &downloads); err != nil {
+				return err
+			}
+
+			outputJSON, _ := cmd.Flags().GetBool("json")
+			if outputJSON {
+				encoder := json.NewEncoder(os.Stdout)
+				encoder.SetIndent("", "  ")
+
+				if err := encoder.Encode(downloads); err != nil {
+					return err
+				}
+				return nil
+			}
+
+			for _, download := range downloads {
+				printer.AddField(strconv.Itoa(download.ID))
+				printer.AddField(download.Filename)
+				printer.AddField(download.State)
+				printer.EndRow()
+			}
+
+			if err := printer.Render(); err != nil {
 				return err
 			}
 
 			return nil
 		},
 	}
+
+	cmd.Flags().Bool("json", false, "json output")
+	return cmd
 }
 
-func NewCmdWindow() *cobra.Command {
+func NewCmdWindow(printer tableprinter.TablePrinter) *cobra.Command {
 	cmd := &cobra.Command{
 		Use: "window",
 	}
 
-	cmd.AddCommand(NewCmdWindowList())
+	cmd.AddCommand(NewCmdWindowList(printer))
 
 	return cmd
 }
@@ -290,12 +366,12 @@ func NewCmdBookMark() *cobra.Command {
 	return cmd
 }
 
-func NewCmdTab() *cobra.Command {
+func NewCmdTab(printer tableprinter.TablePrinter) *cobra.Command {
 	cmd := &cobra.Command{
 		Use: "tab",
 	}
 
-	cmd.AddCommand(NewCmdTabList())
+	cmd.AddCommand(NewCmdTabList(printer))
 	cmd.AddCommand(NewCmdTabFocus())
 	cmd.AddCommand(NewCmdTabCreate())
 
@@ -312,12 +388,12 @@ func NewCmdHistory() *cobra.Command {
 	return cmd
 }
 
-func NewCmdDownload() *cobra.Command {
+func NewCmdDownload(printer tableprinter.TablePrinter) *cobra.Command {
 	cmd := &cobra.Command{
 		Use: "download",
 	}
 
-	cmd.AddCommand(NewCmdDownloadList())
+	cmd.AddCommand(NewCmdDownloadList(printer))
 
 	return cmd
 }
@@ -385,17 +461,24 @@ func NewCmdInit() *cobra.Command {
 	return cmd
 }
 
-func NewRootCmd() *cobra.Command {
+func Execute() error {
 	cmd := &cobra.Command{
-		Use: "webterm",
+		Use:          "webterm",
+		SilenceUsage: true,
+	}
+
+	printer, err := getPrinter()
+	if err != nil {
+		return err
 	}
 
 	cmd.AddCommand(NewCmdInit())
 	cmd.AddCommand(NewCmdServer())
-	cmd.AddCommand(NewCmdTab())
-	cmd.AddCommand(NewCmdWindow())
+	cmd.AddCommand(NewCmdTab(printer))
+	cmd.AddCommand(NewCmdWindow(printer))
 	cmd.AddCommand(NewCmdHistory())
 	cmd.AddCommand(NewCmdBookMark())
-	cmd.AddCommand(NewCmdDownload())
-	return cmd
+	cmd.AddCommand(NewCmdDownload(printer))
+
+	return cmd.Execute()
 }
