@@ -57,11 +57,3 @@ brews:
       bash_completion.install "completions/webterm.bash"
       zsh_completion.install "completions/webterm.zsh"
       fish_completion.install "completions/webterm.fish"
-scoop:
-  bucket:
-    owner: pomdtr
-    name: scoop-bucket
-  folder: bucket
-  homepage: https://pomdtr.github.io/webterm
-  description: An integrated
-  license: MIT
