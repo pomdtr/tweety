@@ -1,0 +1,67 @@
+# Make sure to check the documentation at https://goreleaser.com
+before:
+  hooks:
+    - go mod tidy
+    - rm -rf completions
+    - mkdir completions
+    - sh -c 'go run . completion "bash" >./completions/{{ .ProjectName }}.bash'
+    - sh -c 'go run . completion "zsh" >./completions/{{ .ProjectName }}.zsh'
+    - sh -c 'go run . completion "fish" >./completions/{{ .ProjectName }}.fish'
+changelog:
+  skip: true
+builds:
+  - env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+archives:
+  - name_template: "{{ .ProjectName }}-{{ .Version }}-{{ .Os }}_{{ .Arch }}"
+    format_overrides:
+      - goos: windows
+        format: zip
+    files:
+      - README.md
+      - LICENSE-MIT
+      - completions/*
+    rlcp: true
+nfpms:
+  - vendor: pomdtr
+    homepage: https://pomdtr.github.io/webterm
+    maintainer: Achille Lacoin
+    description: An integrated terminal for your web browser
+    license: MIT
+    formats:
+      - apk
+      - deb
+      - rpm
+    contents:
+      - src: ./completions/{{ .ProjectName }}.bash
+        dst: /etc/bash_completion.d/{{ .ProjectName }}
+      - src: ./completions/{{ .ProjectName }}.fish
+        dst: /usr/share/fish/vendor_completions.d/{{ .ProjectName }}.fish
+      - src: ./completions/{{ .ProjectName }}.zsh
+        dst: /usr/share/zsh/site-functions/_{{ .ProjectName }}
+checksum:
+  name_template: "checksums.txt"
+snapshot:
+  name_template: "{{ incpatch .Version }}-next"
+brews:
+  - name: webterm
+    homepage: https://pomdtr.github.io/webterm
+    tap:
+      owner: pomdtr
+      name: homebrew-tap
+    install: |-
+      bin.install "webterm"
+      bash_completion.install "completions/webterm.bash"
+      zsh_completion.install "completions/webterm.zsh"
+      fish_completion.install "completions/webterm.fish"
+scoop:
+  bucket:
+    owner: pomdtr
+    name: scoop-bucket
+  folder: bucket
+  homepage: https://pomdtr.github.io/webterm
+  description: An integrated
+  license: MIT
