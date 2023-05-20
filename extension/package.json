@@ -1,0 +1,31 @@
+{
+  "name": "webterm",
+  "version": "1.0.0",
+  "displayName": "Web Term",
+  "author": "Achille Lacoin",
+  "description": "A popup terminal for your browser",
+  "scripts": {
+    "build": "tsc && vite build",
+    "watch": "vite build --watch --mode development --minify false",
+    "dev": "vite",
+    "serve:firefox": "web-ext run --start-url \"about:debugging#/runtime/this-firefox\"  --source-dir ./dist/",
+    "serve:chrome": "web-ext run -t chromium --start-url \"https://example.com\" --source-dir ./dist/"
+  },
+  "license": "MIT",
+  "devDependencies": {
+    "@samrum/vite-plugin-web-extension": "^4.0.0",
+    "@types/chrome": "^0.0.228",
+    "@types/webextension-polyfill": "^0.10.0",
+    "typescript": "^5.0.4",
+    "vite": "~4.3.1",
+    "web-ext": "^7.6.1"
+  },
+  "dependencies": {
+    "webextension-polyfill": "^0.10.0",
+    "xterm": "^5.1.0",
+    "xterm-addon-attach": "^0.8.0",
+    "xterm-addon-fit": "^0.7.0",
+    "xterm-addon-web-links": "^0.8.0",
+    "xterm-addon-webgl": "^0.14.0"
+  }
+}

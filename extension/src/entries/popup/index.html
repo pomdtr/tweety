@@ -1,0 +1,44 @@
+<!doctype html>
+<html>
+
+<head>
+  <link rel="stylesheet" href="../../../node_modules/xterm/css/xterm.css" />
+  <script type="module" src="./main.ts" defer></script>
+  <style>
+    html::-webkit-scrollbar,
+    body::-webkit-scrollbar,
+    div::-webkit-scrollbar {
+      display: none;
+      width: 0;
+    }
+
+    html,
+    body {
+      margin: 0;
+      overflow: hidden;
+      padding: 0;
+      width: 750px;
+      height: 450px;
+    }
+
+    div#terminal {
+      height: 100%;
+      width: 100%;
+      left: 0;
+      position: absolute;
+      top: 0;
+    }
+
+    .xterm {
+      padding: 10px;
+      height: 100%;
+      width: 100%;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="terminal"></div>
+</body>
+
+</html>
