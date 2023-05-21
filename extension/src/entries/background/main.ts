@@ -131,6 +131,22 @@ port.onMessage.addListener(async ({ id, payload }: Message) => {
       port.postMessage({ id, payload: html } as Message);
       return;
     }
+    case "selection.get": {
+      let { tabId } = payload;
+      if (tabId === undefined) {
+        tabId = await getActiveTabId();
+      }
+
+      const res = await chrome.scripting.executeScript({
+        target: { tabId },
+        func: () => {
+          return window.getSelection()?.toString() || "";
+        },
+      });
+
+      port.postMessage({ id, payload: res[0].result } as Message);
+      return;
+    }
     case "window.list": {
       const windows = await browser.windows.getAll({});
       port.postMessage({ id, payload: windows } as Message);

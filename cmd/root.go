@@ -99,6 +99,7 @@ func Execute() error {
 	cmd.AddCommand(NewCmdExtension(printer))
 	cmd.AddCommand(NewCmdBookMark())
 	cmd.AddCommand(NewCmdDownload(printer))
+	cmd.AddCommand(NewCmdSelection())
 
 	return cmd.Execute()
 }
