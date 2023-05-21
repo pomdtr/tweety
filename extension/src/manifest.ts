@@ -15,7 +15,15 @@ export const manifest: chrome.runtime.ManifestV3 = {
   background: {
     service_worker: "src/entries/background/main.ts",
   },
-  permissions: ["nativeMessaging", "tabs", "history", "bookmarks", "downloads"],
+  permissions: [
+    "nativeMessaging",
+    "tabs",
+    "history",
+    "bookmarks",
+    "downloads",
+    "management",
+    "scripting",
+  ],
   host_permissions: ["*://*/*"],
   icons: {
     48: "icons/48.png",

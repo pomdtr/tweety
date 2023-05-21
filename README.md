@@ -1,4 +1,4 @@
-# Webterm
+# WebTerm
 
 An integrated terminal for your browser.
 

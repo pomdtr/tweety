@@ -6,6 +6,18 @@ type Message = {
   error?: string;
 };
 
+async function getActiveTabId() {
+  const activeTabs = await browser.tabs.query({
+    active: true,
+    currentWindow: true,
+  });
+  const tabId = activeTabs[0].id;
+  if (tabId === undefined) {
+    throw new Error("Active tab not found");
+  }
+  return tabId;
+}
+
 // activate when installed or updated
 browser.runtime.onInstalled.addListener(() => {
   console.log("Extension installed or updated");
@@ -31,18 +43,52 @@ port.onMessage.addListener(async ({ id, payload }: Message) => {
       port.postMessage({ id, payload: tabs } as Message);
       return;
     }
+    case "tab.get": {
+      let { tabId } = payload;
+      if (tabId === undefined) {
+        tabId = await getActiveTabId();
+      }
+      const tab = await browser.tabs.get(tabId);
+      port.postMessage({ id, payload: tab } as Message);
+      return;
+    }
+    case "tab.pin": {
+      let { tabId } = payload;
+      if (tabId === undefined) {
+        tabId = await getActiveTabId();
+      }
+      const tab = await browser.tabs.update(tabId, { pinned: true });
+      port.postMessage({ id, payload: tab } as Message);
+      return;
+    }
+    case "tab.unpin": {
+      let { tabId } = payload;
+      if (tabId === undefined) {
+        tabId = await getActiveTabId();
+      }
+      const tab = await browser.tabs.update(tabId, { pinned: false });
+      port.postMessage({ id, payload: tab } as Message);
+      return;
+    }
     case "tab.focus": {
       const { tabId } = payload;
       const tab = await browser.tabs.update(tabId, { active: true });
       if (tab.windowId !== undefined) {
         await browser.windows.update(tab.windowId, { focused: true });
       }
-      port.postMessage({ id, payload: { tab } } as Message);
+      port.postMessage({ id } as Message);
       return;
     }
     case "tab.remove": {
-      const { tabId } = payload;
-      await browser.tabs.remove(tabId);
+      let { tabIds } = payload;
+      if (tabIds === undefined) {
+        const activeTabs = await browser.tabs.query({
+          active: true,
+          currentWindow: true,
+        });
+        tabIds = activeTabs;
+      }
+      await browser.tabs.remove(tabIds);
       port.postMessage({ id, payload: {} } as Message);
       return;
     }
@@ -61,7 +107,28 @@ port.onMessage.addListener(async ({ id, payload }: Message) => {
     case "tab.create": {
       const { url } = payload;
       const tab = await browser.tabs.create({ url });
+      await browser.windows.update(tab.windowId!, {
+        focused: true,
+      });
       port.postMessage({ id, payload: { tab } } as Message);
+      return;
+    }
+    case "tab.source": {
+      let { tabId } = payload;
+      if (tabId === undefined) {
+        tabId = await getActiveTabId();
+      }
+
+      const res = await chrome.scripting.executeScript({
+        target: { tabId },
+        func: () => {
+          return document.documentElement.outerHTML;
+        },
+      });
+
+      const html = res[0].result;
+
+      port.postMessage({ id, payload: html } as Message);
       return;
     }
     case "window.list": {
@@ -87,6 +154,11 @@ port.onMessage.addListener(async ({ id, payload }: Message) => {
       const { url } = payload;
       const window = await browser.windows.create({ url });
       port.postMessage({ id, payload: { window } } as Message);
+      return;
+    }
+    case "extension.list": {
+      const extensions = await browser.management.getAll();
+      port.postMessage({ id, payload: extensions } as Message);
       return;
     }
     case "bookmark.list": {

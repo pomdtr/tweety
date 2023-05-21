@@ -1,9 +1,9 @@
 {
   "name": "webterm",
   "version": "1.0.0",
-  "displayName": "Web Term",
+  "displayName": "WebTerm",
   "author": "Achille Lacoin",
-  "description": "A popup terminal for your browser",
+  "description": "An integrated terminal for your web browser",
   "scripts": {
     "build": "tsc && vite build",
     "watch": "vite build --watch --mode development --minify false",
