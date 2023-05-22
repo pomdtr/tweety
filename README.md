@@ -6,6 +6,8 @@ An integrated terminal for your browser.
 
 ## Installation
 
+> **Warning**: WebTerm does not work on Windows yet (see [this issue](https://github.com/creack/pty/issues/161)).
+
 ```bash
 # clone the repository
 git clone https://github.com/pomdtr/webterm && cd webterm
