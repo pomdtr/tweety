@@ -39,7 +39,7 @@ port.onMessage.addListener(async ({ id, payload }: Message) => {
   console.log("Received message", payload);
   switch (payload.command) {
     case "tab.list": {
-      const tabs = await browser.tabs.query({});
+      const tabs = await browser.tabs.query({ currentWindow: true });
       port.postMessage({ id, payload: tabs } as Message);
       return;
     }
@@ -53,21 +53,28 @@ port.onMessage.addListener(async ({ id, payload }: Message) => {
       return;
     }
     case "tab.pin": {
-      let { tabId } = payload;
-      if (tabId === undefined) {
-        tabId = await getActiveTabId();
+      let { tabIds } = payload;
+      if (tabIds === undefined) {
+        tabIds = [await getActiveTabId()];
       }
-      const tab = await browser.tabs.update(tabId, { pinned: true });
-      port.postMessage({ id, payload: tab } as Message);
+
+      for (const tabId of tabIds) {
+        await browser.tabs.update(tabId, { pinned: true });
+      }
+      port.postMessage({ id } as Message);
       return;
     }
     case "tab.unpin": {
-      let { tabId } = payload;
-      if (tabId === undefined) {
-        tabId = await getActiveTabId();
+      let { tabIds } = payload;
+      if (tabIds === undefined) {
+        tabIds = [await getActiveTabId()];
       }
-      const tab = await browser.tabs.update(tabId, { pinned: false });
-      port.postMessage({ id, payload: tab } as Message);
+
+      for (const tabId of tabIds) {
+        await browser.tabs.update(tabId, { pinned: false });
+      }
+
+      port.postMessage({ id } as Message);
       return;
     }
     case "tab.focus": {
@@ -82,35 +89,42 @@ port.onMessage.addListener(async ({ id, payload }: Message) => {
     case "tab.remove": {
       let { tabIds } = payload;
       if (tabIds === undefined) {
-        const activeTabs = await browser.tabs.query({
-          active: true,
-          currentWindow: true,
-        });
-        tabIds = activeTabs;
+        tabIds = [await getActiveTabId()];
       }
       await browser.tabs.remove(tabIds);
       port.postMessage({ id, payload: {} } as Message);
       return;
     }
     case "tab.reload": {
-      const { tabId } = payload;
-      const tab = await browser.tabs.reload(tabId);
-      port.postMessage({ id, payload: { tab } } as Message);
+      let { tabIds } = payload;
+      if (tabIds === undefined) {
+        tabIds = [await getActiveTabId()];
+      }
+      for (const tabId of tabIds) {
+        await browser.tabs.reload(tabId);
+      }
+      port.postMessage({ id } as Message);
       return;
     }
     case "tab.update": {
       const { tabId, url } = payload;
-      const tab = await browser.tabs.update(tabId, { url });
-      port.postMessage({ id, payload: { tab } } as Message);
+      await browser.tabs.update(tabId, { url });
+      port.postMessage({ id } as Message);
       return;
     }
     case "tab.create": {
-      const { url } = payload;
-      const tab = await browser.tabs.create({ url });
-      await browser.windows.update(tab.windowId!, {
-        focused: true,
-      });
-      port.postMessage({ id, payload: { tab } } as Message);
+      const { urls } = payload;
+      const currentWindow = await browser.windows.getCurrent();
+      if (currentWindow.id === undefined) {
+        throw new Error("Current window not found");
+      }
+
+      for (const url of urls) {
+        await browser.tabs.create({ url, windowId: currentWindow.id });
+      }
+
+      await browser.windows.update(currentWindow.id, { focused: true });
+      port.postMessage({ id } as Message);
       return;
     }
     case "tab.source": {
@@ -145,6 +159,29 @@ port.onMessage.addListener(async ({ id, payload }: Message) => {
       });
 
       port.postMessage({ id, payload: res[0].result } as Message);
+      return;
+    }
+    case "selection.set": {
+      let { tabId, text } = payload;
+      if (tabId === undefined) {
+        tabId = await getActiveTabId();
+      }
+
+      console.log(`setting input to ${text}`);
+      await chrome.scripting.executeScript({
+        target: { tabId },
+        args: [text],
+        func: (text) => {
+          const activeElement = document.activeElement;
+          if (activeElement instanceof HTMLInputElement) {
+            activeElement.setRangeText(text);
+          } else if (activeElement instanceof HTMLTextAreaElement) {
+            activeElement.setRangeText(text);
+          }
+        },
+      });
+
+      port.postMessage({ id } as Message);
       return;
     }
     case "window.list": {

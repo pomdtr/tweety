@@ -68,6 +68,7 @@ func NewCmdWindowList(printer tableprinter.TablePrinter) *cobra.Command {
 
 	return cmd
 }
+
 func NewCmdWindow(printer tableprinter.TablePrinter) *cobra.Command {
 	cmd := &cobra.Command{
 		Use: "window",

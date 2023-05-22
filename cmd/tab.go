@@ -83,14 +83,23 @@ func NewCmdTabList(printer tableprinter.TablePrinter) *cobra.Command {
 func NewCmdTabPin() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:  "pin",
-		Args: cobra.NoArgs,
+		Args: cobra.ArbitraryArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			msg := map[string]any{
 				"command": "tab.pin",
 			}
-			if cmd.Flags().Changed("id") {
-				id, _ := cmd.Flags().GetInt("id")
-				msg["tabId"] = id
+
+			if len(args) > 0 {
+				tabIds := make([]int, len(args))
+				for i, arg := range args {
+					id, err := strconv.Atoi(arg)
+					if err != nil {
+						return fmt.Errorf("invalid tab id: %w", err)
+					}
+					tabIds[i] = id
+				}
+
+				msg["tabIds"] = tabIds
 			}
 
 			_, err := sendMessage(msg)
@@ -102,21 +111,29 @@ func NewCmdTabPin() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().Int("id", 0, "tab id")
 	return cmd
 }
 
 func NewCmdTabUnpin() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:  "unpin",
-		Args: cobra.NoArgs,
+		Args: cobra.ArbitraryArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			msg := map[string]any{
 				"command": "tab.unpin",
 			}
-			if cmd.Flags().Changed("id") {
-				id, _ := cmd.Flags().GetInt("id")
-				msg["tabId"] = id
+
+			if len(args) > 0 {
+				tabIds := make([]int, len(args))
+				for i, arg := range args {
+					id, err := strconv.Atoi(arg)
+					if err != nil {
+						return fmt.Errorf("invalid tab id: %w", err)
+					}
+					tabIds[i] = id
+				}
+
+				msg["tabIds"] = tabIds
 			}
 
 			_, err := sendMessage(msg)
@@ -128,21 +145,20 @@ func NewCmdTabUnpin() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().Int("id", 0, "tab id")
 	return cmd
 }
 
 func NewCmdTabCreate() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:  "create",
-		Args: cobra.NoArgs,
+		Args: cobra.ArbitraryArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			msg := map[string]any{
 				"command": "tab.create",
 			}
-			if cmd.Flags().Changed("url") {
-				_, url := cmd.Flags().GetString("url")
-				msg["url"] = url
+
+			if len(args) > 0 {
+				msg["urls"] = args
 			}
 
 			_, err := sendMessage(msg)
@@ -154,7 +170,6 @@ func NewCmdTabCreate() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().String("url", "", "url to open")
 	return cmd
 
 }
@@ -162,15 +177,19 @@ func NewCmdTabCreate() *cobra.Command {
 func NewCmdTabGet(printer tableprinter.TablePrinter) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:  "get",
-		Args: cobra.NoArgs,
+		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			msg := map[string]any{
 				"command": "tab.get",
 			}
 
-			if cmd.Flags().Changed("id") {
-				id, _ := cmd.Flags().GetInt("id")
-				msg["tabId"] = id
+			if len(args) > 0 {
+				tabId, err := strconv.Atoi(args[0])
+				if err != nil {
+					return fmt.Errorf("invalid tab id: %w", err)
+				}
+
+				msg["tabId"] = tabId
 			}
 
 			res, err := sendMessage(msg)
@@ -206,7 +225,6 @@ func NewCmdTabGet(printer tableprinter.TablePrinter) *cobra.Command {
 		},
 	}
 
-	cmd.Flags().Int("id", 0, "tab id to get")
 	cmd.Flags().Bool("json", false, "output as json")
 
 	return cmd
@@ -215,15 +233,19 @@ func NewCmdTabGet(printer tableprinter.TablePrinter) *cobra.Command {
 func NewCmdTabUrl() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:  "url",
-		Args: cobra.NoArgs,
+		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			msg := map[string]any{
 				"command": "tab.get",
 			}
 
-			if cmd.Flags().Changed("id") {
-				id, _ := cmd.Flags().GetInt("id")
-				msg["tabId"] = id
+			if len(args) > 0 {
+				tabId, err := strconv.Atoi(args[0])
+				if err != nil {
+					return fmt.Errorf("invalid tab id: %w", err)
+				}
+
+				msg["tabId"] = tabId
 			}
 
 			res, err := sendMessage(msg)
@@ -241,23 +263,29 @@ func NewCmdTabUrl() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().Int("id", 0, "tab id to get url")
-
 	return cmd
 }
 
 func NewCmdTabClose() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:  "close",
-		Args: cobra.NoArgs,
+		Args: cobra.ArbitraryArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			msg := map[string]any{
 				"command": "tab.remove",
 			}
 
-			if cmd.Flags().Changed("id") {
-				ids, _ := cmd.Flags().GetIntSlice("id")
-				msg["tabIds"] = ids
+			if len(args) > 0 {
+				tabIds := make([]int, len(args))
+				for i, arg := range args {
+					id, err := strconv.Atoi(arg)
+					if err != nil {
+						return fmt.Errorf("invalid tab id: %w", err)
+					}
+					tabIds[i] = id
+				}
+
+				msg["tabIds"] = tabIds
 			}
 
 			if _, err := sendMessage(msg); err != nil {
@@ -268,10 +296,7 @@ func NewCmdTabClose() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().IntSlice("id", nil, "tab id to close")
-
 	return cmd
-
 }
 
 func NewCmdTabFocus() *cobra.Command {
@@ -299,15 +324,19 @@ func NewCmdTabFocus() *cobra.Command {
 func NewCmdTabSource() *cobra.Command {
 	return &cobra.Command{
 		Use:  "source",
-		Args: cobra.NoArgs,
+		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			msg := map[string]any{
 				"command": "tab.source",
 			}
 
-			if cmd.Flags().Changed("id") {
-				id, _ := cmd.Flags().GetInt("id")
-				msg["tabId"] = id
+			if len(args) > 0 {
+				tabId, err := strconv.Atoi(args[0])
+				if err != nil {
+					return fmt.Errorf("invalid tab id: %w", err)
+				}
+
+				msg["tabId"] = tabId
 			}
 
 			res, err := sendMessage(msg)
