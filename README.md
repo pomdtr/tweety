@@ -2,7 +2,7 @@
 
 An integrated terminal for your browser.
 
-![screenshot](./assets/screenshot.png)
+![screenshot](./static/screenshot.png)
 
 ## Installation
 
@@ -39,4 +39,4 @@ When the popup is opened, the embedded terminal (xterm.js) will connect to the H
 
 When you use the webterm cli, the message is sent to the http server, and then piped to the chrome extension.
 
-![webterm architecture](./assets/architecture.excalidraw.png)
+![webterm architecture](./static/architecture.excalidraw.png)
