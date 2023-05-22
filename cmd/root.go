@@ -40,6 +40,11 @@ func sendMessage(payload any) ([]byte, error) {
 	}
 	defer res.Body.Close()
 
+	if res.StatusCode != http.StatusOK {
+		msg, _ := io.ReadAll(res.Body)
+		return nil, fmt.Errorf(string(msg))
+	}
+
 	return io.ReadAll(res.Body)
 }
 

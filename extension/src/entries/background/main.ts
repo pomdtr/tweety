@@ -2,21 +2,12 @@ import browser from "webextension-polyfill";
 
 type Message = {
   id: string;
-  payload: any;
+  payload?: {
+    command: string;
+    [key: string]: any;
+  };
   error?: string;
 };
-
-async function getActiveTabId() {
-  const activeTabs = await browser.tabs.query({
-    active: true,
-    currentWindow: true,
-  });
-  const tabId = activeTabs[0].id;
-  if (tabId === undefined) {
-    throw new Error("Active tab not found");
-  }
-  return tabId;
-}
 
 // activate when installed or updated
 browser.runtime.onInstalled.addListener(() => {
@@ -35,22 +26,33 @@ browser.runtime.onMessage.addListener(async (message) => {
 });
 
 const port = browser.runtime.connectNative("com.pomdtr.webterm");
-port.onMessage.addListener(async ({ id, payload }: Message) => {
-  console.log("Received message", payload);
+port.onMessage.addListener(async (msg: Message) => {
+  console.log("Received message", msg);
+  try {
+    const res = await handleMessage(msg.payload);
+    port.postMessage({
+      id: msg.id,
+      payload: res,
+    });
+  } catch (e: any) {
+    port.postMessage({
+      id: msg.id,
+      error: e.message,
+    });
+  }
+});
+
+async function handleMessage(payload: any): Promise<any> {
   switch (payload.command) {
     case "tab.list": {
-      const tabs = await browser.tabs.query({ currentWindow: true });
-      port.postMessage({ id, payload: tabs } as Message);
-      return;
+      return await browser.tabs.query({ currentWindow: true });
     }
     case "tab.get": {
       let { tabId } = payload;
       if (tabId === undefined) {
         tabId = await getActiveTabId();
       }
-      const tab = await browser.tabs.get(tabId);
-      port.postMessage({ id, payload: tab } as Message);
-      return;
+      return await browser.tabs.get(tabId);
     }
     case "tab.pin": {
       let { tabIds } = payload;
@@ -61,7 +63,7 @@ port.onMessage.addListener(async ({ id, payload }: Message) => {
       for (const tabId of tabIds) {
         await browser.tabs.update(tabId, { pinned: true });
       }
-      port.postMessage({ id } as Message);
+
       return;
     }
     case "tab.unpin": {
@@ -74,7 +76,6 @@ port.onMessage.addListener(async ({ id, payload }: Message) => {
         await browser.tabs.update(tabId, { pinned: false });
       }
 
-      port.postMessage({ id } as Message);
       return;
     }
     case "tab.focus": {
@@ -83,7 +84,6 @@ port.onMessage.addListener(async ({ id, payload }: Message) => {
       if (tab.windowId !== undefined) {
         await browser.windows.update(tab.windowId, { focused: true });
       }
-      port.postMessage({ id } as Message);
       return;
     }
     case "tab.remove": {
@@ -92,7 +92,6 @@ port.onMessage.addListener(async ({ id, payload }: Message) => {
         tabIds = [await getActiveTabId()];
       }
       await browser.tabs.remove(tabIds);
-      port.postMessage({ id, payload: {} } as Message);
       return;
     }
     case "tab.reload": {
@@ -103,13 +102,11 @@ port.onMessage.addListener(async ({ id, payload }: Message) => {
       for (const tabId of tabIds) {
         await browser.tabs.reload(tabId);
       }
-      port.postMessage({ id } as Message);
       return;
     }
     case "tab.update": {
       const { tabId, url } = payload;
       await browser.tabs.update(tabId, { url });
-      port.postMessage({ id } as Message);
       return;
     }
     case "tab.create": {
@@ -124,7 +121,6 @@ port.onMessage.addListener(async ({ id, payload }: Message) => {
       }
 
       await browser.windows.update(currentWindow.id, { focused: true });
-      port.postMessage({ id } as Message);
       return;
     }
     case "tab.source": {
@@ -140,10 +136,7 @@ port.onMessage.addListener(async ({ id, payload }: Message) => {
         },
       });
 
-      const html = res[0].result;
-
-      port.postMessage({ id, payload: html } as Message);
-      return;
+      return res[0].result;
     }
     case "selection.get": {
       let { tabId } = payload;
@@ -158,8 +151,7 @@ port.onMessage.addListener(async ({ id, payload }: Message) => {
         },
       });
 
-      port.postMessage({ id, payload: res[0].result } as Message);
-      return;
+      return res[0].result;
     }
     case "selection.set": {
       let { tabId, text } = payload;
@@ -201,76 +193,65 @@ port.onMessage.addListener(async ({ id, payload }: Message) => {
         },
       });
 
-      port.postMessage({ id } as Message);
       return;
     }
     case "window.list": {
-      const windows = await browser.windows.getAll({});
-      port.postMessage({ id, payload: windows } as Message);
-      return;
+      return browser.windows.getAll({});
     }
     case "window.focus": {
       const { windowId } = payload;
-      const window = await browser.windows.update(windowId, {
+      return await browser.windows.update(windowId, {
         focused: true,
       });
-      port.postMessage({ id, payload: { window } } as Message);
-      return;
     }
     case "window.remove": {
       const { windowId } = payload;
       await browser.windows.remove(windowId);
-      port.postMessage({ id, payload: {} } as Message);
       return;
     }
     case "window.create": {
       const { url } = payload;
-      const window = await browser.windows.create({ url });
-      port.postMessage({ id, payload: { window } } as Message);
-      return;
+      return await browser.windows.create({ url });
     }
     case "extension.list": {
-      const extensions = await browser.management.getAll();
-      port.postMessage({ id, payload: extensions } as Message);
-      return;
+      return await browser.management.getAll();
     }
     case "bookmark.list": {
-      const bookmarks = await browser.bookmarks.getTree();
-      port.postMessage({ id, payload: bookmarks } as Message);
-      return;
+      return await browser.bookmarks.getTree();
     }
     case "bookmark.create": {
       const { parentId, title, url } = payload;
-      const bookmark = await browser.bookmarks.create({
+      return browser.bookmarks.create({
         parentId,
         title,
         url,
       });
-      port.postMessage({ id, payload: bookmark } as Message);
-      return;
     }
     case "bookmark.remove": {
       const { id } = payload;
-      await browser.bookmarks.remove(id);
-      port.postMessage({ id, payload: {} } as Message);
+      browser.bookmarks.remove(id);
       return;
     }
     case "download.list": {
-      const downloads = await browser.downloads.search({});
-      port.postMessage({ id, payload: downloads } as Message);
-      return;
+      return await browser.downloads.search({});
     }
     case "history.search": {
-      const history = await browser.history.search({ text: payload.query });
-      port.postMessage({ id, payload: history } as Message);
-      return;
+      return browser.history.search({ text: payload.query });
     }
     default: {
-      console.error("Unknown message type", payload.type);
-      port.postMessage({
-        id,
-        error: "Unknown message type",
-      } as Message);
+      throw new Error(`Unknown command: ${payload.command}`);
     }
   }
-});
+}
+
+async function getActiveTabId() {
+  const activeTabs = await browser.tabs.query({
+    active: true,
+    currentWindow: true,
+  });
+  const tabId = activeTabs[0].id;
+  if (tabId === undefined) {
+    throw new Error("Active tab not found");
+  }
+  return tabId;
+}
