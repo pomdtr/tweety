@@ -172,11 +172,31 @@ port.onMessage.addListener(async ({ id, payload }: Message) => {
         target: { tabId },
         args: [text],
         func: (text) => {
-          const activeElement = document.activeElement;
-          if (activeElement instanceof HTMLInputElement) {
-            activeElement.setRangeText(text);
-          } else if (activeElement instanceof HTMLTextAreaElement) {
-            activeElement.setRangeText(text);
+          // Get the current selection
+          const selection = window.getSelection();
+          if (!selection) {
+            return;
+          }
+
+          if (selection.rangeCount > 0) {
+            // Get the first range of the selection
+            const range = selection.getRangeAt(0);
+
+            // Create a new text node as replacement
+            const newNode = document.createTextNode(text);
+
+            // Replace the selected range with the new node
+            range.deleteContents();
+            range.insertNode(newNode);
+
+            // Adjust the selection to the end of the inserted node
+            range.collapse(false);
+
+            // Clear any existing selection
+            selection.removeAllRanges();
+
+            // Add the modified range to the selection
+            selection.addRange(range);
           }
         },
       });
