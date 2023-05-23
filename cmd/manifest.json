@@ -1,9 +1,9 @@
 {
     "name": "com.pomdtr.webterm",
     "description": "A simple popup terminal for the web",
-    "path": "/Users/achille/.local/bin/webterm.sh",
+    "path": "{{ .homeDir }}/.local/bin/webterm.sh",
     "type": "stdio",
     "allowed_origins": [
-        "chrome-extension://pallooedgponhakoomlebmioapfhmnim/"
+        "chrome-extension://{{ .extensionID }}/"
     ]
 }

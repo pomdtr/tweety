@@ -14,7 +14,6 @@ git clone https://github.com/pomdtr/webterm && cd webterm
 
 # install the cli
 go install
-webterm init
 
 # build the extension
 cd extension
@@ -22,9 +21,16 @@ npm i
 npm run build
 ```
 
-Then go to the `chrome://extensions` page, activate the Developer mode and click on the `Load unpacked`.
-
+Then go to the `chrome://extensions` page, activate the Developer mode and click on the `Load unpacked` button.
 You will need to select the `extension/dist` folder using the file picker.
+
+![Extension Page](./static/extensions.png)
+
+Once you have installed the extension, copy the extension id, and run the following command:
+
+```bash
+webterm init --browser chrome --extension-id <extension-id>
+```
 
 ## How does it work?
 
