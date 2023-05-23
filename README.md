@@ -1,6 +1,6 @@
 # Popcorn
 
-An integrated terminal for your browser.
+An pop-up terminal for your browser.
 
 ![screenshot](./static/screenshot.png)
 
