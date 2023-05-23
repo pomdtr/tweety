@@ -52,7 +52,7 @@ const lightTheme = {
 
 async function main() {
   // wake up background script
-  await chrome.runtime.sendMessage({ type: "popup" });
+  const tabUrl = await chrome.runtime.sendMessage({ type: "popup" });
 
   const terminal = new Terminal({
     cursorBlink: true,
@@ -91,7 +91,9 @@ async function main() {
   }
 
   const ws = new WebSocket(
-    `ws://localhost:9999/pty?cols=${terminal.cols}&rows=${terminal.rows}`
+    `ws://localhost:9999/pty?cols=${terminal.cols}&rows=${
+      terminal.rows
+    }&url=${encodeURIComponent(tabUrl)}`
   );
 
   ws.onclose = () => {

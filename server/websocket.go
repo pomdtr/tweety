@@ -47,6 +47,16 @@ func WebSocketHandler(opts HandlerOpts) func(http.ResponseWriter, *http.Request)
 			return
 		}
 
+		tabUrl := r.URL.Query().Get("url")
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			w.Write([]byte(fmt.Sprintf("invalid tabUrl value: %s", err)))
+			return
+		}
+
+		environ := opts.Env
+		environ = append(environ, fmt.Sprintf("TAB_URL=%s", tabUrl))
+
 		log.Printf("received connection request with cols=%d, rows=%d", cols, rows)
 
 		connectionErrorLimit := opts.ConnectionErrorLimit
@@ -71,7 +81,7 @@ func WebSocketHandler(opts HandlerOpts) func(http.ResponseWriter, *http.Request)
 		}
 
 		cmd := exec.Command(opts.Command, opts.Args...)
-		cmd.Env = opts.Env
+		cmd.Env = environ
 		cmd.Dir = opts.Dir
 		tty, err := pty.Start(cmd)
 		if err := pty.Setsize(tty, &pty.Winsize{

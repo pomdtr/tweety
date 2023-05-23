@@ -23,6 +23,10 @@ browser.runtime.onMessage.addListener(async (message) => {
   if (message.type === "popup") {
     console.log("Popup opened");
   }
+
+  const tab = await browser.tabs.query({ active: true, currentWindow: true });
+
+  return tab[0].url;
 });
 
 const port = browser.runtime.connectNative("com.pomdtr.popcorn");
