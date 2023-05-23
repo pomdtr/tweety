@@ -7,13 +7,13 @@ import (
 	"path/filepath"
 
 	"github.com/adrg/xdg"
-	"github.com/pomdtr/webterm/cmd"
+	"github.com/pomdtr/popcorn/cmd"
 )
 
 func main() {
-	logFile := os.Getenv("WEBTERM_LOGFILE")
+	logFile := os.Getenv("POPCORN_LOGFILE")
 	if logFile == "" {
-		logFile = filepath.Join(xdg.StateHome, "webterm", "log")
+		logFile = filepath.Join(xdg.StateHome, "popcorn", "log")
 	}
 
 	if err := os.MkdirAll(filepath.Dir(logFile), 0755); err != nil {

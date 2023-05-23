@@ -12,12 +12,12 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const manifestName = "com.pomdtr.webterm.json"
+const manifestName = "com.pomdtr.popcorn.json"
 
 var (
 	//go:embed manifest.json
 	manifest []byte
-	//go:embed webterm.sh
+	//go:embed popcorn.sh
 	entrypoint []byte
 )
 
@@ -70,7 +70,7 @@ func NewCmdInit() *cobra.Command {
 			}
 			cmd.Printf("Manifest file written successfully\n")
 
-			entrypointPath := filepath.Join(homeDir, ".local", "bin", "webterm.sh")
+			entrypointPath := filepath.Join(homeDir, ".local", "bin", "popcorn.sh")
 			cmd.Printf("Writing entrypoint file to %s\n", entrypointPath)
 			if err := os.WriteFile(entrypointPath, []byte(entrypoint), 0755); err != nil {
 				return fmt.Errorf("unable to write entrypoint file: %w", err)

@@ -7,7 +7,7 @@ import (
 
 	"github.com/adrg/xdg"
 	"github.com/joho/godotenv"
-	"github.com/pomdtr/webterm/server"
+	"github.com/pomdtr/popcorn/server"
 	"github.com/spf13/cobra"
 )
 
@@ -16,7 +16,7 @@ func NewCmdServer() *cobra.Command {
 		Use:    "server",
 		Hidden: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			envFile := filepath.Join(xdg.ConfigHome, "webterm", "webterm.env")
+			envFile := filepath.Join(xdg.ConfigHome, "popcorn", "popcorn.env")
 			environ := os.Environ()
 			environ = append(environ, "TERM=xterm-256color")
 

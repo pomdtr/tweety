@@ -14,10 +14,10 @@ import (
 	"golang.org/x/term"
 )
 
-const webtermPort = 9999
+const popcornPort = 9999
 
 func sendMessage(payload any) ([]byte, error) {
-	target := fmt.Sprintf("http://localhost:%d/browser", webtermPort)
+	target := fmt.Sprintf("http://localhost:%d/browser", popcornPort)
 	b, err := json.Marshal(payload)
 	if err != nil {
 		return nil, err
@@ -39,7 +39,7 @@ func sendMessage(payload any) ([]byte, error) {
 
 func Execute() error {
 	cmd := &cobra.Command{
-		Use:          "webterm",
+		Use:          "popcorn",
 		SilenceUsage: true,
 	}
 	var isTTY bool

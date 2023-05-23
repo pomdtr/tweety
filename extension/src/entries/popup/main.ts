@@ -76,7 +76,7 @@ async function main() {
   terminal.open(document.getElementById("terminal")!);
   fitAddon.fit();
 
-  // check if webterm server is running
+  // check if popcorn server is running
   let ready = false;
   while (!ready) {
     try {

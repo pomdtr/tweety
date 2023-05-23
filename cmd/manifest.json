@@ -1,7 +1,7 @@
 {
-    "name": "com.pomdtr.webterm",
+    "name": "com.pomdtr.popcorn",
     "description": "A simple popup terminal for the web",
-    "path": "{{ .homeDir }}/.local/bin/webterm.sh",
+    "path": "{{ .homeDir }}/.local/bin/popcorn.sh",
     "type": "stdio",
     "allowed_origins": [
         "chrome-extension://{{ .extensionID }}/"

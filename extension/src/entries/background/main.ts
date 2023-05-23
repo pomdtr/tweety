@@ -25,7 +25,7 @@ browser.runtime.onMessage.addListener(async (message) => {
   }
 });
 
-const port = browser.runtime.connectNative("com.pomdtr.webterm");
+const port = browser.runtime.connectNative("com.pomdtr.popcorn");
 port.onMessage.addListener(async (msg: Message) => {
   console.log("Received message", msg);
   try {
