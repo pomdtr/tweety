@@ -18,6 +18,7 @@ webterm init
 
 # build the extension
 cd extension
+npm i
 npm run build
 ```
 
