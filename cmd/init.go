@@ -76,8 +76,12 @@ func NewCmdInit() *cobra.Command {
 			}
 
 			entrypointBuffer := bytes.Buffer{}
+			execPath, err := os.Executable()
+			if err != nil {
+				return fmt.Errorf("unable to get executable path: %w", err)
+			}
 			if err := entrypointTmpl.Execute(&entrypointBuffer, map[string]string{
-				"popcornBin": os.Args[0],
+				"popcornBin": execPath,
 			}); err != nil {
 				return fmt.Errorf("unable to execute entrypoint template: %w", err)
 			}
