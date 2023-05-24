@@ -38,9 +38,26 @@ func NewCmdTabList(printer tableprinter.TablePrinter) *cobra.Command {
 	cmd := &cobra.Command{
 		Use: "list",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			res, err := sendMessage(map[string]string{
+			msg := map[string]any{
 				"command": "tab.list",
-			})
+			}
+
+			windowID, _ := cmd.Flags().GetString("window")
+			if windowID != "" {
+				id, err := strconv.Atoi(windowID)
+				if err != nil {
+					return fmt.Errorf("invalid window id: %w", err)
+				}
+
+				msg["windowId"] = id
+			}
+
+			allWindows, _ := cmd.Flags().GetBool("all")
+			if allWindows {
+				msg["allWindows"] = true
+			}
+
+			res, err := sendMessage(msg)
 			if err != nil {
 				return err
 			}
@@ -75,7 +92,9 @@ func NewCmdTabList(printer tableprinter.TablePrinter) *cobra.Command {
 		},
 	}
 
+	cmd.Flags().StringP("window", "w", "", "window id")
 	cmd.Flags().Bool("json", false, "output as json")
+	cmd.Flags().BoolP("all", "a", false, "list tabs from all windows")
 
 	return cmd
 }

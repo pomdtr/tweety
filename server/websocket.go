@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"os/exec"
 	"strconv"
 	"sync"
@@ -48,16 +49,24 @@ func WebSocketHandler(opts HandlerOpts) func(http.ResponseWriter, *http.Request)
 		}
 
 		tabUrl := r.URL.Query().Get("url")
-		if err != nil {
-			w.WriteHeader(http.StatusBadRequest)
-			w.Write([]byte(fmt.Sprintf("invalid tabUrl value: %s", err)))
-			return
+
+		log.Printf("received connection request with cols=%d, rows=%d", cols, rows)
+
+		args := opts.Args
+		if command := r.URL.Query().Get("command"); command != "" {
+			args = []string{"-lic", command}
 		}
+		log.Printf("command: %s %s", opts.Command, args)
+
+		cmd := exec.Command(opts.Command, args...)
+		cmd.Env = os.Environ()
+		cmd.Env = append(cmd.Env, opts.Env...)
+		cmd.Env = append(cmd.Env, fmt.Sprintf("TAB_URL=%s", tabUrl))
 
 		environ := opts.Env
 		environ = append(environ, fmt.Sprintf("TAB_URL=%s", tabUrl))
-
-		log.Printf("received connection request with cols=%d, rows=%d", cols, rows)
+		cmd.Env = environ
+		cmd.Dir = opts.Dir
 
 		connectionErrorLimit := opts.ConnectionErrorLimit
 		if connectionErrorLimit < 0 {
@@ -80,9 +89,6 @@ func WebSocketHandler(opts HandlerOpts) func(http.ResponseWriter, *http.Request)
 			return
 		}
 
-		cmd := exec.Command(opts.Command, opts.Args...)
-		cmd.Env = environ
-		cmd.Dir = opts.Dir
 		tty, err := pty.Start(cmd)
 		if err := pty.Setsize(tty, &pty.Winsize{
 			Rows: uint16(rows),

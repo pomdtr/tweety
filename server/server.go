@@ -91,7 +91,7 @@ func NewServer(m *MessageHandler, environ []string) *http.Server {
 		args = []string{"-li"}
 	} else {
 		command = "/bin/bash"
-		args = []string{"bash", "-li"}
+		args = []string{"-li"}
 	}
 	dir, err := os.UserHomeDir()
 	if err != nil {

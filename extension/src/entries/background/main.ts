@@ -9,6 +9,48 @@ type Message = {
   error?: string;
 };
 
+browser.omnibox.onInputChanged.addListener((text) => {
+  if (!text) {
+    browser.omnibox.setDefaultSuggestion({
+      description: "Enter command...",
+    });
+  }
+  browser.omnibox.setDefaultSuggestion({
+    description: `Run command: <match>${text}</match>`,
+  });
+});
+
+browser.omnibox.onInputEntered.addListener(async (text) => {
+  if (!text) {
+    return;
+  }
+  const page = `src/entries/popup/index.html?command=${encodeURIComponent(
+    text
+  )}`;
+
+  const tabs = await browser.tabs.query({ active: true, currentWindow: true });
+  const tab = tabs[0];
+  if (tab.id) {
+    await browser.tabs.remove(tab.id);
+  }
+
+  await browser.tabs.create({ url: chrome.runtime.getURL(page) });
+
+  return;
+});
+
+browser.action.setPopup({
+  popup: `src/entries/popup/index.html`,
+});
+
+browser.action.onClicked.addListener(async (_, info) => {
+  if (info?.modifiers.length) {
+    browser.tabs.create({ url: `src/entries/popup/index.html` });
+  }
+
+  browser.action.openPopup();
+});
+
 // activate when installed or updated
 browser.runtime.onInstalled.addListener(() => {
   console.log("Extension installed or updated");
@@ -49,6 +91,14 @@ port.onMessage.addListener(async (msg: Message) => {
 async function handleMessage(payload: any): Promise<any> {
   switch (payload.command) {
     case "tab.list": {
+      if (payload.allWindows) {
+        return await browser.tabs.query({});
+      }
+
+      if (payload.windowId !== undefined) {
+        return await browser.tabs.query({ windowId: payload.windowId });
+      }
+
       return await browser.tabs.query({ currentWindow: true });
     }
     case "tab.get": {
@@ -109,15 +159,24 @@ async function handleMessage(payload: any): Promise<any> {
       return;
     }
     case "tab.update": {
-      const { tabId, url } = payload;
+      let { tabId, url } = payload;
+      if (tabId === undefined) {
+        tabId = await getActiveTabId();
+      }
       await browser.tabs.update(tabId, { url });
       return;
     }
     case "tab.create": {
-      const { urls } = payload;
+      const { url, urls } = payload;
       const currentWindow = await browser.windows.getCurrent();
       if (currentWindow.id === undefined) {
         throw new Error("Current window not found");
+      }
+
+      if (url !== undefined) {
+        await browser.tabs.create({ url, windowId: currentWindow.id });
+        await browser.windows.update(currentWindow.id, { focused: true });
+        return;
       }
 
       for (const url of urls) {

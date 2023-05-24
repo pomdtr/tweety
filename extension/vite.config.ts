@@ -9,6 +9,9 @@ export default defineConfig(() => {
     plugins: [
       webExtension({
         manifest,
+        additionalInputs: {
+          html: ["src/entries/popup/index.html"],
+        },
       }),
     ],
     resolve: {

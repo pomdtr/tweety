@@ -11,13 +11,9 @@ export const manifest: chrome.runtime.ManifestV3 = {
     default_icon: {
       48: "icons/48.png",
     },
-    default_popup: "src/entries/popup/index.html",
   },
   background: {
     service_worker: "src/entries/background/main.ts",
-  },
-  chrome_url_overrides: {
-    newtab: "src/entries/popup/index.html",
   },
   permissions: [
     "nativeMessaging",
@@ -28,6 +24,9 @@ export const manifest: chrome.runtime.ManifestV3 = {
     "management",
     "scripting",
   ],
+  omnibox: {
+    keyword: "tty",
+  },
   host_permissions: ["*://*/*"],
   icons: {
     16: "icons/16.png",

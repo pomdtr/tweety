@@ -16,6 +16,10 @@ import (
 
 const popcornPort = 9999
 
+const (
+	newTabUrl = "chrome://newtab/"
+)
+
 func sendMessage(payload any) ([]byte, error) {
 	target := fmt.Sprintf("http://localhost:%d/browser", popcornPort)
 	b, err := json.Marshal(payload)

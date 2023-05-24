@@ -2,13 +2,16 @@ package cmd
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 
 	"github.com/cli/go-gh/v2/pkg/tableprinter"
 	"github.com/spf13/cobra"
 )
 
-type BitwardenExtension struct {
+const extensionUrl = "chrome://extensions/"
+
+type Extension struct {
 	Description     string   `json:"description"`
 	Enabled         bool     `json:"enabled"`
 	HomepageURL     string   `json:"homepageUrl"`
@@ -56,7 +59,7 @@ func NewCmdExtensionList(printer tableprinter.TablePrinter) *cobra.Command {
 				return err
 			}
 
-			var extensions []BitwardenExtension
+			var extensions []Extension
 			if err := json.Unmarshal(res, &extensions); err != nil {
 				return err
 			}
@@ -92,12 +95,42 @@ func NewCmdExtensionList(printer tableprinter.TablePrinter) *cobra.Command {
 	return cmd
 }
 
+func NewCmdExtensionOpen() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:  "open",
+		Args: cobra.ArbitraryArgs,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			msg := map[string]any{
+				"command": "tab.create",
+				"url":     extensionUrl,
+			}
+
+			if os.Getenv("TAB_URL") == newTabUrl {
+				msg["command"] = "tab.update"
+			}
+
+			if _, err := sendMessage(msg); err != nil {
+				return fmt.Errorf("failed to open extensions: %w", err)
+			}
+
+			return nil
+		},
+	}
+
+	return cmd
+}
+
 func NewCmdExtension(printer tableprinter.TablePrinter) *cobra.Command {
 	cmd := &cobra.Command{
 		Use: "extension",
+		Aliases: []string{
+			"ext",
+			"extensions",
+		},
 	}
 
 	cmd.AddCommand(NewCmdExtensionList(printer))
+	cmd.AddCommand(NewCmdExtensionOpen())
 
 	return cmd
 }

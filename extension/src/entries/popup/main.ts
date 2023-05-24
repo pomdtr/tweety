@@ -90,11 +90,18 @@ async function main() {
     }
   }
 
-  const ws = new WebSocket(
-    `ws://localhost:9999/pty?cols=${terminal.cols}&rows=${
-      terminal.rows
-    }&url=${encodeURIComponent(tabUrl)}`
-  );
+  let url = `ws://localhost:9999/pty?cols=${terminal.cols}&rows=${
+    terminal.rows
+  }&url=${encodeURIComponent(tabUrl)}`;
+
+  const searchParams = new URLSearchParams(window.location.search);
+  const command = searchParams.get("command");
+  if (command) {
+    window.document.title = command;
+    url += `&command=${encodeURIComponent(command)}`;
+  }
+
+  const ws = new WebSocket(url);
 
   ws.onclose = () => {
     window.close();
@@ -103,14 +110,18 @@ async function main() {
   const attachAddon = new AttachAddon(ws);
   terminal.loadAddon(attachAddon);
 
-  terminal.focus();
-
   window
     .matchMedia("(prefers-color-scheme: dark)")
     .addEventListener("change", function (e) {
       console.log("color scheme changed", e.matches);
       terminal.options.theme = e.matches ? darkTheme : lightTheme;
     });
+
+  window.onfocus = () => {
+    terminal.focus();
+  };
+
+  terminal.focus();
 }
 
 main();
