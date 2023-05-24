@@ -25,7 +25,7 @@ export const manifest: chrome.runtime.ManifestV3 = {
     "scripting",
   ],
   omnibox: {
-    keyword: "tty",
+    keyword: "pop",
   },
   host_permissions: ["*://*/*"],
   icons: {
