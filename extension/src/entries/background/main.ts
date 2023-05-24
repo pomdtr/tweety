@@ -50,9 +50,15 @@ browser.omnibox.onInputEntered.addListener(async (text) => {
   )}`;
 
   const tabs = await browser.tabs.query({ active: true, currentWindow: true });
-  const tab = tabs[0];
+  if (!tabs.length) {
+    return;
+  }
 
-  await browser.tabs.create({ url: chrome.runtime.getURL(page) });
+  const tab = tabs[0];
+  await browser.tabs.create({
+    url: chrome.runtime.getURL(page),
+    index: tab.index + 1,
+  });
   if (tab.id) {
     await browser.tabs.remove(tab.id);
   }
