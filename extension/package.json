@@ -2,6 +2,7 @@
   "name": "popcorn",
   "version": "1.0.0",
   "displayName": "Popcorn",
+  "homepage": "https://github.com/pomdtr/popcorn",
   "author": "Achille Lacoin",
   "description": "An pop-up terminal for your web browser",
   "scripts": {

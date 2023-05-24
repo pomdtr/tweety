@@ -5,6 +5,7 @@ export const manifest: chrome.runtime.ManifestV3 = {
   description: pkg.description,
   name: pkg.displayName ?? pkg.name,
   version: pkg.version,
+  homepage_url: pkg.homepage,
   manifest_version: 3,
   action: {
     default_icon: {
@@ -14,6 +15,9 @@ export const manifest: chrome.runtime.ManifestV3 = {
   },
   background: {
     service_worker: "src/entries/background/main.ts",
+  },
+  chrome_url_overrides: {
+    newtab: "src/entries/popup/index.html",
   },
   permissions: [
     "nativeMessaging",
@@ -26,6 +30,7 @@ export const manifest: chrome.runtime.ManifestV3 = {
   ],
   host_permissions: ["*://*/*"],
   icons: {
+    16: "icons/16.png",
     48: "icons/48.png",
     128: "icons/128.png",
     256: "icons/256.png",
