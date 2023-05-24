@@ -9,6 +9,27 @@ type Message = {
   error?: string;
 };
 
+browser.action.setPopup({
+  popup: `src/entries/popup/index.html`,
+});
+
+browser.commands.onCommand.addListener(async (command) => {
+  const page = "src/entries/popup/index.html";
+  switch (command) {
+    case "open-terminal-tab": {
+      await browser.tabs.create({ url: chrome.runtime.getURL(page) });
+      break;
+    }
+    case "open-terminal-popup": {
+      await browser.action.openPopup();
+      break;
+    }
+    default: {
+      console.log(`Command ${command} not found`);
+    }
+  }
+});
+
 browser.omnibox.onInputChanged.addListener((text) => {
   if (!text) {
     browser.omnibox.setDefaultSuggestion({
@@ -30,17 +51,13 @@ browser.omnibox.onInputEntered.addListener(async (text) => {
 
   const tabs = await browser.tabs.query({ active: true, currentWindow: true });
   const tab = tabs[0];
+
+  await browser.tabs.create({ url: chrome.runtime.getURL(page) });
   if (tab.id) {
     await browser.tabs.remove(tab.id);
   }
 
-  await browser.tabs.create({ url: chrome.runtime.getURL(page) });
-
   return;
-});
-
-browser.action.setPopup({
-  popup: `src/entries/popup/index.html`,
 });
 
 browser.action.onClicked.addListener(async (_, info) => {

@@ -27,6 +27,22 @@ export const manifest: chrome.runtime.ManifestV3 = {
   omnibox: {
     keyword: "pop",
   },
+  commands: {
+    "open-terminal-popup": {
+      suggested_key: {
+        default: "Ctrl+E",
+        mac: "Command+E",
+      },
+      description: "Open Terminal Popup",
+    },
+    "open-terminal-tab": {
+      suggested_key: {
+        default: "Ctrl+Shift+E",
+        mac: "Command+Shift+E",
+      },
+      description: "Open Terminal Tab",
+    },
+  },
   host_permissions: ["*://*/*"],
   icons: {
     16: "icons/16.png",
