@@ -30,42 +30,6 @@ browser.commands.onCommand.addListener(async (command) => {
   }
 });
 
-browser.omnibox.onInputChanged.addListener((text) => {
-  if (!text) {
-    browser.omnibox.setDefaultSuggestion({
-      description: "Enter command...",
-    });
-  }
-  browser.omnibox.setDefaultSuggestion({
-    description: `Run command: <match>${text}</match>`,
-  });
-});
-
-browser.omnibox.onInputEntered.addListener(async (text) => {
-  if (!text) {
-    return;
-  }
-  const page = `src/entries/popup/index.html?command=${encodeURIComponent(
-    text
-  )}`;
-
-  const tabs = await browser.tabs.query({ active: true, currentWindow: true });
-  if (!tabs.length) {
-    return;
-  }
-
-  const tab = tabs[0];
-  await browser.tabs.create({
-    url: chrome.runtime.getURL(page),
-    index: tab.index + 1,
-  });
-  if (tab.id) {
-    await browser.tabs.remove(tab.id);
-  }
-
-  return;
-});
-
 browser.action.onClicked.addListener(async (_, info) => {
   if (info?.modifiers.length) {
     browser.tabs.create({ url: `src/entries/popup/index.html` });

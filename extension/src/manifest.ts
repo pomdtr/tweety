@@ -24,9 +24,6 @@ export const manifest: chrome.runtime.ManifestV3 = {
     "management",
     "scripting",
   ],
-  omnibox: {
-    keyword: "pop",
-  },
   commands: {
     "open-terminal-popup": {
       suggested_key: {
