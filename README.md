@@ -4,6 +4,8 @@ An pop-up terminal for your browser.
 
 ![screenshot](./static/screenshot.png)
 
+Check out a demo of the extension running from the arc browser here: https://www.capster.io/video/zRgddaTPilyn
+
 ## Installation
 
 > **Warning**: Popcorn does not work on Windows yet (see [this issue](https://github.com/creack/pty/issues/161)).
