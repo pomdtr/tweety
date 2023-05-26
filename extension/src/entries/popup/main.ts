@@ -52,8 +52,12 @@ const lightTheme = {
 };
 
 async function main() {
-  navigator.registerProtocolHandler(protocol, "?uri=%s");
+  // don't register protocol handler if we're in a popup
   const searchParams = new URLSearchParams(window.location.search);
+
+  if (!searchParams.has("popup")) {
+    navigator.registerProtocolHandler(protocol, "?uri=%s");
+  }
 
   let command: string = "";
   if (searchParams.has("command")) {
@@ -61,7 +65,10 @@ async function main() {
     window.document.title = command;
   } else if (searchParams.has("uri")) {
     const uri = searchParams.get("uri")!;
-    command = uri.slice(`${protocol}://`.length);
+    const url = new URL(uri);
+
+    const params = new URLSearchParams(url.search);
+    command = params.get("command")!;
     window.document.title = command;
   }
 

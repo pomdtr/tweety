@@ -10,7 +10,7 @@ type Message = {
 };
 
 browser.action.setPopup({
-  popup: `src/entries/popup/index.html`,
+  popup: `src/entries/popup/index.html?popup=true`,
 });
 
 browser.commands.onCommand.addListener(async (command) => {
