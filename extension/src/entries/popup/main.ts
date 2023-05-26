@@ -4,8 +4,7 @@ import { WebglAddon } from "xterm-addon-webgl";
 import { WebLinksAddon } from "xterm-addon-web-links";
 import { AttachAddon } from "xterm-addon-attach";
 
-const protocol = "web+tty://";
-
+const protocol = "web+tty";
 const darkTheme = {
   foreground: "#c5c8c6",
   background: "#1d1f21",
@@ -53,13 +52,16 @@ const lightTheme = {
 };
 
 async function main() {
+  navigator.registerProtocolHandler(protocol, "?uri=%s");
   const searchParams = new URLSearchParams(window.location.search);
-  let command = searchParams.get("command");
-  if (command) {
-    if (command?.startsWith(protocol)) {
-      command = command.slice("web+tty://".length);
-    }
 
+  let command: string = "";
+  if (searchParams.has("command")) {
+    command = searchParams.get("command")!;
+    window.document.title = command;
+  } else if (searchParams.has("uri")) {
+    const uri = searchParams.get("uri")!;
+    command = uri.slice(`${protocol}://`.length);
     window.document.title = command;
   }
 
