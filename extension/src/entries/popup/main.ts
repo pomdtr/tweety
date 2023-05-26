@@ -4,6 +4,8 @@ import { WebglAddon } from "xterm-addon-webgl";
 import { WebLinksAddon } from "xterm-addon-web-links";
 import { AttachAddon } from "xterm-addon-attach";
 
+const protocol = "web+tty://";
+
 const darkTheme = {
   foreground: "#c5c8c6",
   background: "#1d1f21",
@@ -51,6 +53,16 @@ const lightTheme = {
 };
 
 async function main() {
+  const searchParams = new URLSearchParams(window.location.search);
+  let command = searchParams.get("command");
+  if (command) {
+    if (command?.startsWith(protocol)) {
+      command = command.slice("web+tty://".length);
+    }
+
+    window.document.title = command;
+  }
+
   // wake up background script
   const tabUrl = await chrome.runtime.sendMessage({ type: "popup" });
 
@@ -94,10 +106,7 @@ async function main() {
     terminal.rows
   }&url=${encodeURIComponent(tabUrl)}`;
 
-  const searchParams = new URLSearchParams(window.location.search);
-  const command = searchParams.get("command");
   if (command) {
-    window.document.title = command;
     url += `&command=${encodeURIComponent(command)}`;
   }
 
