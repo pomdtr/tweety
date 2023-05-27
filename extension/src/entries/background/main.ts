@@ -17,11 +17,10 @@ browser.commands.onCommand.addListener(async (command) => {
   const page = "src/entries/popup/index.html";
   switch (command) {
     case "open-terminal-tab": {
-      await browser.tabs.create({ url: chrome.runtime.getURL(page) });
-      break;
-    }
-    case "open-terminal-popup": {
-      await browser.action.openPopup();
+      const tab = await browser.tabs.create({
+        url: chrome.runtime.getURL(page),
+      });
+      await browser.windows.update(tab.windowId!, { focused: true });
       break;
     }
     default: {

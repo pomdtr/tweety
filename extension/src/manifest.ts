@@ -30,13 +30,6 @@ export const manifest: chrome.runtime.ManifestV3 = {
     "scripting",
   ],
   commands: {
-    "open-terminal-popup": {
-      suggested_key: {
-        default: "Ctrl+E",
-        mac: "Command+E",
-      },
-      description: "Open Terminal Popup",
-    },
     "open-terminal-tab": {
       suggested_key: {
         default: "Ctrl+Shift+E",
