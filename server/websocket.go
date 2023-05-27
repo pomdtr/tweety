@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -50,23 +51,29 @@ func WebSocketHandler(opts HandlerOpts) func(http.ResponseWriter, *http.Request)
 
 		tabUrl := r.URL.Query().Get("url")
 
-		log.Printf("received connection request with cols=%d, rows=%d", cols, rows)
-
 		args := opts.Args
 		if command := r.URL.Query().Get("command"); command != "" {
 			args = []string{"-lic", command}
 		}
 		log.Printf("command: %s %s", opts.Command, args)
 
+		dir := opts.Dir
+		if param := r.URL.Query().Get("dir"); param != "" {
+			if strings.HasPrefix(param, "~") {
+				home, _ := os.UserHomeDir()
+				param = strings.Replace(param, "~", home, 1)
+			}
+			dir = param
+		}
+
+		log.Printf("received connection request with cols=%d, rows=%d, dir=%s", cols, rows, dir)
+
 		cmd := exec.Command(opts.Command, args...)
 		cmd.Env = os.Environ()
 		cmd.Env = append(cmd.Env, opts.Env...)
 		cmd.Env = append(cmd.Env, fmt.Sprintf("TAB_URL=%s", tabUrl))
 
-		environ := opts.Env
-		environ = append(environ, fmt.Sprintf("TAB_URL=%s", tabUrl))
-		cmd.Env = environ
-		cmd.Dir = opts.Dir
+		cmd.Dir = dir
 
 		connectionErrorLimit := opts.ConnectionErrorLimit
 		if connectionErrorLimit < 0 {

@@ -59,19 +59,22 @@ async function main() {
   }
 
   let command: string = "";
-  if (searchParams.has("command")) {
-    command = searchParams.get("command")!;
-    window.document.title = command;
-  }
-
+  let dir: string = "";
   if (searchParams.has("uri")) {
     const uri = searchParams.get("uri")!;
     const url = new URL(uri);
-
     const params = new URLSearchParams(url.search);
+
     if (params.has("command")) {
-      command = params.get("command")!;
+      command = params.get("command") || "";
+    }
+
+    if (command) {
       window.document.title = command;
+    }
+
+    if (params.has("dir")) {
+      dir = params.get("dir") || "";
     }
   }
 
@@ -120,6 +123,9 @@ async function main() {
 
   if (command) {
     url += `&command=${encodeURIComponent(command)}`;
+  }
+  if (dir) {
+    url += `&dir=${encodeURIComponent(dir)}`;
   }
 
   const ws = new WebSocket(url);
