@@ -1,4 +1,4 @@
-# Wesh
+# Wsh
 
 A shell for your browser.
 
@@ -12,7 +12,7 @@ Check out a demo of the extension running from the arc browser here: <https://ww
 
 ```bash
 # clone the repository
-git clone https://github.com/pomdtr/wesh && cd wsh
+git clone https://github.com/pomdtr/wsh && cd wsh
 
 # install the cli (make sure that ~/.local/bin is in your $PATH)
 go build -o ~/.local/bin/wsh
@@ -36,7 +36,7 @@ wsh init --browser chrome --extension-id <extension-id>
 
 ## How does it work?
 
-Wesh is composed of two parts:
+Wsh is composed of two parts:
 
 - A CLI (wsh) that will create a configuration file and a binary that will be used by the extension.
 - A Chrome extension that will communicate with the binary and display the terminal.

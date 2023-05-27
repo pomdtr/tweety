@@ -12,7 +12,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const manifestName = "com.pomdtr.wesh.json"
+const manifestName = "com.pomdtr.wsh.json"
 
 var (
 	//go:embed manifest.json

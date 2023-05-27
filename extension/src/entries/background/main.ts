@@ -58,7 +58,7 @@ browser.runtime.onMessage.addListener(async (message) => {
   return tab[0].url;
 });
 
-const port = browser.runtime.connectNative("com.pomdtr.wesh");
+const port = browser.runtime.connectNative("com.pomdtr.wsh");
 port.onMessage.addListener(async (msg: Message) => {
   console.log("Received message", msg);
   try {

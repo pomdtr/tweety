@@ -28,7 +28,7 @@ archives:
     rlcp: true
 nfpms:
   - vendor: pomdtr
-    homepage: https://pomdtr.github.io/wesh
+    homepage: https://pomdtr.github.io/wsh
     maintainer: Achille Lacoin
     description: An integrated terminal for your web browser
     license: MIT
@@ -49,7 +49,7 @@ snapshot:
   name_template: "{{ incpatch .Version }}-next"
 brews:
   - name: wsh
-    homepage: https://pomdtr.github.io/wesh
+    homepage: https://pomdtr.github.io/wsh
     tap:
       owner: pomdtr
       name: homebrew-tap
