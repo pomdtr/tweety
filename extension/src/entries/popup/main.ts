@@ -55,7 +55,7 @@ async function main() {
   const searchParams = new URLSearchParams(window.location.search);
 
   if (!searchParams.has("popup")) {
-    navigator.registerProtocolHandler("web+wesh", "?uri=%s");
+    navigator.registerProtocolHandler("web+wsh", "?uri=%s");
   }
 
   let command: string = "";
@@ -100,7 +100,7 @@ async function main() {
   terminal.open(document.getElementById("terminal")!);
   fitAddon.fit();
 
-  // check if wesh server is running
+  // check if wsh server is running
   let ready = false;
   while (!ready) {
     try {

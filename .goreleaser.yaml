@@ -27,7 +27,7 @@ archives:
     rlcp: true
 nfpms:
   - vendor: pomdtr
-    homepage: https://pomdtr.github.io/wesh
+    homepage: https://pomdtr.github.io/wsh
     maintainer: Achille Lacoin
     description: An integrated terminal for your web browser
     license: MIT
@@ -47,13 +47,13 @@ checksum:
 snapshot:
   name_template: "{{ incpatch .Version }}-next"
 brews:
-  - name: wesh
-    homepage: https://pomdtr.github.io/wesh
+  - name: wsh
+    homepage: https://pomdtr.github.io/wsh
     tap:
       owner: pomdtr
       name: homebrew-tap
     install: |-
-      bin.install "wesh"
-      bash_completion.install "completions/wesh.bash"
-      zsh_completion.install "completions/wesh.zsh"
-      fish_completion.install "completions/wesh.fish"
+      bin.install "wsh"
+      bash_completion.install "completions/wsh.bash"
+      zsh_completion.install "completions/wsh.zsh"
+      fish_completion.install "completions/wsh.fish"

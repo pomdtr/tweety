@@ -1,7 +1,7 @@
 {
-    "name": "com.pomdtr.wesh",
+    "name": "com.pomdtr.wsh",
     "description": "A simple popup terminal for the web",
-    "path": "{{ .homeDir }}/.local/bin/wesh.sh",
+    "path": "{{ .homeDir }}/.local/bin/wsh.sh",
     "type": "stdio",
     "allowed_origins": [
         "chrome-extension://{{ .extensionID }}/"

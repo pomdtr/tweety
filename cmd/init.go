@@ -12,12 +12,12 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const manifestName = "com.pomdtr.wesh.json"
+const manifestName = "com.pomdtr.wsh.json"
 
 var (
 	//go:embed manifest.json
 	manifest []byte
-	//go:embed wesh.sh
+	//go:embed entrypoint.sh
 	entrypoint []byte
 )
 
@@ -82,12 +82,12 @@ func NewCmdInit() *cobra.Command {
 				return fmt.Errorf("unable to get executable path: %w", err)
 			}
 			if err := entrypointTmpl.Execute(&entrypointBuffer, map[string]string{
-				"weshBin": execPath,
+				"wshBin": execPath,
 			}); err != nil {
 				return fmt.Errorf("unable to execute entrypoint template: %w", err)
 			}
 
-			entrypointPath := filepath.Join(homeDir, ".local", "bin", "wesh.sh")
+			entrypointPath := filepath.Join(homeDir, ".local", "bin", "wsh.sh")
 			cmd.Printf("Writing entrypoint file to %s\n", entrypointPath)
 			if err := os.WriteFile(entrypointPath, entrypointBuffer.Bytes(), 0755); err != nil {
 				return fmt.Errorf("unable to write entrypoint file: %w", err)
