@@ -46,7 +46,7 @@ func readMessageLength(msg []byte) (int, error) {
 	return int(length), nil
 }
 
-func NewServer(m *MessageHandler, environ []string) *http.Server {
+func Serve(m *MessageHandler, port int, environ []string) error {
 	http.HandleFunc("/ready", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("OK"))
@@ -103,7 +103,7 @@ func NewServer(m *MessageHandler, environ []string) *http.Server {
 		Dir:     dir,
 	}))
 
-	return &http.Server{}
+	return http.ListenAndServe(fmt.Sprintf(":%d", port), nil)
 }
 
 type Message struct {

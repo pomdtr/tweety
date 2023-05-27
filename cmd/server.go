@@ -10,6 +10,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
+const weshPort = 9999
+
 func NewCmdServer() *cobra.Command {
 	return &cobra.Command{
 		Use:    "server",
@@ -41,10 +43,9 @@ func NewCmdServer() *cobra.Command {
 			}
 
 			messageHandler := server.NewMessageHandler()
-			server := server.NewServer(messageHandler, environ)
-
 			go messageHandler.Loop()
-			if err := server.ListenAndServe(); err != nil {
+
+			if err := server.Serve(messageHandler, weshPort, environ); err != nil {
 				return err
 			}
 

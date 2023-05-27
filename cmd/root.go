@@ -14,8 +14,6 @@ import (
 	"golang.org/x/term"
 )
 
-const weshPort = 9999
-
 const (
 	newTabUrl = "chrome://newtab/"
 )

@@ -4,7 +4,7 @@
   "displayName": "Wesh",
   "homepage": "https://github.com/pomdtr/wesh",
   "author": "Achille Lacoin",
-  "description": "An pop-up terminal for your web browser",
+  "description": "A shell for your browser",
   "scripts": {
     "build": "tsc && vite build",
     "watch": "vite build --watch --mode development --minify false",
