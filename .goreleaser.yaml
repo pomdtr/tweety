@@ -10,7 +10,8 @@ before:
 changelog:
   skip: true
 builds:
-  - env:
+  - binary: wsh
+    env:
       - CGO_ENABLED=0
     goos:
       - linux

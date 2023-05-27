@@ -14,8 +14,8 @@ Check out a demo of the extension running from the arc browser here: <https://ww
 # clone the repository
 git clone https://github.com/pomdtr/wesh && cd wsh
 
-# install the cli
-go install
+# install the cli (make sure that ~/.local/bin is in your $PATH)
+go build -o ~/.local/bin/wsh
 
 # build the extension
 cd extension
