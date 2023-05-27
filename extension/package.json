@@ -1,8 +1,8 @@
 {
   "name": "wsh",
   "version": "1.0.0",
-  "displayName": "wsh",
-  "homepage": "https://github.com/pomdtr/wsh",
+  "displayName": "Wesh",
+  "homepage": "https://github.com/pomdtr/wesh",
   "author": "Achille Lacoin",
   "description": "A shell for your browser",
   "scripts": {

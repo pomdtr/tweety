@@ -15,9 +15,9 @@ export const manifest: chrome.runtime.ManifestV3 = {
   background: {
     service_worker: "src/entries/background/main.ts",
   },
-  side_panel: {
-    default_path: "src/entries/popup/index.html",
-  },
+  // side_panel: {
+  //   default_path: "src/entries/popup/index.html",
+  // },
   permissions: [
     "nativeMessaging",
     "tabs",
@@ -25,7 +25,7 @@ export const manifest: chrome.runtime.ManifestV3 = {
     "bookmarks",
     "downloads",
     // @ts-ignore
-    "sidePanel",
+    // "sidePanel",
     "management",
     "scripting",
   ],

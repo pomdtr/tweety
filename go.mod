@@ -1,4 +1,4 @@
-module github.com/pomdtr/wsh
+module github.com/pomdtr/wesh
 
 go 1.20
 

@@ -3,7 +3,7 @@ package main
 import (
 	"os"
 
-	"github.com/pomdtr/wsh/cmd"
+	"github.com/pomdtr/wesh/cmd"
 )
 
 func main() {

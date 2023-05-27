@@ -1,5 +1,5 @@
 {
-    "name": "com.pomdtr.wsh",
+    "name": "com.pomdtr.wesh",
     "description": "A simple popup terminal for the web",
     "path": "{{ .homeDir }}/.local/bin/wsh.sh",
     "type": "stdio",

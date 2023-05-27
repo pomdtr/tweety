@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 
 	"github.com/joho/godotenv"
-	"github.com/pomdtr/wsh/server"
+	"github.com/pomdtr/wesh/server"
 	"github.com/spf13/cobra"
 )
 
