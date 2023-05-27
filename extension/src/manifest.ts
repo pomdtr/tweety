@@ -15,12 +15,17 @@ export const manifest: chrome.runtime.ManifestV3 = {
   background: {
     service_worker: "src/entries/background/main.ts",
   },
+  side_panel: {
+    default_path: "src/entries/popup/index.html",
+  },
   permissions: [
     "nativeMessaging",
     "tabs",
     "history",
     "bookmarks",
     "downloads",
+    // @ts-ignore
+    "sidePanel",
     "management",
     "scripting",
   ],

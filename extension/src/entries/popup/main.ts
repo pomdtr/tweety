@@ -4,7 +4,6 @@ import { WebglAddon } from "xterm-addon-webgl";
 import { WebLinksAddon } from "xterm-addon-web-links";
 import { AttachAddon } from "xterm-addon-attach";
 
-const protocol = "web+tty";
 const darkTheme = {
   foreground: "#c5c8c6",
   background: "#1d1f21",
@@ -56,20 +55,24 @@ async function main() {
   const searchParams = new URLSearchParams(window.location.search);
 
   if (!searchParams.has("popup")) {
-    navigator.registerProtocolHandler(protocol, "?uri=%s");
+    navigator.registerProtocolHandler("web+wesh", "?uri=%s");
   }
 
   let command: string = "";
   if (searchParams.has("command")) {
     command = searchParams.get("command")!;
     window.document.title = command;
-  } else if (searchParams.has("uri")) {
+  }
+
+  if (searchParams.has("uri")) {
     const uri = searchParams.get("uri")!;
     const url = new URL(uri);
 
     const params = new URLSearchParams(url.search);
-    command = params.get("command")!;
-    window.document.title = command;
+    if (params.has("command")) {
+      command = params.get("command")!;
+      window.document.title = command;
+    }
   }
 
   // wake up background script
@@ -97,7 +100,7 @@ async function main() {
   terminal.open(document.getElementById("terminal")!);
   fitAddon.fit();
 
-  // check if popcorn server is running
+  // check if wesh server is running
   let ready = false;
   while (!ready) {
     try {

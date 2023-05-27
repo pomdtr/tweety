@@ -14,14 +14,14 @@ import (
 	"golang.org/x/term"
 )
 
-const popcornPort = 9999
+const weshPort = 9999
 
 const (
 	newTabUrl = "chrome://newtab/"
 )
 
 func sendMessage(payload any) ([]byte, error) {
-	target := fmt.Sprintf("http://localhost:%d/browser", popcornPort)
+	target := fmt.Sprintf("http://localhost:%d/browser", weshPort)
 	b, err := json.Marshal(payload)
 	if err != nil {
 		return nil, err
@@ -43,7 +43,7 @@ func sendMessage(payload any) ([]byte, error) {
 
 func Execute() error {
 	cmd := &cobra.Command{
-		Use:          "popcorn",
+		Use:          "wesh",
 		SilenceUsage: true,
 	}
 	var isTTY bool

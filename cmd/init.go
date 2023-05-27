@@ -12,12 +12,12 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const manifestName = "com.pomdtr.popcorn.json"
+const manifestName = "com.pomdtr.wesh.json"
 
 var (
 	//go:embed manifest.json
 	manifest []byte
-	//go:embed popcorn.sh
+	//go:embed wesh.sh
 	entrypoint []byte
 )
 
@@ -25,11 +25,12 @@ var (
 	manifestTmpl   = template.Must(template.New("manifest").Parse(string(manifest)))
 	entrypointTmpl = template.Must(template.New("entrypoint").Parse(string(entrypoint)))
 	manifestPaths  = map[string]string{
-		"chrome":  filepath.Join(xdg.DataHome, "Google", "Chrome", "NativeMessagingHosts", manifestName),
-		"edge":    filepath.Join(xdg.DataHome, "microsoft", "edge", "NativeMessagingHosts", manifestName),
-		"brave":   filepath.Join(xdg.DataHome, "BraveSoftware", "Brave-Browser", "NativeMessagingHosts", manifestName),
-		"vivaldi": filepath.Join(xdg.DataHome, "vivaldi", "NativeMessagingHosts", manifestName),
-		"arc":     filepath.Join(xdg.DataHome, "Arc", "User Data", "NativeMessagingHosts", manifestName),
+		"chrome":      filepath.Join(xdg.DataHome, "Google", "Chrome", "NativeMessagingHosts", manifestName),
+		"chrome-beta": filepath.Join(xdg.DataHome, "Google", "Chrome Beta", "NativeMessagingHosts", manifestName),
+		"edge":        filepath.Join(xdg.DataHome, "microsoft", "edge", "NativeMessagingHosts", manifestName),
+		"brave":       filepath.Join(xdg.DataHome, "BraveSoftware", "Brave-Browser", "NativeMessagingHosts", manifestName),
+		"vivaldi":     filepath.Join(xdg.DataHome, "vivaldi", "NativeMessagingHosts", manifestName),
+		"arc":         filepath.Join(xdg.DataHome, "Arc", "User Data", "NativeMessagingHosts", manifestName),
 	}
 )
 
@@ -81,12 +82,12 @@ func NewCmdInit() *cobra.Command {
 				return fmt.Errorf("unable to get executable path: %w", err)
 			}
 			if err := entrypointTmpl.Execute(&entrypointBuffer, map[string]string{
-				"popcornBin": execPath,
+				"weshBin": execPath,
 			}); err != nil {
 				return fmt.Errorf("unable to execute entrypoint template: %w", err)
 			}
 
-			entrypointPath := filepath.Join(homeDir, ".local", "bin", "popcorn.sh")
+			entrypointPath := filepath.Join(homeDir, ".local", "bin", "wesh.sh")
 			cmd.Printf("Writing entrypoint file to %s\n", entrypointPath)
 			if err := os.WriteFile(entrypointPath, entrypointBuffer.Bytes(), 0755); err != nil {
 				return fmt.Errorf("unable to write entrypoint file: %w", err)

@@ -1,7 +1,7 @@
 {
-    "name": "com.pomdtr.popcorn",
+    "name": "com.pomdtr.wesh",
     "description": "A simple popup terminal for the web",
-    "path": "{{ .homeDir }}/.local/bin/popcorn.sh",
+    "path": "{{ .homeDir }}/.local/bin/wesh.sh",
     "type": "stdio",
     "allowed_origins": [
         "chrome-extension://{{ .extensionID }}/"

@@ -18,8 +18,6 @@ import (
 // nativeEndian used to detect native byte order
 var nativeEndian binary.ByteOrder
 
-var popcornPort = 9999
-
 func init() {
 	// determine native byte order so that we can read message size correctly
 	var one int16 = 1
@@ -105,11 +103,7 @@ func NewServer(m *MessageHandler, environ []string) *http.Server {
 		Dir:     dir,
 	}))
 
-	log.Printf("Listening on port %d\n", popcornPort)
-
-	return &http.Server{
-		Addr: fmt.Sprintf(":%d", popcornPort),
-	}
+	return &http.Server{}
 }
 
 type Message struct {

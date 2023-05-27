@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 
 	"github.com/joho/godotenv"
-	"github.com/pomdtr/popcorn/server"
+	"github.com/pomdtr/wesh/server"
 	"github.com/spf13/cobra"
 )
 
@@ -20,12 +20,12 @@ func NewCmdServer() *cobra.Command {
 				return err
 			}
 
-			configDir := filepath.Join(homeDir, ".config", "popcorn")
+			configDir := filepath.Join(homeDir, ".config", "wesh")
 			if err := os.MkdirAll(configDir, 0755); err != nil {
 				return err
 			}
 
-			envFile := filepath.Join(configDir, "popcorn.env")
+			envFile := filepath.Join(configDir, "wesh.env")
 			environ := os.Environ()
 			environ = append(environ, "TERM=xterm-256color")
 
