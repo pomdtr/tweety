@@ -11,7 +11,7 @@ export const manifest: chrome.runtime.ManifestV3 = {
     default_icon: {
       48: "icons/48.png",
     },
-    default_popup: "src/index.html",
+    default_title: "Open Terminal",
   },
   background: {
     service_worker: "src/background.ts",

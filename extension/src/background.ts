@@ -10,6 +10,8 @@ type Message = {
 };
 
 function init() {
+  // @ts-ignore
+  chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true });
   browser.contextMenus.create({
     id: "open-terminal-tab",
     title: "Open Terminal in New Tab",
@@ -51,8 +53,8 @@ browser.runtime.onStartup.addListener(() => {
 });
 
 browser.runtime.onMessage.addListener(async (message) => {
-  if (message.type === "popup") {
-    console.log("Popup opened");
+  if (message.type !== "popup") {
+    return;
   }
 
   const tab = await browser.tabs.query({ active: true, currentWindow: true });
@@ -308,7 +310,7 @@ async function getActiveTabId() {
   return tabId;
 }
 
-browser.contextMenus.onClicked.addListener(async (info, tab) => {
+browser.contextMenus.onClicked.addListener(async (info) => {
   const mainPage = "/src/index.html";
   switch (info.menuItemId) {
     case "open-terminal-tab": {
