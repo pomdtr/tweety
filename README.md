@@ -2,7 +2,7 @@
 
 A shell for your browser.
 
-![screenshot](./static/screenshot.png)
+![screenshot](./static/demo.png)
 
 Check out a demo of the extension running from the arc browser here: <https://www.capster.io/video/zRgddaTPilyn>.
 
