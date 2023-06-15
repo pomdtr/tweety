@@ -1,10 +1,10 @@
-name: goreleaser
+name: release
 
 on:
   push:
     # run only against tags
     tags:
-      - "v*"
+      - "v*.*.*"
 
 permissions:
   contents: write
@@ -12,6 +12,34 @@ permissions:
   # issues: write
 
 jobs:
+  extension-release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 16
+
+      - name: Install dependencies
+        run: npm install
+        working-directory: ./extension
+
+      - name: Build
+        run: npm run build
+        working-directory: ./extension
+
+      - name: Zip dist
+        run: zip -r extension.zip extension/dist
+
+      - name: Create release
+        uses: softprops/action-gh-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          files: extension.zip
   goreleaser:
     runs-on: ubuntu-latest
     steps:
