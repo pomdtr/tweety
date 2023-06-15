@@ -10,21 +10,16 @@ Check out a demo of the extension running from the arc browser here: <https://ww
 
 > **Warning**: wesh does not work on Windows yet (see [this issue](https://github.com/creack/pty/issues/161)).
 
-```bash
-# clone the repository
-git clone https://github.com/pomdtr/wesh && cd wesh
+Install the wesh binary:
 
-# install the cli (make sure that ~/.local/bin is in your $PATH)
-go build -o ~/.local/bin/wesh
-
-# build the extension
-cd extension
-npm i
-npm run build
+````bash
+go install github.com/pomdtr/wesh@latest
 ```
 
+Download the extension from the [releases page](https://github.com/pomdtr/wesh/releases/latest) and unzip it.
+
 Then go to the `chrome://extensions` page, activate the Developer mode and click on the `Load unpacked` button.
-You will need to select the `extension/dist` folder using the file picker.
+You will need to select the `dist` folder you just extracted using the file picker.
 
 ![Extension Page](./static/extensions.png)
 
@@ -32,7 +27,7 @@ Once you have installed the extension, copy the extension id, and run the follow
 
 ```bash
 wesh init --browser chrome --extension-id <extension-id>
-```
+````
 
 ## How does it work?
 
