@@ -10,9 +10,13 @@ Check out a demo of the extension running from the arc browser here: <https://ww
 
 > **Warning**: wesh does not work on Windows yet (see [this issue](https://github.com/creack/pty/issues/161)).
 
-Install the wesh binary:
+Install the wesh binary (or download it from the [releases page](https://github.com/pomdtr/wesh/releases/latest)):
 
-````bash
+```bash
+# Using brew
+brew install pomdtr/tap/wesh
+
+# From source
 go install github.com/pomdtr/wesh@latest
 ```
 
@@ -27,7 +31,7 @@ Once you have installed the extension, copy the extension id, and run the follow
 
 ```bash
 wesh init --browser chrome --extension-id <extension-id>
-````
+```
 
 ## How does it work?
 

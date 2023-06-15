@@ -53,30 +53,8 @@ const lightTheme = {
 async function main() {
   // don't register protocol handler if we're in a popup
   const searchParams = new URLSearchParams(window.location.search);
-
-  if (!searchParams.has("popup")) {
-    navigator.registerProtocolHandler("web+wesh", "?uri=%s");
-  }
-
-  let command: string = "";
-  let dir: string = "";
-  if (searchParams.has("uri")) {
-    const uri = searchParams.get("uri")!;
-    const url = new URL(uri);
-    const params = new URLSearchParams(url.search);
-
-    if (params.has("command")) {
-      command = params.get("command") || "";
-    }
-
-    if (command) {
-      window.document.title = command;
-    }
-
-    if (params.has("dir")) {
-      dir = params.get("dir") || "";
-    }
-  }
+  let command: string = searchParams.get("command") || "";
+  let dir: string = searchParams.get("dir") || "";
 
   // wake up background script
   const tabUrl = await chrome.runtime.sendMessage({ type: "popup" });

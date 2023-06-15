@@ -9,6 +9,19 @@ type Message = {
   error?: string;
 };
 
+function init() {
+  browser.contextMenus.create({
+    id: "open-terminal-tab",
+    title: "Open Terminal in New Tab",
+    contexts: ["action"],
+  });
+  browser.contextMenus.create({
+    id: "open-terminal-window",
+    title: "Open Terminal in New Window",
+    contexts: ["action"],
+  });
+}
+
 browser.commands.onCommand.addListener(async (command) => {
   const page = "src/index.html";
   switch (command) {
@@ -28,11 +41,13 @@ browser.commands.onCommand.addListener(async (command) => {
 // activate when installed or updated
 browser.runtime.onInstalled.addListener(() => {
   console.log("Extension installed or updated");
+  init();
 });
 
 // activate when browser starts
 browser.runtime.onStartup.addListener(() => {
   console.log("Browser started");
+  init();
 });
 
 browser.runtime.onMessage.addListener(async (message) => {
@@ -292,3 +307,35 @@ async function getActiveTabId() {
   }
   return tabId;
 }
+
+browser.contextMenus.onClicked.addListener(async (info, tab) => {
+  const mainPage = "/src/index.html";
+  switch (info.menuItemId) {
+    case "open-terminal-tab": {
+      await browser.tabs.create({ url: mainPage });
+      break;
+    }
+    case "open-terminal-window": {
+      await browser.windows.create({ url: mainPage });
+      break;
+    }
+    default: {
+      throw new Error(`Unknown menu item: ${info.menuItemId}`);
+    }
+  }
+});
+
+browser.omnibox.onInputEntered.addListener(async (text, disposition) => {
+  const url = `/src/index.html?command=${encodeURIComponent(text)}`;
+  switch (disposition) {
+    case "currentTab":
+      await browser.tabs.update({ url });
+      break;
+    case "newForegroundTab":
+      await browser.tabs.create({ url });
+      break;
+    case "newBackgroundTab":
+      await browser.tabs.create({ url, active: false });
+      break;
+  }
+});
