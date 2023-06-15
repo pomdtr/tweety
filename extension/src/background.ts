@@ -9,12 +9,8 @@ type Message = {
   error?: string;
 };
 
-browser.action.setPopup({
-  popup: `src/entries/popup/index.html?popup=true`,
-});
-
 browser.commands.onCommand.addListener(async (command) => {
-  const page = "src/entries/popup/index.html";
+  const page = "src/index.html";
   switch (command) {
     case "open-terminal-tab": {
       const tab = await browser.tabs.create({
@@ -27,14 +23,6 @@ browser.commands.onCommand.addListener(async (command) => {
       console.log(`Command ${command} not found`);
     }
   }
-});
-
-browser.action.onClicked.addListener(async (_, info) => {
-  if (info?.modifiers.length) {
-    browser.tabs.create({ url: `src/entries/popup/index.html` });
-  }
-
-  browser.action.openPopup();
 });
 
 // activate when installed or updated
@@ -57,7 +45,7 @@ browser.runtime.onMessage.addListener(async (message) => {
   return tab[0].url;
 });
 
-const port = browser.runtime.connectNative("com.pomdtr.wsh");
+const port = browser.runtime.connectNative("com.pomdtr.wesh");
 port.onMessage.addListener(async (msg: Message) => {
   console.log("Received message", msg);
   try {

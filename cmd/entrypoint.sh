@@ -1,3 +1,3 @@
 #!/usr/bin/env bash
 
-{{ .wshBin }} server
+{{ .weshBin }} server

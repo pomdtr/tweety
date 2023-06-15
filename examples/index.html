@@ -7,20 +7,24 @@
     <title>Demo</title>
     <meta name='viewport' content='width=device-width, initial-scale=1'>
     <script>
-        window.wsh = {
-            name: "command",
+        window.commands = [{
+            name: "command-name",
             description: "commmand description",
-            args: [{
-                name: "arg",
-                description: "arg description",
-            }]
-        }
-
+            args: [
+                {
+                    name: "hello",
+                    description: "arg description",
+                }
+            ],
+            run: (args) => {
+                alert(args.arg);
+            }
+        }]
     </script>
 </head>
 
 <body>
-
+    Hello World
 
 </body>
 

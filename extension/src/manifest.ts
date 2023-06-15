@@ -11,12 +11,13 @@ export const manifest: chrome.runtime.ManifestV3 = {
     default_icon: {
       48: "icons/48.png",
     },
+    default_popup: "src/index.html?popup=true",
   },
   background: {
-    service_worker: "src/entries/background/main.ts",
+    service_worker: "src/background.ts",
   },
   // side_panel: {
-  //   default_path: "src/entries/popup/index.html",
+  //   default_path: "src/index.html",
   // },
   permissions: [
     "nativeMessaging",

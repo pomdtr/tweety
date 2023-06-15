@@ -6,11 +6,11 @@ import (
 	"path/filepath"
 
 	"github.com/joho/godotenv"
-	"github.com/pomdtr/wsh/server"
+	"github.com/pomdtr/wesh/server"
 	"github.com/spf13/cobra"
 )
 
-const wshPort = 9999
+const weshPort = 9999
 
 func NewCmdServer() *cobra.Command {
 	return &cobra.Command{
@@ -22,12 +22,12 @@ func NewCmdServer() *cobra.Command {
 				return err
 			}
 
-			configDir := filepath.Join(homeDir, ".config", "wsh")
+			configDir := filepath.Join(homeDir, ".config", "wesh")
 			if err := os.MkdirAll(configDir, 0755); err != nil {
 				return err
 			}
 
-			envFile := filepath.Join(configDir, "wsh.env")
+			envFile := filepath.Join(configDir, "wesh.env")
 			environ := os.Environ()
 			environ = append(environ, "TERM=xterm-256color")
 
@@ -45,7 +45,7 @@ func NewCmdServer() *cobra.Command {
 			messageHandler := server.NewMessageHandler()
 			go messageHandler.Loop()
 
-			if err := server.Serve(messageHandler, wshPort, environ); err != nil {
+			if err := server.Serve(messageHandler, weshPort, environ); err != nil {
 				return err
 			}
 

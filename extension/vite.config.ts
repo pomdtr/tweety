@@ -10,7 +10,7 @@ export default defineConfig(() => {
       webExtension({
         manifest,
         additionalInputs: {
-          html: ["src/entries/popup/index.html"],
+          html: ["src/index.html"],
         },
       }),
     ],
