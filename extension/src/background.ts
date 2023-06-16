@@ -90,8 +90,17 @@ async function handleMessage(payload: any): Promise<any> {
       const res = await chrome.scripting.executeScript({
         target: { tabId },
         args: [payload.url],
-        func: (url: string) => {
-          return fetch(url).then((res) => res.text());
+        func: async (url: string) => {
+          const res = await fetch(url);
+          if (!res.ok) {
+            throw new Error(`Fetch failed: ${res.statusText}`);
+          }
+
+          if (res.headers.get("Content-Type")?.includes("application/json")) {
+            return res.json();
+          }
+
+          return res.text();
         },
       });
 
