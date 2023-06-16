@@ -1,6 +1,6 @@
 # Wesh
 
-A shell for your browser.
+An integrated terminal for your browser.
 
 ![screenshot](./static/demo.png)
 

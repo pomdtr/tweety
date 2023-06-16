@@ -81,6 +81,22 @@ port.onMessage.addListener(async (msg: Message) => {
 
 async function handleMessage(payload: any): Promise<any> {
   switch (payload.command) {
+    case "fetch": {
+      const tabId = await getActiveTabId();
+      if (tabId === undefined) {
+        throw new Error("No active tab");
+      }
+
+      const res = await chrome.scripting.executeScript({
+        target: { tabId },
+        args: [payload.url],
+        func: (url: string) => {
+          return fetch(url).then((res) => res.text());
+        },
+      });
+
+      return res[0].result;
+    }
     case "tab.list": {
       if (payload.allWindows) {
         return await browser.tabs.query({});

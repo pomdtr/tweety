@@ -66,6 +66,7 @@ func Execute() error {
 	cmd.AddCommand(NewCmdBookMark())
 	cmd.AddCommand(NewCmdDownload(printer))
 	cmd.AddCommand(NewCmdSelection())
+	cmd.AddCommand(NewCmdFetch())
 
 	return cmd.Execute()
 }
