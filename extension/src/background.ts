@@ -9,20 +9,8 @@ type Message = {
   error?: string;
 };
 
-function init() {
-  // @ts-ignore
-  chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true });
-  browser.contextMenus.create({
-    id: "open-terminal-tab",
-    title: "Open Terminal in New Tab",
-    contexts: ["action"],
-  });
-  browser.contextMenus.create({
-    id: "open-terminal-window",
-    title: "Open Terminal in New Window",
-    contexts: ["action"],
-  });
-}
+// @ts-ignore
+chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true });
 
 browser.commands.onCommand.addListener(async (command) => {
   const page = "src/index.html";
@@ -40,16 +28,29 @@ browser.commands.onCommand.addListener(async (command) => {
   }
 });
 
+enum ContextMenuID {
+  OPEN_TERMINAL_TAB = "open-terminal-tab",
+  OPEN_TERMINAL_WINDOW = "open-terminal-window",
+}
+
 // activate when installed or updated
 browser.runtime.onInstalled.addListener(() => {
   console.log("Extension installed or updated");
-  init();
+  browser.contextMenus.create({
+    id: ContextMenuID.OPEN_TERMINAL_TAB,
+    title: "Open Terminal in New Tab",
+    contexts: ["action"],
+  });
+  browser.contextMenus.create({
+    id: ContextMenuID.OPEN_TERMINAL_WINDOW,
+    title: "Open Terminal in New Window",
+    contexts: ["action"],
+  });
 });
 
 // activate when browser starts
 browser.runtime.onStartup.addListener(() => {
   console.log("Browser started");
-  init();
 });
 
 browser.runtime.onMessage.addListener(async (message) => {
@@ -82,9 +83,21 @@ port.onMessage.addListener(async (msg: Message) => {
 async function handleMessage(payload: any): Promise<any> {
   switch (payload.command) {
     case "fetch": {
-      const tabId = await getActiveTabId();
-      if (tabId === undefined) {
-        throw new Error("No active tab");
+      let tabId: number;
+      if (payload.pattern) {
+        const tabs = await browser.tabs.query({
+          url: payload.pattern,
+        });
+        if (tabs.length === 0) {
+          throw new Error(`No tabs matching ${payload.pattern}`);
+        }
+
+        tabId = tabs[0].id!;
+      } else {
+        tabId = await getActiveTabId();
+        if (tabId === undefined) {
+          throw new Error("No active tab");
+        }
       }
 
       const res = await chrome.scripting.executeScript({
@@ -338,11 +351,11 @@ async function getActiveTabId() {
 browser.contextMenus.onClicked.addListener(async (info) => {
   const mainPage = "/src/index.html";
   switch (info.menuItemId) {
-    case "open-terminal-tab": {
+    case ContextMenuID.OPEN_TERMINAL_TAB: {
       await browser.tabs.create({ url: mainPage });
       break;
     }
-    case "open-terminal-window": {
+    case ContextMenuID.OPEN_TERMINAL_WINDOW: {
       await browser.windows.create({ url: mainPage });
       break;
     }
