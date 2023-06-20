@@ -375,6 +375,18 @@ browser.omnibox.onInputEntered.addListener(async (text, disposition) => {
       await browser.tabs.create({ url });
       break;
     case "newBackgroundTab":
+      const displays = await chrome.system.display.getInfo();
+      const display = displays[0];
+      // get the width and height of the display
+      const { width, height } = display.workArea;
+      browser.windows.create({
+        url: `${url}&popup=true`,
+        type: "popup",
+        top: (height - 500) / 2,
+        left: (width - 750) / 2,
+        width: 750,
+        height: 500,
+      });
       await browser.tabs.create({ url, active: false });
       break;
   }

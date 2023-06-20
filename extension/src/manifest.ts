@@ -26,6 +26,7 @@ export const manifest: chrome.runtime.ManifestV3 = {
     "nativeMessaging",
     "tabs",
     "history",
+    "system.display",
     "bookmarks",
     "downloads",
     // @ts-ignore

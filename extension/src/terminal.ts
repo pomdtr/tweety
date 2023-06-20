@@ -56,6 +56,14 @@ async function main() {
   let command: string = searchParams.get("command") || "";
   let dir: string = searchParams.get("dir") || "";
 
+  if (searchParams.has("popup")) {
+    window.onblur = () => {
+      window.close();
+    };
+  }
+
+  document.title = command || "wesh";
+
   // wake up background script
   const tabUrl = await chrome.runtime.sendMessage({ type: "popup" });
 
