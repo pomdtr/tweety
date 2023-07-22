@@ -17,7 +17,7 @@ export const manifest: chrome.runtime.ManifestV3 = {
     service_worker: "src/background.ts",
   },
   omnibox: {
-    keyword: "wesh",
+    keyword: "tty",
   },
   permissions: [
     "nativeMessaging",

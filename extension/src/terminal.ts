@@ -3,6 +3,7 @@ import { FitAddon } from "xterm-addon-fit";
 import { WebglAddon } from "xterm-addon-webgl";
 import { WebLinksAddon } from "xterm-addon-web-links";
 import { AttachAddon } from "xterm-addon-attach";
+import { nanoid } from "nanoid";
 
 const darkTheme = {
   foreground: "#c5c8c6",
@@ -65,7 +66,7 @@ async function main() {
   document.title = command || "wesh";
 
   // wake up background script
-  const tabUrl = await chrome.runtime.sendMessage({ type: "popup" });
+  await chrome.runtime.sendMessage({ type: "popup" });
 
   const terminal = new Terminal({
     cursorBlink: true,
@@ -103,9 +104,8 @@ async function main() {
     }
   }
 
-  let url = `ws://localhost:9999/pty?cols=${terminal.cols}&rows=${
-    terminal.rows
-  }&url=${encodeURIComponent(tabUrl)}`;
+  const terminalID = nanoid();
+  let url = `ws://localhost:9999/pty/${terminalID}?cols=${terminal.cols}&rows=${terminal.rows}`;
 
   if (command) {
     url += `&command=${encodeURIComponent(command)}`;
@@ -119,6 +119,18 @@ async function main() {
   ws.onclose = () => {
     window.close();
   };
+
+  window.onresize = () => {
+    fitAddon.fit();
+  };
+
+  terminal.onResize((size) => {
+    const { cols, rows } = size;
+    const url = `http://localhost:9999/resize/${terminalID}?cols=${cols}&rows=${rows}`;
+    fetch(url, {
+      method: "POST",
+    });
+  });
 
   const attachAddon = new AttachAddon(ws);
   terminal.loadAddon(attachAddon);
