@@ -477,6 +477,7 @@ func WebSocketHandler(opts HandlerOpts) func(http.ResponseWriter, *http.Request)
 		}()
 
 		waiter.Wait()
+		delete(opts.ttyMap, terminalID)
 		log.Printf("closing connection...")
 		connectionClosed = true
 	}
