@@ -1,5 +1,3 @@
-import browser from "webextension-polyfill";
-
 type Message = {
   id: string;
   payload?: {
@@ -9,61 +7,48 @@ type Message = {
   error?: string;
 };
 
-// @ts-ignore
-chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true });
-
-browser.commands.onCommand.addListener(async (command) => {
-  const page = "src/index.html";
-  switch (command) {
-    case "open-terminal-tab": {
-      const tab = await browser.tabs.create({
-        url: chrome.runtime.getURL(page),
-      });
-      await browser.windows.update(tab.windowId!, { focused: true });
-      break;
-    }
-    default: {
-      console.log(`Command ${command} not found`);
-    }
-  }
-});
-
 enum ContextMenuID {
   OPEN_TERMINAL_TAB = "open-terminal-tab",
   OPEN_TERMINAL_WINDOW = "open-terminal-window",
 }
 
 // activate when installed or updated
-browser.runtime.onInstalled.addListener(() => {
+chrome.runtime.onInstalled.addListener(() => {
   console.log("Extension installed or updated");
-  browser.contextMenus.create({
+  chrome.contextMenus.create({
     id: ContextMenuID.OPEN_TERMINAL_TAB,
     title: "Open Terminal in New Tab",
     contexts: ["action"],
   });
-  browser.contextMenus.create({
+  chrome.contextMenus.create({
     id: ContextMenuID.OPEN_TERMINAL_WINDOW,
     title: "Open Terminal in New Window",
     contexts: ["action"],
   });
 });
 
-// activate when browser starts
-browser.runtime.onStartup.addListener(() => {
+// activate when chrome starts
+chrome.runtime.onStartup.addListener(() => {
   console.log("Browser started");
 });
 
-browser.runtime.onMessage.addListener(async (message) => {
+chrome.runtime.onMessage.addListener(async (message) => {
   if (message.type !== "popup") {
     return;
   }
 
-  const tab = await browser.tabs.query({ active: true, currentWindow: true });
+  const tab = await chrome.tabs.query({ active: true, currentWindow: true });
 
   return tab[0].url;
 });
 
-const port = browser.runtime.connectNative("com.pomdtr.wesh");
+chrome.action.onClicked.addListener(async () => {
+  await chrome.tabs.create({
+    url: chrome.runtime.getURL("src/index.html"),
+  });
+});
+
+const port = chrome.runtime.connectNative("com.pomdtr.wesh");
 port.onMessage.addListener(async (msg: Message) => {
   console.log("Received message", msg);
   try {
@@ -85,7 +70,7 @@ async function handleMessage(payload: any): Promise<any> {
     case "fetch": {
       let tabId: number;
       if (payload.pattern) {
-        const tabs = await browser.tabs.query({
+        const tabs = await chrome.tabs.query({
           url: payload.pattern,
         });
         if (tabs.length === 0) {
@@ -121,21 +106,21 @@ async function handleMessage(payload: any): Promise<any> {
     }
     case "tab.list": {
       if (payload.allWindows) {
-        return await browser.tabs.query({});
+        return await chrome.tabs.query({});
       }
 
       if (payload.windowId !== undefined) {
-        return await browser.tabs.query({ windowId: payload.windowId });
+        return await chrome.tabs.query({ windowId: payload.windowId });
       }
 
-      return await browser.tabs.query({ currentWindow: true });
+      return await chrome.tabs.query({ currentWindow: true });
     }
     case "tab.get": {
       let { tabId } = payload;
       if (tabId === undefined) {
         tabId = await getActiveTabId();
       }
-      return await browser.tabs.get(tabId);
+      return await chrome.tabs.get(tabId);
     }
     case "tab.pin": {
       let { tabIds } = payload;
@@ -144,7 +129,7 @@ async function handleMessage(payload: any): Promise<any> {
       }
 
       for (const tabId of tabIds) {
-        await browser.tabs.update(tabId, { pinned: true });
+        await chrome.tabs.update(tabId, { pinned: true });
       }
 
       return;
@@ -156,16 +141,16 @@ async function handleMessage(payload: any): Promise<any> {
       }
 
       for (const tabId of tabIds) {
-        await browser.tabs.update(tabId, { pinned: false });
+        await chrome.tabs.update(tabId, { pinned: false });
       }
 
       return;
     }
     case "tab.focus": {
       const { tabId } = payload;
-      const tab = await browser.tabs.update(tabId, { active: true });
+      const tab = await chrome.tabs.update(tabId, { active: true });
       if (tab.windowId !== undefined) {
-        await browser.windows.update(tab.windowId, { focused: true });
+        await chrome.windows.update(tab.windowId, { focused: true });
       }
       return;
     }
@@ -174,7 +159,7 @@ async function handleMessage(payload: any): Promise<any> {
       if (tabIds === undefined) {
         tabIds = [await getActiveTabId()];
       }
-      await browser.tabs.remove(tabIds);
+      await chrome.tabs.remove(tabIds);
       return;
     }
     case "tab.reload": {
@@ -183,7 +168,7 @@ async function handleMessage(payload: any): Promise<any> {
         tabIds = [await getActiveTabId()];
       }
       for (const tabId of tabIds) {
-        await browser.tabs.reload(tabId);
+        await chrome.tabs.reload(tabId);
       }
       return;
     }
@@ -192,27 +177,27 @@ async function handleMessage(payload: any): Promise<any> {
       if (tabId === undefined) {
         tabId = await getActiveTabId();
       }
-      await browser.tabs.update(tabId, { url });
+      await chrome.tabs.update(tabId, { url });
       return;
     }
     case "tab.create": {
       const { url, urls } = payload;
-      const currentWindow = await browser.windows.getCurrent();
+      const currentWindow = await chrome.windows.getCurrent();
       if (currentWindow.id === undefined) {
         throw new Error("Current window not found");
       }
 
       if (url !== undefined) {
-        await browser.tabs.create({ url, windowId: currentWindow.id });
-        await browser.windows.update(currentWindow.id, { focused: true });
+        await chrome.tabs.create({ url, windowId: currentWindow.id });
+        await chrome.windows.update(currentWindow.id, { focused: true });
         return;
       }
 
       for (const url of urls) {
-        await browser.tabs.create({ url, windowId: currentWindow.id });
+        await chrome.tabs.create({ url, windowId: currentWindow.id });
       }
 
-      await browser.windows.update(currentWindow.id, { focused: true });
+      await chrome.windows.update(currentWindow.id, { focused: true });
       return;
     }
     case "tab.source": {
@@ -288,32 +273,32 @@ async function handleMessage(payload: any): Promise<any> {
       return;
     }
     case "window.list": {
-      return browser.windows.getAll({});
+      return chrome.windows.getAll({});
     }
     case "window.focus": {
       const { windowId } = payload;
-      return await browser.windows.update(windowId, {
+      return await chrome.windows.update(windowId, {
         focused: true,
       });
     }
     case "window.remove": {
       const { windowId } = payload;
-      await browser.windows.remove(windowId);
+      await chrome.windows.remove(windowId);
       return;
     }
     case "window.create": {
       const { url } = payload;
-      return await browser.windows.create({ url });
+      return await chrome.windows.create({ url });
     }
     case "extension.list": {
-      return await browser.management.getAll();
+      return await chrome.management.getAll();
     }
     case "bookmark.list": {
-      return await browser.bookmarks.getTree();
+      return await chrome.bookmarks.getTree();
     }
     case "bookmark.create": {
       const { parentId, title, url } = payload;
-      return browser.bookmarks.create({
+      return chrome.bookmarks.create({
         parentId,
         title,
         url,
@@ -321,14 +306,14 @@ async function handleMessage(payload: any): Promise<any> {
     }
     case "bookmark.remove": {
       const { id } = payload;
-      browser.bookmarks.remove(id);
+      chrome.bookmarks.remove(id);
       return;
     }
     case "download.list": {
-      return await browser.downloads.search({});
+      return await chrome.downloads.search({});
     }
     case "history.search": {
-      return browser.history.search({ text: payload.query });
+      return chrome.history.search({ text: payload.query });
     }
     default: {
       throw new Error(`Unknown command: ${payload.command}`);
@@ -337,7 +322,7 @@ async function handleMessage(payload: any): Promise<any> {
 }
 
 async function getActiveTabId() {
-  const activeTabs = await browser.tabs.query({
+  const activeTabs = await chrome.tabs.query({
     active: true,
     currentWindow: true,
   });
@@ -348,15 +333,15 @@ async function getActiveTabId() {
   return tabId;
 }
 
-browser.contextMenus.onClicked.addListener(async (info) => {
+chrome.contextMenus.onClicked.addListener(async (info) => {
   const mainPage = "/src/index.html";
   switch (info.menuItemId) {
     case ContextMenuID.OPEN_TERMINAL_TAB: {
-      await browser.tabs.create({ url: mainPage });
+      await chrome.tabs.create({ url: mainPage });
       break;
     }
     case ContextMenuID.OPEN_TERMINAL_WINDOW: {
-      await browser.windows.create({ url: mainPage });
+      await chrome.windows.create({ url: mainPage });
       break;
     }
     default: {
@@ -365,21 +350,33 @@ browser.contextMenus.onClicked.addListener(async (info) => {
   }
 });
 
-browser.omnibox.onInputEntered.addListener(async (text, disposition) => {
+chrome.omnibox.onInputStarted.addListener(async () => {
+  chrome.omnibox.setDefaultSuggestion({
+    description: "Run command",
+  });
+});
+
+chrome.omnibox.onInputChanged.addListener(async (text) => {
+  chrome.omnibox.setDefaultSuggestion({
+    description: `Run: ${text}`,
+  });
+});
+
+chrome.omnibox.onInputEntered.addListener(async (text, disposition) => {
   const url = `/src/index.html?command=${encodeURIComponent(text)}`;
   switch (disposition) {
     case "currentTab":
-      await browser.tabs.update({ url });
+      await chrome.tabs.update({ url });
       break;
     case "newForegroundTab":
-      await browser.tabs.create({ url });
+      await chrome.tabs.create({ url });
       break;
     case "newBackgroundTab":
       const displays = await chrome.system.display.getInfo();
       const display = displays[0];
       // get the width and height of the display
       const { width, height } = display.workArea;
-      browser.windows.create({
+      chrome.windows.create({
         url: `${url}&popup=true`,
         type: "popup",
         top: (height - 500) / 2,
@@ -387,7 +384,6 @@ browser.omnibox.onInputEntered.addListener(async (text, disposition) => {
         width: 750,
         height: 500,
       });
-      await browser.tabs.create({ url, active: false });
       break;
   }
 });

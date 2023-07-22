@@ -16,9 +16,6 @@ export const manifest: chrome.runtime.ManifestV3 = {
   background: {
     service_worker: "src/background.ts",
   },
-  side_panel: {
-    default_path: "src/index.html",
-  },
   omnibox: {
     keyword: "wesh",
   },
@@ -28,22 +25,13 @@ export const manifest: chrome.runtime.ManifestV3 = {
     "history",
     "system.display",
     "bookmarks",
+    "storage",
     "downloads",
-    // @ts-ignore
     "sidePanel",
     "contextMenus",
     "management",
     "scripting",
   ],
-  commands: {
-    "open-terminal-tab": {
-      suggested_key: {
-        default: "Ctrl+Shift+E",
-        mac: "Command+Shift+E",
-      },
-      description: "Open Terminal Tab",
-    },
-  },
   host_permissions: ["*://*/*"],
   icons: {
     16: "icons/16.png",

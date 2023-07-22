@@ -15,8 +15,7 @@
   "license": "MIT",
   "devDependencies": {
     "@samrum/vite-plugin-web-extension": "^5.0.0",
-    "@types/chrome": "^0.0.228",
-    "@types/webextension-polyfill": "^0.10.0",
+    "@types/chrome": "^0.0.241",
     "typescript": "^5.0.4",
     "vite": "~4.3.1",
     "web-ext": "^7.6.1"
