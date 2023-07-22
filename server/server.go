@@ -10,6 +10,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"path/filepath"
 	"unsafe"
 
 	"github.com/google/uuid"
@@ -44,6 +45,28 @@ func readMessageLength(msg []byte) (int, error) {
 		return 0, fmt.Errorf("unable to read bytes representing message length: %w", err)
 	}
 	return int(length), nil
+}
+
+type WeshConfig struct {
+	Shell string `json:"shell"`
+}
+
+func findshell() string {
+	homedir, _ := os.UserHomeDir()
+	bs, err := os.ReadFile(filepath.Join(homedir, ".config", "wesh", "config.json"))
+	if err == nil {
+		var config WeshConfig
+		if err := json.Unmarshal(bs, &config); err == nil {
+			return config.Shell
+		}
+	}
+
+	if env, ok := os.LookupEnv("SHELL"); ok {
+		return env
+	}
+
+	return "/bin/bash"
+
 }
 
 func Serve(m *MessageHandler, port int, environ []string) error {
@@ -82,15 +105,8 @@ func Serve(m *MessageHandler, port int, environ []string) error {
 		}
 	})
 
-	var command string
-	var args []string
-	if shell, ok := os.LookupEnv("SHELL"); ok {
-		command = shell
-		args = []string{"-li"}
-	} else {
-		command = "/bin/bash"
-		args = []string{"-li"}
-	}
+	command := findshell()
+	args := []string{"-li"}
 	dir, err := os.UserHomeDir()
 	if err != nil {
 		log.Fatal(err)
