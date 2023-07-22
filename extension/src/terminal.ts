@@ -55,6 +55,12 @@ async function main() {
   // don't register protocol handler if we're in a popup
   const searchParams = new URLSearchParams(window.location.search);
   let command: string = searchParams.get("command") || "";
+  if (command) {
+    const res = await window.confirm(`Run command: ${command} ?`);
+    if (!res) {
+      window.close();
+    }
+  }
   let dir: string = searchParams.get("dir") || "";
 
   if (searchParams.has("popup")) {
