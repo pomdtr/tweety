@@ -1,16 +1,14 @@
 {
-  "name": "wesh",
+  "name": "popcorn",
   "version": "1.0.0",
-  "displayName": "wesh",
-  "homepage": "https://github.com/pomdtr/wesh",
+  "displayName": "popcorn",
+  "homepage": "https://github.com/pomdtr/popcorn",
   "author": "Achille Lacoin",
   "description": "A shell for your browser",
   "scripts": {
     "build": "tsc && vite build",
     "watch": "vite build --watch --mode development --minify false",
-    "dev": "vite",
-    "serve:firefox": "web-ext run --start-url \"about:debugging#/runtime/this-firefox\"  --source-dir ./dist/",
-    "serve:chrome": "web-ext run -t chromium --start-url \"https://example.com\" --source-dir ./dist/"
+    "dev": "vite"
   },
   "license": "MIT",
   "devDependencies": {

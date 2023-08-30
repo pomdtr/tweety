@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"encoding/json"
 	"os"
 
 	"github.com/spf13/cobra"
@@ -8,11 +9,12 @@ import (
 
 func NewCmdFetch() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:  "fetch",
-		Args: cobra.ExactArgs(1),
+		Use:   "fetch",
+		Short: "Do a request from the browser",
+		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			pattern, _ := cmd.Flags().GetString("pattern")
-			res, err := sendMessage(map[string]any{
+			res, err := sendMessage[any](map[string]any{
 				"command": "fetch",
 				"url":     args[0],
 				"pattern": pattern,
@@ -21,7 +23,8 @@ func NewCmdFetch() *cobra.Command {
 				return err
 			}
 
-			if _, err := os.Stdout.Write(res); err != nil {
+			encoder := json.NewEncoder(os.Stdout)
+			if err := encoder.Encode(res); err != nil {
 				return err
 			}
 

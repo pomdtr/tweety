@@ -52,28 +52,6 @@ const lightTheme = {
 };
 
 async function main() {
-  // don't register protocol handler if we're in a popup
-  const searchParams = new URLSearchParams(window.location.search);
-  let command: string = searchParams.get("command") || "";
-  if (command) {
-    const res = await window.confirm(`Run command: ${command} ?`);
-    if (!res) {
-      window.close();
-    }
-  }
-  let dir: string = searchParams.get("dir") || "";
-
-  if (searchParams.has("popup")) {
-    window.onblur = () => {
-      window.close();
-    };
-  }
-
-  document.title = command || "wesh";
-
-  // wake up background script
-  await chrome.runtime.sendMessage({ type: "popup" });
-
   const terminal = new Terminal({
     cursorBlink: true,
     allowProposedApi: true,
@@ -86,6 +64,8 @@ async function main() {
       : lightTheme,
   });
 
+  const params = new URLSearchParams(window.location.search);
+
   const webglAddon = new WebglAddon();
   const fitAddon = new FitAddon();
   const webLinksAddon = new WebLinksAddon();
@@ -96,11 +76,14 @@ async function main() {
   terminal.open(document.getElementById("terminal")!);
   fitAddon.fit();
 
-  // check if wesh server is running
+  const { port: popcornPort, token: popcornToken } =
+    await chrome.storage.session.get(["port", "token"]);
+
+  // check if popcorn server is running
   let ready = false;
   while (!ready) {
     try {
-      const res = await fetch("http://localhost:9999/ready");
+      const res = await fetch(`http://localhost:${popcornPort}/ready`);
       if (res.status !== 200) {
         throw new Error("not ready");
       }
@@ -111,17 +94,16 @@ async function main() {
   }
 
   const terminalID = nanoid();
-  let url = `ws://localhost:9999/pty/${terminalID}?cols=${terminal.cols}&rows=${terminal.rows}`;
+  let websocketUrl = `ws://localhost:${popcornPort}/pty/${terminalID}?token=${[
+    popcornToken,
+  ]}&cols=${terminal.cols}&rows=${terminal.rows}`;
 
-  if (command) {
-    url += `&command=${encodeURIComponent(command)}`;
+  const profile = params.get("profile");
+  if (profile) {
+    websocketUrl += `&profile=${encodeURIComponent(profile)})}`;
   }
-  if (dir) {
-    url += `&dir=${encodeURIComponent(dir)}`;
-  }
 
-  const ws = new WebSocket(url);
-
+  const ws = new WebSocket(websocketUrl);
   ws.onclose = () => {
     window.close();
   };
@@ -132,7 +114,7 @@ async function main() {
 
   terminal.onResize((size) => {
     const { cols, rows } = size;
-    const url = `http://localhost:9999/resize/${terminalID}?cols=${cols}&rows=${rows}`;
+    const url = `http://localhost:${popcornPort}/${terminalID}/resize?cols=${cols}&rows=${rows}`;
     fetch(url, {
       method: "POST",
     });
@@ -144,7 +126,6 @@ async function main() {
   window
     .matchMedia("(prefers-color-scheme: dark)")
     .addEventListener("change", function (e) {
-      console.log("color scheme changed", e.matches);
       terminal.options.theme = e.matches ? darkTheme : lightTheme;
     });
 

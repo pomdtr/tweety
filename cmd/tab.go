@@ -57,13 +57,8 @@ func NewCmdTabList(printer tableprinter.TablePrinter) *cobra.Command {
 				msg["allWindows"] = true
 			}
 
-			res, err := sendMessage(msg)
+			tabs, err := sendMessage[[]Tab](msg)
 			if err != nil {
-				return err
-			}
-
-			var tabs []Tab
-			if err := json.Unmarshal(res, &tabs); err != nil {
 				return err
 			}
 
@@ -121,7 +116,7 @@ func NewCmdTabPin() *cobra.Command {
 				msg["tabIds"] = tabIds
 			}
 
-			_, err := sendMessage(msg)
+			_, err := sendMessage[any](msg)
 			if err != nil {
 				return err
 			}
@@ -155,7 +150,7 @@ func NewCmdTabUnpin() *cobra.Command {
 				msg["tabIds"] = tabIds
 			}
 
-			_, err := sendMessage(msg)
+			_, err := sendMessage[any](msg)
 			if err != nil {
 				return err
 			}
@@ -180,7 +175,7 @@ func NewCmdTabCreate() *cobra.Command {
 				msg["urls"] = args
 			}
 
-			_, err := sendMessage(msg)
+			_, err := sendMessage[any](msg)
 			if err != nil {
 				return err
 			}
@@ -211,13 +206,8 @@ func NewCmdTabGet(printer tableprinter.TablePrinter) *cobra.Command {
 				msg["tabId"] = tabId
 			}
 
-			res, err := sendMessage(msg)
+			tab, err := sendMessage[Tab](msg)
 			if err != nil {
-				return err
-			}
-
-			var tab Tab
-			if err := json.Unmarshal(res, &tab); err != nil {
 				return err
 			}
 
@@ -267,13 +257,8 @@ func NewCmdTabUrl() *cobra.Command {
 				msg["tabId"] = tabId
 			}
 
-			res, err := sendMessage(msg)
+			tab, err := sendMessage[Tab](msg)
 			if err != nil {
-				return err
-			}
-
-			var tab Tab
-			if err := json.Unmarshal(res, &tab); err != nil {
 				return err
 			}
 
@@ -307,7 +292,7 @@ func NewCmdTabClose() *cobra.Command {
 				msg["tabIds"] = tabIds
 			}
 
-			if _, err := sendMessage(msg); err != nil {
+			if _, err := sendMessage[any](msg); err != nil {
 				return err
 			}
 
@@ -328,7 +313,7 @@ func NewCmdTabFocus() *cobra.Command {
 				return err
 			}
 
-			if _, err := sendMessage(map[string]any{
+			if _, err := sendMessage[any](map[string]any{
 				"command": "tab.focus",
 				"tabId":   tabId,
 			}); err != nil {
@@ -358,13 +343,8 @@ func NewCmdTabSource() *cobra.Command {
 				msg["tabId"] = tabId
 			}
 
-			res, err := sendMessage(msg)
+			source, err := sendMessage[string](msg)
 			if err != nil {
-				return err
-			}
-
-			var source string
-			if err := json.Unmarshal(res, &source); err != nil {
 				return err
 			}
 
@@ -378,7 +358,8 @@ func NewCmdTabSource() *cobra.Command {
 
 func NewCmdTab(printer tableprinter.TablePrinter) *cobra.Command {
 	cmd := &cobra.Command{
-		Use: "tab",
+		Use:   "tab",
+		Short: "Manage Tabs",
 	}
 
 	cmd.AddCommand(NewCmdTabList(printer))

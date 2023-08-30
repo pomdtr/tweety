@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"encoding/json"
 	"os"
 
 	"github.com/spf13/cobra"
@@ -10,14 +11,15 @@ func NewCmdBookmarkList() *cobra.Command {
 	return &cobra.Command{
 		Use: "list",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			res, err := sendMessage(map[string]string{
+			res, err := sendMessage[any](map[string]string{
 				"command": "bookmark.list",
 			})
 			if err != nil {
 				return err
 			}
 
-			if _, err := os.Stdout.Write(res); err != nil {
+			encoder := json.NewEncoder(os.Stdout)
+			if err := encoder.Encode(res); err != nil {
 				return err
 			}
 
@@ -28,7 +30,8 @@ func NewCmdBookmarkList() *cobra.Command {
 
 func NewCmdBookMark() *cobra.Command {
 	cmd := &cobra.Command{
-		Use: "bookmark",
+		Use:   "bookmark",
+		Short: "Manage bookmarks",
 	}
 
 	cmd.AddCommand(NewCmdBookmarkList())

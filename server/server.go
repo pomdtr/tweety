@@ -12,6 +12,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 	"sync"
@@ -54,30 +55,63 @@ func readMessageLength(msg []byte) (int, error) {
 	return int(length), nil
 }
 
-type WeshConfig struct {
-	Shell string `json:"shell"`
+type Profile struct {
+	Path             string            `json:"path"`
+	Args             []string          `json:"args"`
+	Env              map[string]string `json:"env"`
+	WorkingDirectory string            `json:"workingDirectory"`
 }
 
-func findshell() string {
-	homedir, _ := os.UserHomeDir()
-	bs, err := os.ReadFile(filepath.Join(homedir, ".config", "wesh", "config.json"))
-	if err == nil {
-		var config WeshConfig
-		if err := json.Unmarshal(bs, &config); err == nil {
-			return config.Shell
+func (p Profile) Command(env ...string) *exec.Cmd {
+	cmd := exec.Command(p.Path, p.Args...)
+	cmd.Env = os.Environ()
+	cmd.Env = append(cmd.Env, env...)
+	for k, v := range p.Env {
+		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", k, v))
+	}
+	cmd.Dir = p.WorkingDirectory
+
+	return cmd
+}
+
+type Config struct {
+	Profiles map[string]Profile `json:"profiles"`
+}
+
+func LoadConfig(path string) (*Config, error) {
+	f, err := os.Open(path)
+	if os.IsNotExist(err) {
+		homedir, err := os.UserHomeDir()
+		if err != nil {
+			return nil, fmt.Errorf("failed to get user home directory: %w", err)
 		}
+
+		return &Config{
+			Profiles: map[string]Profile{
+				"default": {
+					Path:             defaultShell(),
+					Args:             []string{"-li"},
+					WorkingDirectory: homedir,
+					Env:              make(map[string]string),
+				},
+			},
+		}, nil
+	} else if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+
+	var config Config
+	decoder := json.NewDecoder(f)
+	if err := decoder.Decode(&config); err != nil {
+		return nil, err
 	}
 
-	if env, ok := os.LookupEnv("SHELL"); ok {
-		return env
-	}
-
-	return "/bin/bash"
-
+	return &config, nil
 }
 
-func Serve(m *MessageHandler, port int, environ []string) error {
-	http.HandleFunc("/ready", func(w http.ResponseWriter, r *http.Request) {
+func Serve(m *MessageHandler, port int, token string) error {
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("OK"))
 	})
@@ -96,7 +130,7 @@ func Serve(m *MessageHandler, port int, environ []string) error {
 			return
 		}
 
-		msg, err := m.send(payload)
+		msg, err := m.SendMessage(payload)
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			w.Write([]byte(err.Error()))
@@ -112,20 +146,21 @@ func Serve(m *MessageHandler, port int, environ []string) error {
 		}
 	})
 
-	command := findshell()
-	args := []string{"-li"}
-	dir, err := os.UserHomeDir()
+	homedir, err := os.UserHomeDir()
 	if err != nil {
-		log.Fatal(err)
+		return fmt.Errorf("failed to get user home directory: %w", err)
+	}
+
+	config, err := LoadConfig(filepath.Join(homedir, ".config", "popcorn", "config.json"))
+	if err != nil {
+		return err
 	}
 
 	ttyMap := make(map[string]*os.File)
 	http.HandleFunc("/pty/", WebSocketHandler(HandlerOpts{
-		Command: command,
-		Args:    args,
-		Env:     environ,
-		Dir:     dir,
-		ttyMap:  ttyMap,
+		Token:    token,
+		Profiles: config.Profiles,
+		ttyMap:   ttyMap,
 	}))
 
 	http.HandleFunc("/resize/", func(w http.ResponseWriter, r *http.Request) {
@@ -169,7 +204,9 @@ func Serve(m *MessageHandler, port int, environ []string) error {
 		w.Write([]byte("OK"))
 	})
 
+	log.Println("Listening on port", port)
 	return http.ListenAndServe(fmt.Sprintf(":%d", port), nil)
+
 }
 
 type Message struct {
@@ -187,7 +224,7 @@ func NewMessageHandler() *MessageHandler {
 	}
 }
 
-func (h *MessageHandler) send(payload any) (any, error) {
+func (h *MessageHandler) SendMessage(payload any) (any, error) {
 	msgID := uuid.New().String()
 
 	msg := ExtensionMessage{
@@ -291,11 +328,10 @@ func (h *MessageHandler) Loop() {
 const DefaultConnectionErrorLimit = 10
 
 type HandlerOpts struct {
-	Command string
-	Args    []string
-	Env     []string
-	Dir     string
-	ttyMap  map[string]*os.File
+	Env      []string
+	Token    string
+	Profiles map[string]Profile
+	ttyMap   map[string]*os.File
 
 	// ConnectionErrorLimit defines the number of consecutive errors that can happen
 	// before a connection is considered unusable
@@ -306,9 +342,33 @@ type HandlerOpts struct {
 	MaxBufferSizeBytes   int
 }
 
+func defaultShell() string {
+	shell, ok := os.LookupEnv("SHELL")
+	if ok {
+		return shell
+	}
+
+	switch runtime.GOOS {
+	case "windows":
+		return "powershell"
+	case "macos":
+		return "zsh"
+	default:
+		return "bash"
+	}
+}
+
 func WebSocketHandler(opts HandlerOpts) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		terminalID := strings.TrimPrefix(r.URL.Path, "/pty/")
+		token := r.URL.Query().Get("token")
+
+		if token != opts.Token {
+			w.WriteHeader(http.StatusUnauthorized)
+			w.Write([]byte("unauthorized"))
+			return
+		}
+
 		cols, err := strconv.Atoi(r.URL.Query().Get("cols"))
 		if err != nil {
 			w.WriteHeader(http.StatusBadRequest)
@@ -323,28 +383,24 @@ func WebSocketHandler(opts HandlerOpts) func(http.ResponseWriter, *http.Request)
 			return
 		}
 
-		args := opts.Args
-		if command := r.URL.Query().Get("command"); command != "" {
-			args = []string{"-lic", command}
-		}
-		log.Printf("command: %s %s", opts.Command, args)
-
-		dir := opts.Dir
-		if param := r.URL.Query().Get("dir"); param != "" {
-			if strings.HasPrefix(param, "~") {
-				home, _ := os.UserHomeDir()
-				param = strings.Replace(param, "~", home, 1)
-			}
-			dir = param
+		homedir, err := os.UserHomeDir()
+		if err != nil {
+			log.Printf("failed to get user home directory: %s", err)
+			return
 		}
 
-		log.Printf("received connection request with cols=%d, rows=%d, dir=%s", cols, rows, dir)
+		command := defaultShell()
+		args := []string{"-li"}
 
-		cmd := exec.Command(opts.Command, args...)
-		cmd.Env = os.Environ()
+		profile := r.URL.Query().Get("profile")
+		if profile != "" && profile != "default" {
+			// fetch profile
+		}
+
+		cmd := exec.Command(command, args...)
 		cmd.Env = append(cmd.Env, opts.Env...)
-
-		cmd.Dir = dir
+		cmd.Env = append(cmd.Env, "TERM=xterm-256color", fmt.Sprintf("POPCORN_TERMINAL_ID=%s", terminalID))
+		cmd.Dir = homedir
 
 		connectionErrorLimit := opts.ConnectionErrorLimit
 		if connectionErrorLimit < 0 {

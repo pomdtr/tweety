@@ -1,4 +1,4 @@
-module github.com/pomdtr/wesh
+module github.com/pomdtr/popcorn
 
 go 1.20
 
@@ -8,8 +8,9 @@ require (
 	github.com/creack/pty v1.1.18
 	github.com/google/uuid v1.3.0
 	github.com/gorilla/websocket v1.5.0
-	github.com/joho/godotenv v1.5.1
 	github.com/mattn/go-isatty v0.0.18
+	github.com/phayes/freeport v0.0.0-20220201140144-74d24b5ae9f5
+	github.com/sethvargo/go-password v0.2.0
 	github.com/spf13/cobra v1.7.0
 	golang.org/x/term v0.8.0
 )

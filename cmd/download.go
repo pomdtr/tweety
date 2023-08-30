@@ -35,7 +35,7 @@ func NewCmdDownloadList(printer tableprinter.TablePrinter) *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			openInBrowser, _ := cmd.Flags().GetBool("web")
 			if openInBrowser {
-				_, err := sendMessage(map[string]string{
+				_, err := sendMessage[any](map[string]string{
 					"command": "tab.create",
 					"url":     "chrome://downloads",
 				})
@@ -47,15 +47,10 @@ func NewCmdDownloadList(printer tableprinter.TablePrinter) *cobra.Command {
 				return nil
 			}
 
-			res, err := sendMessage(map[string]string{
+			downloads, err := sendMessage[[]Download](map[string]string{
 				"command": "download.list",
 			})
 			if err != nil {
-				return err
-			}
-
-			var downloads []Download
-			if err := json.Unmarshal(res, &downloads); err != nil {
 				return err
 			}
 
@@ -92,7 +87,8 @@ func NewCmdDownloadList(printer tableprinter.TablePrinter) *cobra.Command {
 
 func NewCmdDownload(printer tableprinter.TablePrinter) *cobra.Command {
 	cmd := &cobra.Command{
-		Use: "download",
+		Use:   "download",
+		Short: "Manage Downloads",
 	}
 
 	cmd.AddCommand(NewCmdDownloadList(printer))

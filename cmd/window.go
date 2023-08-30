@@ -26,15 +26,10 @@ func NewCmdWindowList(printer tableprinter.TablePrinter) *cobra.Command {
 	cmd := &cobra.Command{
 		Use: "list",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			res, err := sendMessage(map[string]string{
+			windows, err := sendMessage[[]Window](map[string]string{
 				"command": "window.list",
 			})
 			if err != nil {
-				return err
-			}
-
-			var windows []Window
-			if err := json.Unmarshal(res, &windows); err != nil {
 				return err
 			}
 

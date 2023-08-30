@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"encoding/json"
 	"os"
 
 	"github.com/spf13/cobra"
@@ -12,7 +13,7 @@ func NewCmdHistorySearch() *cobra.Command {
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			query := args[0]
-			res, err := sendMessage(map[string]any{
+			res, err := sendMessage[any](map[string]any{
 				"command": "history.search",
 				"query":   query,
 			})
@@ -20,7 +21,8 @@ func NewCmdHistorySearch() *cobra.Command {
 				return err
 			}
 
-			if _, err := os.Stdout.Write(res); err != nil {
+			encoder := json.NewEncoder(os.Stdout)
+			if err := encoder.Encode(res); err != nil {
 				return err
 			}
 

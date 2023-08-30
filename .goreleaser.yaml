@@ -10,7 +10,7 @@ before:
 changelog:
   skip: true
 builds:
-  - binary: wesh
+  - binary: popcorn
     env:
       - CGO_ENABLED=0
     goos:
@@ -28,7 +28,7 @@ archives:
     rlcp: true
 nfpms:
   - vendor: pomdtr
-    homepage: https://pomdtr.github.io/wesh
+    homepage: https://pomdtr.github.io/popcorn
     maintainer: Achille Lacoin
     description: An integrated terminal for your web browser
     license: MIT
@@ -48,13 +48,13 @@ checksum:
 snapshot:
   name_template: "{{ incpatch .Version }}-next"
 brews:
-  - name: wesh
-    homepage: https://pomdtr.github.io/wesh
+  - name: popcorn
+    homepage: https://pomdtr.github.io/popcorn
     tap:
       owner: pomdtr
       name: homebrew-tap
     install: |-
-      bin.install "wesh"
-      bash_completion.install "completions/wesh.bash"
-      zsh_completion.install "completions/wesh.zsh"
-      fish_completion.install "completions/wesh.fish"
+      bin.install "popcorn"
+      bash_completion.install "completions/popcorn.bash"
+      zsh_completion.install "completions/popcorn.zsh"
+      fish_completion.install "completions/popcorn.fish"

@@ -12,12 +12,12 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const manifestName = "com.pomdtr.wesh.json"
+const manifestName = "com.pomdtr.popcorn.json"
 
 var (
 	//go:embed manifest.json
 	manifest []byte
-	//go:embed entrypoint.sh
+	//go:embed entrypoint.sh.gotmpl
 	entrypoint []byte
 )
 
@@ -36,14 +36,15 @@ var (
 
 func NewCmdInit() *cobra.Command {
 	flags := struct {
-		Browser     string
-		ExtensionID string
+		Browser          string
+		ExtensionID      string
+		ProfileDirectory string
 	}{}
 
 	cmd := &cobra.Command{
-		Use: "init <browser>",
+		Use:   "init",
+		Short: "Init configuration for a browser",
 		RunE: func(cmd *cobra.Command, args []string) error {
-
 			homeDir, err := os.UserHomeDir()
 			if err != nil {
 				return fmt.Errorf("unable to get user home directory: %w", err)
@@ -52,6 +53,10 @@ func NewCmdInit() *cobra.Command {
 			manifestPath, ok := manifestPaths[flags.Browser]
 			if !ok {
 				return fmt.Errorf("invalid browser: %s", flags.Browser)
+			}
+
+			if flags.ProfileDirectory != "" {
+				manifestPath = filepath.Join(manifestPath, flags.ProfileDirectory)
 			}
 
 			cmd.Printf("Writing manifest file to %s\n", manifestPath)
@@ -82,12 +87,13 @@ func NewCmdInit() *cobra.Command {
 				return fmt.Errorf("unable to get executable path: %w", err)
 			}
 			if err := entrypointTmpl.Execute(&entrypointBuffer, map[string]string{
-				"weshBin": execPath,
+				"popcornBin": execPath,
+				"browser":    flags.Browser,
 			}); err != nil {
 				return fmt.Errorf("unable to execute entrypoint template: %w", err)
 			}
 
-			entrypointPath := filepath.Join(homeDir, ".local", "bin", "wesh.sh")
+			entrypointPath := filepath.Join(homeDir, ".local", "bin", "popcorn.sh")
 			cmd.Printf("Writing entrypoint file to %s\n", entrypointPath)
 			if err := os.WriteFile(entrypointPath, entrypointBuffer.Bytes(), 0755); err != nil {
 				return fmt.Errorf("unable to write entrypoint file: %w", err)
@@ -102,6 +108,7 @@ func NewCmdInit() *cobra.Command {
 	cmd.MarkFlagRequired("browser")
 	cmd.Flags().StringVar(&flags.ExtensionID, "extension-id", "", "Extension ID to install")
 	cmd.MarkFlagRequired("extension-id")
+	cmd.Flags().StringVar(&flags.ProfileDirectory, "profile-directory", "", "Profile Directory")
 
 	return cmd
 }

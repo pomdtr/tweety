@@ -10,6 +10,7 @@ type Message = {
 enum ContextMenuID {
   OPEN_TERMINAL_TAB = "open-terminal-tab",
   OPEN_TERMINAL_WINDOW = "open-terminal-window",
+  COPY_EXTENSION_ID = "copy-extension-id",
 }
 
 // activate when installed or updated
@@ -32,41 +33,42 @@ chrome.runtime.onStartup.addListener(() => {
   console.log("Browser started");
 });
 
-chrome.runtime.onMessage.addListener(async (message) => {
-  if (message.type !== "popup") {
-    return;
-  }
-
-  const tab = await chrome.tabs.query({ active: true, currentWindow: true });
-
-  return tab[0].url;
-});
-
 chrome.action.onClicked.addListener(async () => {
   await chrome.tabs.create({
     url: chrome.runtime.getURL("src/index.html"),
   });
 });
 
-const port = chrome.runtime.connectNative("com.pomdtr.wesh");
-port.onMessage.addListener(async (msg: Message) => {
+const nativePort = chrome.runtime.connectNative("com.pomdtr.popcorn");
+nativePort.onMessage.addListener(async (msg: Message) => {
   console.log("Received message", msg);
   try {
     const res = await handleMessage(msg.payload);
-    port.postMessage({
+    nativePort.postMessage({
       id: msg.id,
       payload: res,
     });
   } catch (e: any) {
-    port.postMessage({
+    nativePort.postMessage({
       id: msg.id,
       error: e.message,
     });
   }
 });
 
+chrome.storage.session.setAccessLevel({
+  accessLevel: "TRUSTED_AND_UNTRUSTED_CONTEXTS",
+});
+
 async function handleMessage(payload: any): Promise<any> {
   switch (payload.command) {
+    case "init": {
+      await chrome.storage.session.set({
+        port: payload.port,
+        token: payload.token,
+      });
+      return "ok";
+    }
     case "fetch": {
       let tabId: number;
       if (payload.pattern) {
@@ -362,8 +364,8 @@ chrome.omnibox.onInputChanged.addListener(async (text) => {
   });
 });
 
-chrome.omnibox.onInputEntered.addListener(async (text, disposition) => {
-  const url = `/src/index.html?command=${encodeURIComponent(text)}`;
+chrome.omnibox.onInputEntered.addListener(async (disposition) => {
+  const url = `/src/index.html`;
   switch (disposition) {
     case "currentTab":
       await chrome.tabs.update({ url });
@@ -372,18 +374,6 @@ chrome.omnibox.onInputEntered.addListener(async (text, disposition) => {
       await chrome.tabs.create({ url });
       break;
     case "newBackgroundTab":
-      const displays = await chrome.system.display.getInfo();
-      const display = displays[0];
-      // get the width and height of the display
-      const { width, height } = display.workArea;
-      chrome.windows.create({
-        url: `${url}&popup=true`,
-        type: "popup",
-        top: (height - 500) / 2,
-        left: (width - 750) / 2,
-        width: 750,
-        height: 500,
-      });
-      break;
+      await chrome.tabs.create({ url, active: false });
   }
 });

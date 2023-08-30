@@ -40,7 +40,7 @@ func NewCmdExtensionList(printer tableprinter.TablePrinter) *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			openInBrowser, _ := cmd.Flags().GetBool("open")
 			if openInBrowser {
-				_, err := sendMessage(map[string]string{
+				_, err := sendMessage[any](map[string]string{
 					"command": "tab.create",
 					"url":     "chrome://extensions",
 				})
@@ -52,15 +52,10 @@ func NewCmdExtensionList(printer tableprinter.TablePrinter) *cobra.Command {
 				return nil
 			}
 
-			res, err := sendMessage(map[string]string{
+			extensions, err := sendMessage[[]Extension](map[string]string{
 				"command": "extension.list",
 			})
 			if err != nil {
-				return err
-			}
-
-			var extensions []Extension
-			if err := json.Unmarshal(res, &extensions); err != nil {
 				return err
 			}
 
@@ -109,7 +104,7 @@ func NewCmdExtensionOpen() *cobra.Command {
 				msg["command"] = "tab.update"
 			}
 
-			if _, err := sendMessage(msg); err != nil {
+			if _, err := sendMessage[any](msg); err != nil {
 				return fmt.Errorf("failed to open extensions: %w", err)
 			}
 
@@ -122,7 +117,8 @@ func NewCmdExtensionOpen() *cobra.Command {
 
 func NewCmdExtension(printer tableprinter.TablePrinter) *cobra.Command {
 	cmd := &cobra.Command{
-		Use: "extension",
+		Use:   "extension",
+		Short: "Manage Extensions",
 		Aliases: []string{
 			"ext",
 			"extensions",
