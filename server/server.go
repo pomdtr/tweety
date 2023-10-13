@@ -158,7 +158,10 @@ func Serve(m *MessageHandler, port int, token string) error {
 
 	ttyMap := make(map[string]*os.File)
 	http.HandleFunc("/pty/", WebSocketHandler(HandlerOpts{
-		Token:    token,
+		Token: token,
+		Env: []string{
+			fmt.Sprintf("POPCORN_PORT=%d", port),
+		},
 		Profiles: config.Profiles,
 		ttyMap:   ttyMap,
 	}))
