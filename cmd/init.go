@@ -30,7 +30,7 @@ var (
 		"edge":        filepath.Join(xdg.DataHome, "microsoft", "edge", "NativeMessagingHosts", manifestName),
 		"brave":       filepath.Join(xdg.DataHome, "BraveSoftware", "Brave-Browser", "NativeMessagingHosts", manifestName),
 		"vivaldi":     filepath.Join(xdg.DataHome, "vivaldi", "NativeMessagingHosts", manifestName),
-		"arc":         filepath.Join(xdg.DataHome, "Arc", "User Data", "NativeMessagingHosts", manifestName),
+		"arc":         filepath.Join(xdg.DataHome, "Google", "Chrome", "NativeMessagingHosts", manifestName),
 	}
 )
 
@@ -106,8 +106,18 @@ func NewCmdInit() *cobra.Command {
 
 	cmd.Flags().StringVar(&flags.Browser, "browser", "", "Browser to install the extension for")
 	cmd.MarkFlagRequired("browser")
+	cmd.RegisterFlagCompletionFunc("browser", func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+		var completions []string
+		for browser := range manifestPaths {
+			completions = append(completions, browser)
+		}
+
+		return completions, cobra.ShellCompDirectiveNoFileComp
+	})
+
 	cmd.Flags().StringVar(&flags.ExtensionID, "extension-id", "", "Extension ID to install")
 	cmd.MarkFlagRequired("extension-id")
+
 	cmd.Flags().StringVar(&flags.ProfileDirectory, "profile-directory", "", "Profile Directory")
 
 	return cmd
