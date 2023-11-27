@@ -2,7 +2,7 @@
 
 An integrated terminal for your browser.
 
-![screenshot](./static/demo.png)
+![screenshot](./medias/demo.png)
 
 Check out a demo of the extension running from the arc browser here: <https://www.capster.io/video/zRgddaTPilyn>.
 
@@ -25,7 +25,7 @@ Download the extension from the [releases page](https://github.com/pomdtr/popcor
 Then go to the `chrome://extensions` page, activate the Developer mode and click on the `Load unpacked` button.
 You will need to select the `dist` folder you just extracted using the file picker.
 
-![Extension Page](./static/extensions.png)
+![Extension Page](./medias/extensions.png)
 
 Once you have installed the extension, copy the extension id, and run the following command:
 
@@ -54,4 +54,4 @@ When the popup is opened, the embedded terminal (xterm.js) will connect to the H
 
 When you use the popcorn cli, the message is sent to the http server, and then piped to the chrome extension.
 
-![popcorn architecture](./static/architecture.excalidraw.png)
+![popcorn architecture](./medias/architecture.excalidraw.png)

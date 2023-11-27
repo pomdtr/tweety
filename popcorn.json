@@ -1,0 +1,23 @@
+{
+    "profiles": {
+        "default": {
+            "command": "/opt/homebrew/bin/fish"
+        },
+        "zsh": {
+            "command": "/bin/zsh",
+            "args": [
+                "-l"
+            ]
+        },
+        "popup": {
+            "env": {
+                "EDITOR": "kak"
+            },
+            "command": "/opt/homebrew/bin/fish",
+            "args": [
+                "-c",
+                "sunbeam"
+            ]
+        }
+    }
+}

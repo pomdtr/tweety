@@ -10,8 +10,10 @@ require (
 	github.com/gorilla/websocket v1.5.0
 	github.com/mattn/go-isatty v0.0.18
 	github.com/phayes/freeport v0.0.0-20220201140144-74d24b5ae9f5
+	github.com/santhosh-tekuri/jsonschema/v5 v5.3.1
 	github.com/sethvargo/go-password v0.2.0
 	github.com/spf13/cobra v1.7.0
+	github.com/tailscale/hujson v0.0.0-20221223112325-20486734a56a
 	golang.org/x/term v0.8.0
 )
 

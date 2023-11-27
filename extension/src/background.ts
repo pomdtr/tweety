@@ -9,7 +9,6 @@ type Message = {
 
 enum ContextMenuID {
   OPEN_TERMINAL_TAB = "open-terminal-tab",
-  OPEN_TERMINAL_WINDOW = "open-terminal-window",
   COPY_EXTENSION_ID = "copy-extension-id",
 }
 
@@ -22,8 +21,8 @@ chrome.runtime.onInstalled.addListener(() => {
     contexts: ["action"],
   });
   chrome.contextMenus.create({
-    id: ContextMenuID.OPEN_TERMINAL_WINDOW,
-    title: "Open Terminal in New Window",
+    title: "Copy Extension ID",
+    id: ContextMenuID.COPY_EXTENSION_ID,
     contexts: ["action"],
   });
 });
@@ -33,11 +32,6 @@ chrome.runtime.onStartup.addListener(() => {
   console.log("Browser started");
 });
 
-chrome.action.onClicked.addListener(async () => {
-  await chrome.tabs.create({
-    url: chrome.runtime.getURL("src/index.html"),
-  });
-});
 
 const nativePort = chrome.runtime.connectNative("com.pomdtr.popcorn");
 nativePort.onMessage.addListener(async (msg: Message) => {
@@ -68,43 +62,6 @@ async function handleMessage(payload: any): Promise<any> {
         token: payload.token,
       });
       return "ok";
-    }
-    case "fetch": {
-      let tabId: number;
-      if (payload.pattern) {
-        const tabs = await chrome.tabs.query({
-          url: payload.pattern,
-        });
-        if (tabs.length === 0) {
-          throw new Error(`No tabs matching ${payload.pattern}`);
-        }
-
-        tabId = tabs[0].id!;
-      } else {
-        tabId = await getActiveTabId();
-        if (tabId === undefined) {
-          throw new Error("No active tab");
-        }
-      }
-
-      const res = await chrome.scripting.executeScript({
-        target: { tabId },
-        args: [payload.url],
-        func: async (url: string) => {
-          const res = await fetch(url);
-          if (!res.ok) {
-            throw new Error(`Fetch failed: ${res.statusText}`);
-          }
-
-          if (res.headers.get("Content-Type")?.includes("application/json")) {
-            return res.json();
-          }
-
-          return res.text();
-        },
-      });
-
-      return res[0].result;
     }
     case "tab.list": {
       if (payload.allWindows) {
@@ -336,14 +293,14 @@ async function getActiveTabId() {
 }
 
 chrome.contextMenus.onClicked.addListener(async (info) => {
-  const mainPage = "/src/index.html";
+  const mainPage = "/src/terminal.html";
   switch (info.menuItemId) {
     case ContextMenuID.OPEN_TERMINAL_TAB: {
       await chrome.tabs.create({ url: mainPage });
       break;
     }
-    case ContextMenuID.OPEN_TERMINAL_WINDOW: {
-      await chrome.windows.create({ url: mainPage });
+    case ContextMenuID.COPY_EXTENSION_ID: {
+      await addToClipboard(chrome.runtime.id);
       break;
     }
     default: {
@@ -351,6 +308,19 @@ chrome.contextMenus.onClicked.addListener(async (info) => {
     }
   }
 });
+
+chrome.commands.onCommand.addListener(async (command) => {
+  switch (command) {
+    case "open-terminal-tab": {
+      const tab = await chrome.tabs.create({ url: "/src/terminal.html" });
+      await chrome.windows.update(tab.windowId, { focused: true });
+      break;
+    }
+    default: {
+      throw new Error(`Unknown command: ${command}`);
+    }
+  }
+})
 
 chrome.omnibox.onInputStarted.addListener(async () => {
   chrome.omnibox.setDefaultSuggestion({
@@ -365,7 +335,7 @@ chrome.omnibox.onInputChanged.addListener(async (text) => {
 });
 
 chrome.omnibox.onInputEntered.addListener(async (disposition) => {
-  const url = `/src/index.html`;
+  const url = `/src/terminal.html`;
   switch (disposition) {
     case "currentTab":
       await chrome.tabs.update({ url });
@@ -377,3 +347,19 @@ chrome.omnibox.onInputEntered.addListener(async (disposition) => {
       await chrome.tabs.create({ url, active: false });
   }
 });
+
+async function addToClipboard(value: string) {
+  await chrome.offscreen.createDocument({
+    url: 'src/offscreen.html',
+    reasons: [chrome.offscreen.Reason.CLIPBOARD],
+    justification: 'Write text to the clipboard.'
+  });
+
+  // Now that we have an offscreen document, we can dispatch the
+  // message.
+  chrome.runtime.sendMessage({
+    type: 'copy-data-to-clipboard',
+    target: 'offscreen-doc',
+    data: value
+  });
+}
