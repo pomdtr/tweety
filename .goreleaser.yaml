@@ -11,7 +11,7 @@ changelog:
   skip: true
 builds:
   - binary: popcorn
-    main: ./cmd/devbox/main.go
+    main: ./cmd/popcorn/main.go
     env:
       - CGO_ENABLED=0
     goos:
