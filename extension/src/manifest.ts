@@ -11,7 +11,6 @@ export const manifest: chrome.runtime.ManifestV3 = {
     default_icon: {
       48: "icons/48.png",
     },
-    default_popup: "src/popup.html#popup",
     default_title: "Open Terminal",
   },
   background: {
@@ -21,18 +20,11 @@ export const manifest: chrome.runtime.ManifestV3 = {
     keyword: "tty",
   },
   commands: {
-    "_execute_action": {
-      description: "Show terminal popup",
-      suggested_key: {
-        default: "Ctrl+E",
-        mac: "Command+E",
-      }
-    },
     "open-terminal-tab": {
       description: "Create a new terminal tab",
       suggested_key: {
-        default: "Ctrl+Shift+E",
-        mac: "Command+Shift+E",
+        default: "Ctrl+E",
+        mac: "Command+E",
       }
     }
   },

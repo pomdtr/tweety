@@ -138,7 +138,7 @@ func Serve(m *MessageHandler, port int, token string) error {
 		}
 
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("OK"))
+		w.Write([]byte("Resized"))
 	})
 
 	log.Println("Listening on port", port)
@@ -310,19 +310,7 @@ func WebSocketHandler(opts HandlerOpts) func(http.ResponseWriter, *http.Request)
 			return
 		}
 
-		var profileName string
-		if name := r.URL.Query().Get("profile"); name != "" {
-			profileName = name
-		} else if r.URL.Query().Has("popup") {
-			if _, ok := cfg.Profiles["popup"]; ok {
-				profileName = "popup"
-			} else {
-				profileName = "default"
-			}
-		} else {
-			profileName = "default"
-		}
-
+		profileName := r.URL.Query().Get("profile")
 		profile, ok := cfg.Profiles[profileName]
 		if !ok {
 			log.Println("invalid profile name:", profileName)

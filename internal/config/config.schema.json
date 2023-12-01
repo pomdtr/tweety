@@ -2,16 +2,25 @@
     "$schema": "http://json-schema.org/draft-07/schema#",
     "type": "object",
     "properties": {
+        "theme": {
+            "type": "string"
+        },
+        "themeDark": {
+            "type": "string"
+        },
+        "env": {
+            "type": "object",
+            "patternProperties": {
+                "^[a-zA-Z_]+[a-zA-Z0-9_]*$": {
+                    "type": "string"
+                }
+            }
+        },
+        "defaultProfile": {
+            "type": "string"
+        },
         "profiles": {
             "type": "object",
-            "required": [
-                "default"
-            ],
-            "properties": {
-                "default": {
-                    "$ref": "#/definitions/profile"
-                }
-            },
             "additionalProperties": {
                 "$ref": "#/definitions/profile"
             }
@@ -20,20 +29,30 @@
     "definitions": {
         "profile": {
             "type": "object",
+            "required": [
+                "path"
+            ],
             "properties": {
-                "shell": {
-                    "required": [
-                        "command"
-                    ],
-                    "command": {
+                "path": {
+                    "type": "string"
+                },
+                "args": {
+                    "type": "array",
+                    "items": {
                         "type": "string"
-                    },
-                    "args": {
-                        "type": "array",
-                        "items": {
+                    }
+                },
+                "env": {
+                    "type": "object",
+                    "patternProperties": {
+                        "^[a-zA-Z_]+[a-zA-Z0-9_]*$": {
                             "type": "string"
                         }
                     }
+                },
+                "icon": {
+                    "type": "string",
+                    "maxLength": 1
                 }
             }
         }

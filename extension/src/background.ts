@@ -1,3 +1,5 @@
+import { Config } from "./config";
+
 type Message = {
   id: string;
   payload?: {
@@ -8,59 +10,71 @@ type Message = {
 };
 
 enum ContextMenuID {
-  OPEN_TERMINAL_TAB = "open-terminal-tab",
-  COPY_EXTENSION_ID = "copy-extension-id",
+  OPEN_PROFILE_DEFAUlT = "open-profile-default",
+  OPEN_PROFILE = "open-profile",
+  COPY_INSTALLATION_COMMAND = "copy-installation-command",
 }
 
-// activate when installed or updated
 chrome.runtime.onInstalled.addListener(() => {
   console.log("Extension installed or updated");
   chrome.contextMenus.create({
-    id: ContextMenuID.OPEN_TERMINAL_TAB,
-    title: "Open Terminal in New Tab",
-    contexts: ["action"],
-  });
-  chrome.contextMenus.create({
-    title: "Copy Extension ID",
-    id: ContextMenuID.COPY_EXTENSION_ID,
+    title: "Copy Installation Command",
+    id: ContextMenuID.COPY_INSTALLATION_COMMAND,
     contexts: ["action"],
   });
 });
 
-// activate when chrome starts
-chrome.runtime.onStartup.addListener(() => {
-  console.log("Browser started");
-});
-
-
-const nativePort = chrome.runtime.connectNative("com.pomdtr.popcorn");
-nativePort.onMessage.addListener(async (msg: Message) => {
-  console.log("Received message", msg);
-  try {
-    const res = await handleMessage(msg.payload);
-    nativePort.postMessage({
-      id: msg.id,
-      payload: res,
-    });
-  } catch (e: any) {
-    nativePort.postMessage({
-      id: msg.id,
-      error: e.message,
-    });
-  }
-});
-
-chrome.storage.session.setAccessLevel({
-  accessLevel: "TRUSTED_AND_UNTRUSTED_CONTEXTS",
-});
+let nativePort: chrome.runtime.Port;
+try {
+  nativePort = chrome.runtime.connectNative("com.pomdtr.popcorn");
+  nativePort.onMessage.addListener(async (msg: Message) => {
+    console.log("Received message", msg);
+    try {
+      const res = await handleMessage(msg.payload);
+      nativePort.postMessage({
+        id: msg.id,
+        payload: res,
+      });
+    } catch (e: any) {
+      nativePort.postMessage({
+        id: msg.id,
+        error: e.message,
+      });
+    }
+  });
+} catch (e) {
+  console.log(`Native messaging host not found: ${e}`);
+}
 
 async function handleMessage(payload: any): Promise<any> {
   switch (payload.command) {
     case "init": {
+      const { port, token, config } = payload as { port: number, token: string, config: Config }
       await chrome.storage.session.set({
-        port: payload.port,
-        token: payload.token,
+        port, token, config
       });
+
+      chrome.contextMenus.remove(ContextMenuID.COPY_INSTALLATION_COMMAND)
+      chrome.contextMenus.create({
+        id: ContextMenuID.OPEN_PROFILE_DEFAUlT,
+        title: "Open Default Profile",
+        contexts: ["action"],
+      });
+
+      chrome.contextMenus.create({
+        id: ContextMenuID.OPEN_PROFILE,
+        title: "Open Profile",
+        contexts: ["action"],
+      });
+      for (const profile of Object.keys(config.profiles)) {
+        chrome.contextMenus.create({
+          id: `${ContextMenuID.OPEN_PROFILE}:${profile}`,
+          parentId: ContextMenuID.OPEN_PROFILE,
+          title: profile,
+          contexts: ["action"],
+        });
+      }
+
       return "ok";
     }
     case "tab.list": {
@@ -294,59 +308,61 @@ async function getActiveTabId() {
 
 chrome.contextMenus.onClicked.addListener(async (info) => {
   const mainPage = "/src/terminal.html";
-  switch (info.menuItemId) {
-    case ContextMenuID.OPEN_TERMINAL_TAB: {
-      await chrome.tabs.create({ url: mainPage });
-      break;
+
+  const menuItemID = info.menuItemId;
+  if (typeof menuItemID !== "string") {
+    throw new Error(`Unknown menu item: ${menuItemID}`);
+  }
+
+  if (menuItemID == ContextMenuID.OPEN_PROFILE_DEFAUlT) {
+    await chrome.tabs.create({ url: mainPage });
+  } else if (typeof menuItemID.startsWith(ContextMenuID.OPEN_PROFILE)) {
+    const profile = menuItemID.split(":")[1];
+    if (!profile) {
+      throw new Error(`Unknown menu item: ${menuItemID}`);
     }
-    case ContextMenuID.COPY_EXTENSION_ID: {
-      await addToClipboard(chrome.runtime.id);
-      break;
-    }
-    default: {
-      throw new Error(`Unknown menu item: ${info.menuItemId}`);
-    }
+    await chrome.tabs.create({
+      url: `${mainPage}?profile=${profile}`,
+    });
+  } else if (menuItemID == ContextMenuID.COPY_INSTALLATION_COMMAND) {
+    throw new Error(`Unknown menu item: ${menuItemID}`);
+  } else {
+    await addToClipboard(`popcorn init ${chrome.runtime.id}`);
   }
 });
 
-chrome.commands.onCommand.addListener(async (command) => {
-  switch (command) {
-    case "open-terminal-tab": {
-      const tab = await chrome.tabs.create({ url: "/src/terminal.html" });
-      await chrome.windows.update(tab.windowId, { focused: true });
-      break;
-    }
-    default: {
-      throw new Error(`Unknown command: ${command}`);
-    }
+chrome.action.onClicked.addListener(async () => {
+  if (nativePort === undefined) {
+    return;
   }
-})
-
-chrome.omnibox.onInputStarted.addListener(async () => {
-  chrome.omnibox.setDefaultSuggestion({
-    description: "Run command",
-  });
+  await chrome.tabs.create({ url: "/src/terminal.html" });
 });
 
-chrome.omnibox.onInputChanged.addListener(async (text) => {
-  chrome.omnibox.setDefaultSuggestion({
-    description: `Run: ${text}`,
-  });
-});
+// chrome.omnibox.onInputStarted.addListener(async () => {
+//   chrome.omnibox.setDefaultSuggestion({
+//     description: "Run command",
+//   });
+// });
 
-chrome.omnibox.onInputEntered.addListener(async (disposition) => {
-  const url = `/src/terminal.html`;
-  switch (disposition) {
-    case "currentTab":
-      await chrome.tabs.update({ url });
-      break;
-    case "newForegroundTab":
-      await chrome.tabs.create({ url });
-      break;
-    case "newBackgroundTab":
-      await chrome.tabs.create({ url, active: false });
-  }
-});
+// chrome.omnibox.onInputChanged.addListener(async (text) => {
+//   chrome.omnibox.setDefaultSuggestion({
+//     description: `Run: ${text}`,
+//   });
+// });
+
+// chrome.omnibox.onInputEntered.addListener(async (disposition) => {
+//   const url = `/src/terminal.html`;
+//   switch (disposition) {
+//     case "currentTab":
+//       await chrome.tabs.update({ url });
+//       break;
+//     case "newForegroundTab":
+//       await chrome.tabs.create({ url });
+//       break;
+//     case "newBackgroundTab":
+//       await chrome.tabs.create({ url, active: false });
+//   }
+// });
 
 async function addToClipboard(value: string) {
   await chrome.offscreen.createDocument({

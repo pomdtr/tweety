@@ -1,6 +1,6 @@
 {
     "name": "com.pomdtr.popcorn",
-    "description": "A simple popup terminal for the web",
+    "description": "An integrated terminal for your web browser",
     "path": "{{ .homeDir }}/.local/bin/popcorn.sh",
     "type": "stdio",
     "allowed_origins": [

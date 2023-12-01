@@ -1,20 +1,26 @@
-import { Terminal } from "xterm";
+import { ITheme, Terminal } from "xterm";
 import { FitAddon } from "xterm-addon-fit";
 import { WebglAddon } from "xterm-addon-webgl";
 import { WebLinksAddon } from "xterm-addon-web-links";
 import { AttachAddon } from "xterm-addon-attach";
 import { nanoid } from "nanoid";
+import { Config } from "./config";
 
-const imports = import.meta.glob("./themes/*.json")
-const themes: Record<string, any> = {}
-for (const [key, value] of Object.entries(imports)) {
-  const name = key.slice("./themes/".length, -".json".length)
-  themes[name] = await value() as any
+const themeModules = import.meta.glob("./themes/*.json")
+function importTheme(name: string) {
+  const module = themeModules[`./themes/${name}.json`]
+  if (!module) {
+    throw new Error(`Theme ${name} not found`)
+  }
+  return module() as Promise<ITheme>
 }
 
 async function main() {
-  const lightTheme = themes["Tomorrow"];
-  const darkTheme = themes["Tomorrow Night"];
+  const { port, token, config } =
+    await chrome.storage.session.get(["port", "token", "config"]) as { port: number, token: string, config: Config }
+  console.log(port, token, config)
+  const lightTheme = await importTheme(config.theme || "Tomorrow")
+  const darkTheme = await importTheme(config.themeDark || config.theme || "Tomorrow Night")
   const terminal = new Terminal({
     cursorBlink: true,
     allowProposedApi: true,
@@ -37,14 +43,11 @@ async function main() {
   terminal.open(document.getElementById("terminal")!);
   fitAddon.fit();
 
-  const { port: popcornPort, token: popcornToken } =
-    await chrome.storage.session.get(["port", "token"]);
-
   // check if popcorn server is running
   let ready = false;
   while (!ready) {
     try {
-      const res = await fetch(`http://localhost:${popcornPort}/ready`);
+      const res = await fetch(`http://localhost:${port}/ready`);
       if (res.status !== 200) {
         throw new Error("not ready");
       }
@@ -55,19 +58,14 @@ async function main() {
   }
 
   const terminalID = nanoid();
-  const websocketUrl = new URL(`ws://localhost:${popcornPort}/pty/${terminalID}`)
-  websocketUrl.searchParams.set("token", popcornToken)
+  const websocketUrl = new URL(`ws://localhost:${port}/pty/${terminalID}`)
+  websocketUrl.searchParams.set("token", token)
   websocketUrl.searchParams.set("cols", terminal.cols.toString())
   websocketUrl.searchParams.set("rows", terminal.rows.toString())
-  if (window.location.hash === "#popup") {
-    websocketUrl.searchParams.set("popup", "1")
-  }
 
   const params = new URLSearchParams(window.location.search);
-  const profile = params.get("profile");
-  if (profile) {
-    websocketUrl.searchParams.set("profile", profile);
-  }
+  const profile = params.get("profile") || config.defaultProfile;
+  websocketUrl.searchParams.set("profile", profile);
 
   const ws = new WebSocket(websocketUrl);
   ws.onclose = () => {
@@ -80,7 +78,7 @@ async function main() {
 
   terminal.onResize((size) => {
     const { cols, rows } = size;
-    const url = `http://localhost:${popcornPort}/${terminalID}/resize?cols=${cols}&rows=${rows}`;
+    const url = `http://localhost:${port}/resize/${terminalID}?cols=${cols}&rows=${rows}`;
     fetch(url, {
       method: "POST",
     });

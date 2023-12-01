@@ -12,8 +12,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const manifestName = "com.pomdtr.popcorn.json"
-
 var (
 	//go:embed manifest.json
 	manifest []byte
@@ -24,25 +22,19 @@ var (
 var (
 	manifestTmpl   = template.Must(template.New("manifest").Parse(string(manifest)))
 	entrypointTmpl = template.Must(template.New("entrypoint").Parse(string(entrypoint)))
-	manifestPaths  = map[string]string{
-		"chrome":      filepath.Join(xdg.DataHome, "Google", "Chrome", "NativeMessagingHosts", manifestName),
-		"chrome-beta": filepath.Join(xdg.DataHome, "Google", "Chrome Beta", "NativeMessagingHosts", manifestName),
-		"edge":        filepath.Join(xdg.DataHome, "microsoft", "edge", "NativeMessagingHosts", manifestName),
-		"brave":       filepath.Join(xdg.DataHome, "BraveSoftware", "Brave-Browser", "NativeMessagingHosts", manifestName),
-		"vivaldi":     filepath.Join(xdg.DataHome, "vivaldi", "NativeMessagingHosts", manifestName),
-		"arc":         filepath.Join(xdg.DataHome, "Google", "Chrome", "NativeMessagingHosts", manifestName),
+	manifestDirs   = []string{
+		filepath.Join(xdg.DataHome, "Google", "Chrome", "NativeMessagingHosts"),
+		filepath.Join(xdg.DataHome, "Google", "Chrome Beta", "NativeMessagingHosts"),
+		filepath.Join(xdg.DataHome, "microsoft", "edge", "NativeMessagingHosts"),
+		filepath.Join(xdg.DataHome, "BraveSoftware", "Brave-Browser", "NativeMessagingHosts"),
+		filepath.Join(xdg.DataHome, "vivaldi", "NativeMessagingHosts"),
+		filepath.Join(xdg.DataHome, "Orion", "NativeMessagingHosts"),
 	}
 )
 
 func NewCmdInit() *cobra.Command {
-	flags := struct {
-		Browser          string
-		ExtensionID      string
-		ProfileDirectory string
-	}{}
-
 	cmd := &cobra.Command{
-		Use:   "init",
+		Use:   "init <extension-id>",
 		Short: "Init configuration for a browser",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			homeDir, err := os.UserHomeDir()
@@ -50,32 +42,25 @@ func NewCmdInit() *cobra.Command {
 				return fmt.Errorf("unable to get user home directory: %w", err)
 			}
 
-			manifestPath, ok := manifestPaths[flags.Browser]
-			if !ok {
-				return fmt.Errorf("invalid browser: %s", flags.Browser)
-			}
+			for _, manifestDir := range manifestDirs {
+				if _, err := os.Stat(manifestDir); err != nil {
+					continue
+				}
 
-			if flags.ProfileDirectory != "" {
-				manifestPath = filepath.Join(manifestPath, flags.ProfileDirectory)
-			}
+				manifestBuffer := bytes.Buffer{}
+				if err := manifestTmpl.Execute(&manifestBuffer, map[string]string{
+					"homeDir":     homeDir,
+					"extensionID": args[0],
+				}); err != nil {
+					return fmt.Errorf("unable to execute manifest template: %w", err)
+				}
 
-			cmd.Printf("Writing manifest file to %s\n", manifestPath)
-			if err := os.MkdirAll(filepath.Dir(manifestPath), 0755); err != nil {
-				return fmt.Errorf("unable to create manifest directory: %w", err)
+				manifestPath := filepath.Join(manifestDir, "com.pomdtr.popcorn.json")
+				if err := os.WriteFile(manifestPath, manifestBuffer.Bytes(), 0644); err != nil {
+					return fmt.Errorf("unable to write manifest file: %w", err)
+				}
+				cmd.Printf("Manifest file written successfully to %s\n", manifestPath)
 			}
-
-			manifestBuffer := bytes.Buffer{}
-			if err := manifestTmpl.Execute(&manifestBuffer, map[string]string{
-				"homeDir":     homeDir,
-				"extensionID": flags.ExtensionID,
-			}); err != nil {
-				return fmt.Errorf("unable to execute manifest template: %w", err)
-			}
-
-			if err := os.WriteFile(manifestPath, manifestBuffer.Bytes(), 0644); err != nil {
-				return fmt.Errorf("unable to write manifest file: %w", err)
-			}
-			cmd.Printf("Manifest file written successfully\n")
 
 			if err := os.MkdirAll(filepath.Join(homeDir, ".local", "bin"), 0755); err != nil {
 				return fmt.Errorf("unable to create entrypoint directory: %w", err)
@@ -88,7 +73,6 @@ func NewCmdInit() *cobra.Command {
 			}
 			if err := entrypointTmpl.Execute(&entrypointBuffer, map[string]string{
 				"popcornBin": execPath,
-				"browser":    flags.Browser,
 			}); err != nil {
 				return fmt.Errorf("unable to execute entrypoint template: %w", err)
 			}
@@ -103,22 +87,6 @@ func NewCmdInit() *cobra.Command {
 			return nil
 		},
 	}
-
-	cmd.Flags().StringVar(&flags.Browser, "browser", "", "Browser to install the extension for")
-	cmd.MarkFlagRequired("browser")
-	cmd.RegisterFlagCompletionFunc("browser", func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
-		var completions []string
-		for browser := range manifestPaths {
-			completions = append(completions, browser)
-		}
-
-		return completions, cobra.ShellCompDirectiveNoFileComp
-	})
-
-	cmd.Flags().StringVar(&flags.ExtensionID, "extension-id", "", "Extension ID to install")
-	cmd.MarkFlagRequired("extension-id")
-
-	cmd.Flags().StringVar(&flags.ProfileDirectory, "profile-directory", "", "Profile Directory")
 
 	return cmd
 }

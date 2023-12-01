@@ -1,22 +1,22 @@
 {
+    "theme": "Tomorrow",
+    "themeDark": "Tomorrow Night",
+    "defaultProfile": "fish",
     "profiles": {
-        "default": {
+        "fish": {
             "command": "/opt/homebrew/bin/fish"
+        },
+        "sunbeam": {
+            "command": "/opt/homebrew/bin/fish",
+            "args": [
+                "-c",
+                "sunbeam"
+            ]
         },
         "zsh": {
             "command": "/bin/zsh",
             "args": [
                 "-l"
-            ]
-        },
-        "popup": {
-            "env": {
-                "EDITOR": "kak"
-            },
-            "command": "/opt/homebrew/bin/fish",
-            "args": [
-                "-c",
-                "sunbeam"
             ]
         }
     }

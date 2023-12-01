@@ -12,19 +12,37 @@ import (
 	"github.com/tailscale/hujson"
 )
 
+type Config struct {
+	Theme          string             `json:"theme"`
+	ThemeDark      string             `json:"themeDark"`
+	Env            map[string]string  `json:"env,omitempty"`
+	DefaultProfile string             `json:"defaultProfile"`
+	Profiles       map[string]Profile `json:"profiles"`
+}
+
+type Profile struct {
+	Command string            `json:"command"`
+	Args    []string          `json:"args,omitempty"`
+	Env     map[string]string `json:"env,omitempty"`
+}
+
+var DefaultConfig = Config{
+	Theme:          "Tomorrow",
+	ThemeDark:      "Tomorrow Night",
+	DefaultProfile: "default",
+	Profiles: map[string]Profile{
+		"default": {
+			Command: defaultShell(),
+			Args:    []string{"-l"},
+		},
+	},
+}
+
 var schemaBytes, _ = json.MarshalIndent(DefaultConfig, "", "  ")
-var Path string
+var Path string = FindConfigPath()
 var schema *jsonschema.Schema
 
 func init() {
-	if env, ok := os.LookupEnv("POPCORN_CONFIG"); ok {
-		Path = env
-	} else if env, ok := os.LookupEnv("XDG_CONFIG_HOME"); ok {
-		Path = filepath.Join(env, "popcorn", "popcorn.json")
-	} else {
-		Path = filepath.Join(os.Getenv("HOME"), ".config", "popcorn", "popcorn.json")
-	}
-
 	compiler := jsonschema.NewCompiler()
 	compiler.Draft = jsonschema.Draft7
 
@@ -32,14 +50,22 @@ func init() {
 	schema = compiler.MustCompile("schema.json")
 }
 
-type Config struct {
-	Profiles map[string]Profile `json:"profiles"`
-}
+func FindConfigPath() string {
+	if env, ok := os.LookupEnv("XDG_CONFIG_HOME"); ok {
+		if _, err := os.Stat(filepath.Join(env, "popcorn", "popcorn.jsonc")); err == nil {
+			return filepath.Join(env, "popcorn", "popcorn.jsonc")
+		}
 
-type Profile struct {
-	Command string            `json:"command"`
-	Args    []string          `json:"args"`
-	Env     map[string]string `json:"env"`
+		if _, err := os.Stat(filepath.Join(env, "popcorn", "popcorn.json")); err == nil {
+			return filepath.Join(env, "popcorn", "popcorn.json")
+		}
+	}
+
+	if _, err := os.Stat(filepath.Join(os.Getenv("HOME"), ".config", "popcorn", "popcorn.jsonc")); err == nil {
+		return filepath.Join(os.Getenv("HOME"), ".config", "popcorn", "popcorn.jsonc")
+	}
+
+	return filepath.Join(os.Getenv("HOME"), ".config", "popcorn", "popcorn.json")
 }
 
 func defaultShell() string {
@@ -56,30 +82,37 @@ func defaultShell() string {
 	}
 }
 
-var DefaultConfig = Config{
-	Profiles: map[string]Profile{
-		"default": {
-			Command: defaultShell(),
-			Args:    []string{"-li"},
-		},
-	},
-}
-
 func Load(Path string) (Config, error) {
 	configBytes, err := os.ReadFile(Path)
 	if errors.Is(err, os.ErrNotExist) {
+		if err := os.MkdirAll(filepath.Dir(Path), 0755); err != nil {
+			return Config{}, err
+		}
+
+		jsonBytes, err := json.MarshalIndent(DefaultConfig, "", "  ")
+		if err != nil {
+			return Config{}, err
+		}
+
+		if err := os.WriteFile(Path, jsonBytes, 0644); err != nil {
+			return Config{}, err
+		}
+
 		return DefaultConfig, nil
 	} else if err != nil {
 		return Config{}, err
 	}
 
-	jsonBytes, err := hujson.Standardize(configBytes)
-	if err != nil {
-		return Config{}, err
+	if filepath.Ext(Path) == ".jsonc" {
+		jsonBytes, err := hujson.Standardize(configBytes)
+		if err != nil {
+			return Config{}, err
+		}
+		configBytes = jsonBytes
 	}
 
 	var v any
-	if err := json.Unmarshal(jsonBytes, &v); err != nil {
+	if err := json.Unmarshal(configBytes, &v); err != nil {
 		return Config{}, err
 	}
 
@@ -88,7 +121,7 @@ func Load(Path string) (Config, error) {
 	}
 
 	var config Config
-	if err := json.Unmarshal(jsonBytes, &config); err != nil {
+	if err := json.Unmarshal(configBytes, &config); err != nil {
 		return Config{}, err
 	}
 
