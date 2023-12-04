@@ -29,7 +29,7 @@ archives:
 release:
   prerelease: auto
   extra_files:
-    - glob: internal/schemas/config.schema.json
+    - glob: config.schema.json
 checksum:
   name_template: "checksums.txt"
 snapshot:

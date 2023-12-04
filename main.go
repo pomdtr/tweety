@@ -15,8 +15,9 @@ func main() {
 		port int
 	}
 	cmd := cobra.Command{
-		Use:  "tweety",
-		Args: cobra.NoArgs,
+		Use:   "tweety",
+		Short: "An integrated terminal for your web browser",
+		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			handler, err := NewHandler()
 			if err != nil {
