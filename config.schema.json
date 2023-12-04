@@ -3,13 +3,16 @@
     "type": "object",
     "properties": {
         "theme": {
-            "type": "string"
+            "type": "string",
+            "description": "The color theme for the terminal."
         },
         "themeDark": {
-            "type": "string"
+            "type": "string",
+            "description": "The dark theme variant."
         },
         "env": {
             "type": "object",
+            "description": "Environment variables for all commands.",
             "patternProperties": {
                 "^[a-zA-Z_]+[a-zA-Z0-9_]*$": {
                     "type": "string"
@@ -17,7 +20,8 @@
             }
         },
         "defaultProfile": {
-            "type": "string"
+            "type": "string",
+            "description": "The default profile to use on the root endpoint."
         },
         "profiles": {
             "type": "object",
@@ -34,25 +38,36 @@
             ],
             "properties": {
                 "command": {
-                    "type": "string"
+                    "type": "string",
+                    "description": "The command path."
                 },
                 "args": {
                     "type": "array",
                     "items": {
                         "type": "string"
-                    }
+                    },
+                    "description": "The arguments for the command."
                 },
                 "env": {
                     "type": "object",
+                    "description": "The environment variables for the command.",
                     "patternProperties": {
                         "^[a-zA-Z_]+[a-zA-Z0-9_]*$": {
                             "type": "string"
                         }
                     }
                 },
-                "icon": {
+                "cwd": {
                     "type": "string",
-                    "maxLength": 1
+                    "description": "The working directory for the command. If omitted, the home directory is used."
+                },
+                "title": {
+                    "type": "string"
+                },
+                "favicon": {
+                    "type": "string",
+                    "format": "uri",
+                    "pattern": "^https?://"
                 }
             }
         }
