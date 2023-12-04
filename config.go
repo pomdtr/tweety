@@ -55,7 +55,7 @@ func init() {
 }
 
 func FindConfigPath() string {
-	if env, ok := os.LookupEnv("tweety_CONFIG"); ok {
+	if env, ok := os.LookupEnv("TWEETY_CONFIG"); ok {
 		return env
 	}
 	if env, ok := os.LookupEnv("XDG_CONFIG_HOME"); ok {

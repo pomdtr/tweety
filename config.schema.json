@@ -30,10 +30,10 @@
         "profile": {
             "type": "object",
             "required": [
-                "path"
+                "command"
             ],
             "properties": {
-                "path": {
+                "command": {
                     "type": "string"
                 },
                 "args": {

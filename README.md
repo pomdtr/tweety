@@ -21,10 +21,15 @@ or download a binary from [releases](https://github.com/pomdtr/tweety/releases).
 
 ## Configuration
 
-Use the `~/.config/tweety/tweety.json` file to configure Tweety.
+Use the `$XDG_CONFIG_DIR/tweety/tweety.json` file to configure Tweety (defaults
+to `~/.config/tweety/tweety.json`).
+
+Alternatively, you can use the `TWEETY_CONFIG` environment variable to specify a
+custom path.
 
 ```json
 {
+  "$schema": "https://github.com/pomdtr/tweety/releases/latest/download/config.schema.json",
   "theme": "Tomorrow",
   "themeDark": "Tomorrow Night",
   "env": {
