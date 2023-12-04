@@ -1,3 +1,5 @@
+// @ts-check
+
 import degit from "degit"
 import os from "os"
 import path from "path"
@@ -40,13 +42,18 @@ const keyMapping = {
     "terminal.selectionBackground": "selectionBackground",
     "terminalCursor.foreground": "cursor"
 }
+const themeDir = path.join(dirname, "..", "public", "themes")
+
+await fs.rm(themeDir, { recursive: true, force: true })
+await fs.mkdir(themeDir)
+
 for (const entry of entries) {
     const vscodeTheme = JSON.parse(await fs.readFile(path.join(cloneDir, entry.name), { encoding: "utf-8" }))
     const xtermTheme = {}
     for (const [key, value] of Object.entries(vscodeTheme["workbench.colorCustomizations"])) {
         xtermTheme[keyMapping[key]] = value
     }
-    await fs.writeFile(path.join(dirname, "..", "src", "themes", entry.name), JSON.stringify(xtermTheme, null, 4))
+    await fs.writeFile(path.join(themeDir, entry.name), JSON.stringify(xtermTheme, null, 4))
 }
 
 await fs.rm(path.join(cloneDir), { recursive: true, force: true })

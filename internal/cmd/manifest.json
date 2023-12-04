@@ -1,9 +1,0 @@
-{
-    "name": "com.pomdtr.popcorn",
-    "description": "An integrated terminal for your web browser",
-    "path": "{{ .homeDir }}/.local/bin/popcorn.sh",
-    "type": "stdio",
-    "allowed_origins": [
-        "chrome-extension://{{ .extensionID }}/"
-    ]
-}

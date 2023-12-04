@@ -1,7 +1,8 @@
-package config
+package main
 
 import (
 	"bytes"
+	_ "embed"
 	"encoding/json"
 	"errors"
 	"os"
@@ -23,7 +24,10 @@ type Config struct {
 type Profile struct {
 	Command string            `json:"command"`
 	Args    []string          `json:"args,omitempty"`
+	Cwd     string            `json:"cwd,omitempty"`
 	Env     map[string]string `json:"env,omitempty"`
+	Title   string            `json:"title,omitempty"`
+	Favicon string            `json:"favicon,omitempty"`
 }
 
 var DefaultConfig = Config{
@@ -39,7 +43,7 @@ var DefaultConfig = Config{
 }
 
 var schemaBytes, _ = json.MarshalIndent(DefaultConfig, "", "  ")
-var Path string = FindConfigPath()
+var configPath string = FindConfigPath()
 var schema *jsonschema.Schema
 
 func init() {
@@ -51,21 +55,24 @@ func init() {
 }
 
 func FindConfigPath() string {
+	if env, ok := os.LookupEnv("tweety_CONFIG"); ok {
+		return env
+	}
 	if env, ok := os.LookupEnv("XDG_CONFIG_HOME"); ok {
-		if _, err := os.Stat(filepath.Join(env, "popcorn", "popcorn.jsonc")); err == nil {
-			return filepath.Join(env, "popcorn", "popcorn.jsonc")
+		if _, err := os.Stat(filepath.Join(env, "tweety", "tweety.jsonc")); err == nil {
+			return filepath.Join(env, "tweety", "tweety.jsonc")
 		}
 
-		if _, err := os.Stat(filepath.Join(env, "popcorn", "popcorn.json")); err == nil {
-			return filepath.Join(env, "popcorn", "popcorn.json")
+		if _, err := os.Stat(filepath.Join(env, "tweety", "tweety.json")); err == nil {
+			return filepath.Join(env, "tweety", "tweety.json")
 		}
 	}
 
-	if _, err := os.Stat(filepath.Join(os.Getenv("HOME"), ".config", "popcorn", "popcorn.jsonc")); err == nil {
-		return filepath.Join(os.Getenv("HOME"), ".config", "popcorn", "popcorn.jsonc")
+	if _, err := os.Stat(filepath.Join(os.Getenv("HOME"), ".config", "tweety", "tweety.jsonc")); err == nil {
+		return filepath.Join(os.Getenv("HOME"), ".config", "tweety", "tweety.jsonc")
 	}
 
-	return filepath.Join(os.Getenv("HOME"), ".config", "popcorn", "popcorn.json")
+	return filepath.Join(os.Getenv("HOME"), ".config", "tweety", "tweety.json")
 }
 
 func defaultShell() string {
@@ -82,10 +89,10 @@ func defaultShell() string {
 	}
 }
 
-func Load(Path string) (Config, error) {
-	configBytes, err := os.ReadFile(Path)
+func LoadConfig(configPath string) (Config, error) {
+	configBytes, err := os.ReadFile(configPath)
 	if errors.Is(err, os.ErrNotExist) {
-		if err := os.MkdirAll(filepath.Dir(Path), 0755); err != nil {
+		if err := os.MkdirAll(filepath.Dir(configPath), 0755); err != nil {
 			return Config{}, err
 		}
 
@@ -94,16 +101,16 @@ func Load(Path string) (Config, error) {
 			return Config{}, err
 		}
 
-		if err := os.WriteFile(Path, jsonBytes, 0644); err != nil {
+		if err := os.WriteFile(configPath, jsonBytes, 0644); err != nil {
 			return Config{}, err
 		}
 
-		return DefaultConfig, nil
+		configBytes = jsonBytes
 	} else if err != nil {
 		return Config{}, err
 	}
 
-	if filepath.Ext(Path) == ".jsonc" {
+	if filepath.Ext(configPath) == ".jsonc" {
 		jsonBytes, err := hujson.Standardize(configBytes)
 		if err != nil {
 			return Config{}, err

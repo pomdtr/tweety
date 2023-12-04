@@ -4,14 +4,14 @@ before:
     - go mod tidy
     - rm -rf completions
     - mkdir completions
-    - sh -c 'go run ./cmd/popcorn completion "bash" >./completions/{{ .ProjectName }}.bash'
-    - sh -c 'go run ./cmd/popcorn completion "zsh" >./completions/{{ .ProjectName }}.zsh'
-    - sh -c 'go run ./cmd/popcorn completion "fish" >./completions/{{ .ProjectName }}.fish'
+    - sh -c 'go run ./cmd/tweety completion "bash" >./completions/{{ .ProjectName }}.bash'
+    - sh -c 'go run ./cmd/tweety completion "zsh" >./completions/{{ .ProjectName }}.zsh'
+    - sh -c 'go run ./cmd/tweety completion "fish" >./completions/{{ .ProjectName }}.fish'
 changelog:
   skip: true
 builds:
-  - binary: popcorn
-    main: ./cmd/popcorn/main.go
+  - binary: tweety
+    main: ./cmd/tweety/main.go
     env:
       - CGO_ENABLED=0
     goos:
@@ -26,18 +26,22 @@ archives:
       - README.md
       - LICENSE-MIT
       - completions/*
+release:
+  prerelease: auto
+  extra_files:
+    - glob: internal/schemas/config.schema.json
 checksum:
   name_template: "checksums.txt"
 snapshot:
   name_template: "{{ incpatch .Version }}-next"
 brews:
-  - name: popcorn
-    homepage: https://pomdtr.github.io/popcorn
+  - name: tweety
+    homepage: https://pomdtr.github.io/tweety
     repository:
       owner: pomdtr
       name: homebrew-tap
     install: |-
-      bin.install "popcorn"
-      bash_completion.install "completions/popcorn.bash"
-      zsh_completion.install "completions/popcorn.zsh"
-      fish_completion.install "completions/popcorn.fish"
+      bin.install "tweety"
+      bash_completion.install "completions/tweety.bash"
+      zsh_completion.install "completions/tweety.zsh"
+      fish_completion.install "completions/tweety.fish"

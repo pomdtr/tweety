@@ -2,11 +2,11 @@
     "version": "2.0.0",
     "tasks": [
         {
-            "label": "Build Extension",
+            "label": "build frontend",
             "type": "shell",
             "command": "npm run build",
             "options": {
-                "cwd": "${workspaceFolder}/extension"
+                "cwd": "${workspaceFolder}/frontend"
             }
         }
     ]
