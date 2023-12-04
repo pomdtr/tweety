@@ -10,6 +10,15 @@ An integrated terminal for your browser.
 tweety [-H <host>] [-p <port>]
 ```
 
+## Installation
+
+```
+brew install pomdtr/tap/tweety
+go install github.com/pomdtr/tweety@latest
+```
+
+or download a binary from [releases](https://github.com/pomdtr/tweety/releases).
+
 ## Configuration
 
 Use the `~/.config/tweety/tweety.json` file to configure Tweety.
