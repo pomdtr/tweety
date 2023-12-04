@@ -4,14 +4,13 @@ before:
     - go mod tidy
     - rm -rf completions
     - mkdir completions
-    - sh -c 'go run ./cmd/tweety completion "bash" >./completions/{{ .ProjectName }}.bash'
-    - sh -c 'go run ./cmd/tweety completion "zsh" >./completions/{{ .ProjectName }}.zsh'
-    - sh -c 'go run ./cmd/tweety completion "fish" >./completions/{{ .ProjectName }}.fish'
+    # - sh -c 'go run . completion "bash" >./completions/{{ .ProjectName }}.bash'
+    # - sh -c 'go run . completion "zsh" >./completions/{{ .ProjectName }}.zsh'
+    # - sh -c 'go run . completion "fish" >./completions/{{ .ProjectName }}.fish'
 changelog:
   skip: true
 builds:
   - binary: tweety
-    main: ./cmd/tweety/main.go
     env:
       - CGO_ENABLED=0
     goos:
