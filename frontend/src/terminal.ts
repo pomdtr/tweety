@@ -7,16 +7,17 @@ import { nanoid } from "nanoid";
 import { Config } from "./config";
 
 async function importTheme(name: string) {
-    return fetchJSON(`/themes/${name}.json`) as Promise<ITheme>
+    return fetchJSON(`${import.meta.env.BASE_URL}themes/${name}.json`) as Promise<ITheme>
 }
 
-async function fetchJSON(url: string, options?: RequestInit) {
+async function fetchJSON(url: string | URL, options?: RequestInit) {
     const resp = await fetch(url, options)
     return resp.json()
 }
 
 async function main() {
-    const config = await fetchJSON("/config") as Config
+    const { protocol, host } = new URL(__TWEETY_ORIGIN__)
+    const config = await fetchJSON(`${protocol}//${host}/config`) as Config
     const lightTheme = await importTheme(config.theme || "Tomorrow")
     const darkTheme = await importTheme(config.themeDark || config.theme || "Tomorrow Night")
     const terminal = new Terminal({
@@ -41,8 +42,8 @@ async function main() {
     terminal.open(document.getElementById("terminal")!);
     fitAddon.fit();
     const terminalID = nanoid();
-    const websocketProtocol = window.location.protocol === "https:" ? "wss" : "ws";
-    const websocketUrl = new URL(`${websocketProtocol}://${window.location.host}/pty/${terminalID}`)
+    const websocketProtocol = protocol === "https:" ? "wss" : "ws";
+    const websocketUrl = new URL(`${websocketProtocol}://${host}/pty/${terminalID}`)
 
     websocketUrl.searchParams.set("cols", terminal.cols.toString())
     websocketUrl.searchParams.set("rows", terminal.rows.toString())
