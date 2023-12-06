@@ -26,7 +26,6 @@ type Profile struct {
 	Args    []string          `json:"args,omitempty"`
 	Cwd     string            `json:"cwd,omitempty"`
 	Env     map[string]string `json:"env,omitempty"`
-	Title   string            `json:"title,omitempty"`
 	Favicon string            `json:"favicon,omitempty"`
 }
 

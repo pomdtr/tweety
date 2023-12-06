@@ -11,5 +11,4 @@ export type Profile = {
     args?: string[]
     env?: Record<string, string>
     favicon?: string
-    title?: string
 }

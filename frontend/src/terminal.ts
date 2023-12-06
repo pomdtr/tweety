@@ -56,9 +56,7 @@ async function main() {
         return;
     }
 
-    if (profile.title) {
-        document.title = profile.title;
-    }
+    document.title = [profile.command, ...profile.args || []].join(" ");
 
     if (profile.favicon) {
         const link = document.getElementById("favicon") as HTMLLinkElement | null;
@@ -70,8 +68,12 @@ async function main() {
     websocketUrl.searchParams.set("profile", profileID);
     const ws = new WebSocket(websocketUrl);
     ws.onclose = () => {
-        window.opener = window;
-        window.close()
+        if (params.has("reload")) {
+            window.location.reload();
+        } else {
+            window.opener = window;
+            window.close()
+        }
     };
 
     window.onresize = () => {
@@ -79,9 +81,6 @@ async function main() {
     };
 
     terminal.onTitleChange((title) => {
-        if (profile.title) {
-            title = `${title} - ${profile.title}`;
-        }
         document.title = title;
     });
 
