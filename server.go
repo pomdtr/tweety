@@ -18,11 +18,15 @@ import (
 
 	"github.com/creack/pty"
 	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/cors"
 	"github.com/gorilla/websocket"
 )
 
 func NewHandler() (http.Handler, error) {
 	r := chi.NewRouter()
+	r.Use(cors.Handler(cors.Options{
+		AllowedOrigins: []string{"https://pomdtr.github.io"},
+	}))
 	r.Get("/config", func(w http.ResponseWriter, r *http.Request) {
 		config, err := LoadConfig(configPath)
 		if err != nil {

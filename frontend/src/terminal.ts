@@ -105,7 +105,7 @@ async function main() {
         });
 
     window.onbeforeunload = () => {
-        ws.close();
+        // ws.close();
     }
 
     window.onfocus = () => {
