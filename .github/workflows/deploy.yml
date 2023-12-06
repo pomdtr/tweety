@@ -36,7 +36,9 @@ jobs:
         with:
           node-version: "21"
       - name: Build Website
-        run: npm ci && npm run build-prod
+        run: npm ci && npm run build
+        env:
+          TWEETY_ORIGIN: http://localhost:9999
         working-directory: frontend
       - name: Setup Pages
         uses: actions/configure-pages@v4

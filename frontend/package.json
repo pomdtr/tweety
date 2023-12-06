@@ -7,7 +7,6 @@
     "dev": "vite",
     "refresh-themes": "node ./scripts/refresh-themes.mjs",
     "build": "tsc && vite build",
-    "build-prod": "tsc && vite build --base=/tweety/",
     "watch": "vite build --watch",
     "preview": "vite preview"
   },

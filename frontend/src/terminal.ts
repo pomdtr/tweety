@@ -16,7 +16,7 @@ async function fetchJSON(url: string | URL, options?: RequestInit) {
 }
 
 async function main() {
-    const { protocol, host } = new URL(__TWEETY_ORIGIN__)
+    const { protocol, host } = new URL(__TWEETY_ORIGIN__ || window.location.origin)
     const config = await fetchJSON(`${protocol}//${host}/config`) as Config
     const lightTheme = await importTheme(config.theme || "Tomorrow")
     const darkTheme = await importTheme(config.themeDark || config.theme || "Tomorrow Night")
