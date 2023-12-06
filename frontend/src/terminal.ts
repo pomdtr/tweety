@@ -16,8 +16,8 @@ async function fetchJSON(url: string | URL, options?: RequestInit) {
 }
 
 async function main() {
-    const { protocol, host } = new URL(__TWEETY_ORIGIN__ || window.location.origin)
-    const config = await fetchJSON(`${protocol}//${host}/config`) as Config
+    const origin = new URL(__TWEETY_ORIGIN__ || window.location.origin)
+    const config = await fetchJSON(new URL("/config", origin)) as Config
     const lightTheme = await importTheme(config.theme || "Tomorrow")
     const darkTheme = await importTheme(config.themeDark || config.theme || "Tomorrow Night")
     const terminal = new Terminal({
@@ -42,8 +42,8 @@ async function main() {
     terminal.open(document.getElementById("terminal")!);
     fitAddon.fit();
     const terminalID = nanoid();
-    const websocketProtocol = protocol === "https:" ? "wss" : "ws";
-    const websocketUrl = new URL(`${websocketProtocol}://${host}/pty/${terminalID}`)
+    const websocketProtocol = origin.protocol === "https:" ? "wss" : "ws";
+    const websocketUrl = new URL(`${websocketProtocol}://${origin.host}/pty/${terminalID}`)
 
     websocketUrl.searchParams.set("cols", terminal.cols.toString())
     websocketUrl.searchParams.set("rows", terminal.rows.toString())
@@ -88,7 +88,7 @@ async function main() {
 
     terminal.onResize((size) => {
         const { cols, rows } = size;
-        const url = `/resize/${terminalID}`;
+        const url = new URL(`/resize/${terminalID}`, origin);
         fetch(url, {
             method: "POST",
             body: JSON.stringify({ cols, rows }),
@@ -104,9 +104,9 @@ async function main() {
             terminal.options.theme = e.matches ? darkTheme : lightTheme;
         });
 
-    // window.onbeforeunload = () => {
-    //     ws.close();
-    // }
+    window.onbeforeunload = () => {
+        ws.close();
+    }
 
     window.onfocus = () => {
         terminal.focus();
