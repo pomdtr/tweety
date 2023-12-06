@@ -25,7 +25,7 @@ import (
 func NewHandler() (http.Handler, error) {
 	r := chi.NewRouter()
 	r.Use(cors.Handler(cors.Options{
-		AllowedOrigins: []string{"https://pomdtr.github.io"},
+		AllowedOrigins: []string{"https://local.tweety.sh"},
 	}))
 	r.Get("/config", func(w http.ResponseWriter, r *http.Request) {
 		config, err := LoadConfig(configPath)

@@ -72,8 +72,8 @@ async function main() {
         if (params.has("reload")) {
             window.location.reload();
         } else {
-            // window.opener = window;
-            // window.close()
+            window.opener = window;
+            window.close()
         }
     };
 
@@ -104,9 +104,9 @@ async function main() {
             terminal.options.theme = e.matches ? darkTheme : lightTheme;
         });
 
-    window.onbeforeunload = () => {
-        // ws.close();
-    }
+    // window.onbeforeunload = () => {
+    //     ws.close();
+    // }
 
     window.onfocus = () => {
         terminal.focus();
