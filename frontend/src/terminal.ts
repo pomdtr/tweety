@@ -80,6 +80,8 @@ async function main() {
         if (params.has("reload")) {
             window.location.reload();
         } else {
+            console.log("sending close message")
+            window.parent.postMessage("close", "*");
             window.opener = window;
             window.close()
         }
