@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"net/http"
+	"net/url"
 	"os"
 
 	"github.com/phayes/freeport"
@@ -15,9 +16,10 @@ func main() {
 		port int
 	}
 	cmd := cobra.Command{
-		Use:   "tweety",
-		Short: "An integrated terminal for your web browser",
-		Args:  cobra.NoArgs,
+		Use:          "tweety",
+		Short:        "An integrated terminal for your web browser",
+		SilenceUsage: true,
+		Args:         cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			handler, err := NewHandler()
 			if err != nil {
@@ -34,7 +36,19 @@ func main() {
 				port = p
 			}
 
+			browserUrl, _ := url.Parse("https://local.tweety.sh")
+			query := browserUrl.Query()
+			if cmd.Flags().Changed("port") {
+				query.Set("port", fmt.Sprintf("%d", flags.port))
+			}
+			if cmd.Flags().Changed("host") {
+				query.Set("host", flags.host)
+			}
+			browserUrl.RawQuery = query.Encode()
+
 			cmd.PrintErrln("Listening on", fmt.Sprintf("http://%s:%d", flags.host, port))
+			cmd.PrintErrln("Browser Friendly URL:", browserUrl.String())
+			cmd.Println("Press Ctrl+C to exit")
 			return http.ListenAndServe(fmt.Sprintf("%s:%d", flags.host, port), handler)
 		},
 	}

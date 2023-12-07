@@ -16,7 +16,16 @@ async function fetchJSON(url: string | URL, options?: RequestInit) {
 }
 
 async function main() {
-    const origin = new URL(__TWEETY_ORIGIN__ || window.location.origin)
+    const params = new URLSearchParams(window.location.search);
+    let origin: URL
+    if (params.has("host") || params.has("port")) {
+        origin = new URL(`${params.get("host") || "localhost"}:${params.get("port") || 9999}`)
+    } else if (__TWEETY_ORIGIN__) {
+        origin = new URL(__TWEETY_ORIGIN__)
+    } else {
+        origin = new URL(window.location.origin)
+    }
+
     const config = await fetchJSON(new URL("/config", origin)) as Config
     const lightTheme = await importTheme(config.theme || "Tomorrow")
     const darkTheme = await importTheme(config.themeDark || config.theme || "Tomorrow Night")
@@ -48,9 +57,7 @@ async function main() {
     websocketUrl.searchParams.set("cols", terminal.cols.toString())
     websocketUrl.searchParams.set("rows", terminal.rows.toString())
 
-    const params = new URLSearchParams(window.location.search);
     const profileID = params.get("profile") || config.defaultProfile;
-
     const profile = config.profiles[profileID];
     if (!profile) {
         terminal.writeln(`Profile not found: ${profileID}`);
