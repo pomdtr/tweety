@@ -25,6 +25,13 @@ async function handleCommand(command) {
     if (command == "create_terminal_tab") {
         chrome.tabs.create({ url: origin });
     } else if (command == "create_terminal_window") {
-        chrome.windows.create({ url: origin });
+        const [width, height] = [800, 600];
+        const win = await chrome.windows.getCurrent();
+        if (!win) {
+            chrome.windows.create({ url: origin, type: "popup", width, height });
+        }
+        const left = Math.round(win.left + (win.width - width) / 2);
+        const top = Math.round(win.top + (win.height - height) / 2);
+        chrome.windows.create({ url: origin, type: "popup", width, height, left, top });
     }
 }
