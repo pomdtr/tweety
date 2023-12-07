@@ -7,6 +7,29 @@
             "command": "npm run build",
             "options": {
                 "cwd": "${workspaceFolder}/frontend"
+            },
+            "group": {
+                "kind": "build"
+            }
+        },
+        {
+            "label": "build tweety",
+            "type": "shell",
+            "command": "go build -o tweety",
+            "group": {
+                "kind": "build"
+            }
+        },
+        {
+            "label": "build",
+            "dependsOn": [
+                "build frontend",
+                "build tweety"
+            ],
+            "dependsOrder": "sequence",
+            "group": {
+                "kind": "build",
+                "isDefault": true
             }
         }
     ]
