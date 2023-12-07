@@ -132,7 +132,8 @@ func NewHandler() (http.Handler, error) {
 			return
 		}
 		defer func() {
-			log.Print("gracefully stopping spawned tty...")
+			log.Print("killing spawned process")
+			cmd.Process.Kill()
 			if err := tty.Close(); err != nil {
 				log.Printf("failed to close spawned tty gracefully: %s", err)
 			}
