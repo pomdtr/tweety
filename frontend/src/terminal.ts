@@ -21,7 +21,10 @@ async function main() {
     if (params.has("port")) {
         const portNumber = params.get("port")
         const csp = document.getElementById("CSP")
-        csp?.setAttribute("content", `default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self' ws://localhost:${portNumber} http://localhost:${portNumber}`)
+        if (!csp) {
+            throw new Error("CSP meta tag not found")
+        }
+        csp.setAttribute("content", `default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self' ws://localhost:${portNumber} http://localhost:${portNumber}`)
         origin = new URL(`http://localhost:${portNumber}`)
     } else if (__TWEETY_ORIGIN__) {
         origin = new URL(__TWEETY_ORIGIN__)
