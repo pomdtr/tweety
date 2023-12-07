@@ -2,11 +2,6 @@
 before:
   hooks:
     - go mod tidy
-    - rm -rf completions
-    - mkdir completions
-    # - sh -c 'go run . completion "bash" >./completions/{{ .ProjectName }}.bash'
-    # - sh -c 'go run . completion "zsh" >./completions/{{ .ProjectName }}.zsh'
-    # - sh -c 'go run . completion "fish" >./completions/{{ .ProjectName }}.fish'
 changelog:
   skip: true
 builds:
@@ -24,7 +19,6 @@ archives:
     files:
       - README.md
       - LICENSE-MIT
-      - completions/*
 release:
   prerelease: auto
   extra_files:
@@ -41,6 +35,3 @@ brews:
       name: homebrew-tap
     install: |-
       bin.install "tweety"
-      bash_completion.install "completions/tweety.bash"
-      zsh_completion.install "completions/tweety.zsh"
-      fish_completion.install "completions/tweety.fish"
