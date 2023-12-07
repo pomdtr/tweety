@@ -39,7 +39,7 @@ func main() {
 			browserUrl, _ := url.Parse("https://local.tweety.sh")
 			if cmd.Flags().Changed("port") {
 				query := browserUrl.Query()
-				query.Set("port", fmt.Sprintf("%d", flags.port))
+				query.Set("port", fmt.Sprintf("%d", port))
 				browserUrl.RawQuery = query.Encode()
 			}
 
