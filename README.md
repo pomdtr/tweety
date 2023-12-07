@@ -19,6 +19,19 @@ go install github.com/pomdtr/tweety@latest
 
 or download a binary from [releases](https://github.com/pomdtr/tweety/releases).
 
+## Chrome Extension
+
+A chrome extension is availaible in the extension folder. To install it:
+
+- Clone the repository
+- Go to `chrome://extensions`
+- Enable `Developer mode`
+- Click on `Load unpacked`
+- Select the `extension` folder
+
+By default, the extension will try to connect to `localhost:9999`. You can
+customize the origin in the extension options.
+
 ## Configuration
 
 Use the `$XDG_CONFIG_DIR/tweety/tweety.json` file to configure Tweety (defaults
