@@ -21,7 +21,7 @@
     "page": "./options.html"
   },
   "side_panel": {
-    "default_path": "popup.html"
+    "default_path": "panel.html"
   },
   "commands": {
     "create_terminal_tab": {
