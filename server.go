@@ -29,7 +29,6 @@ func NewHandler() (http.Handler, error) {
 	r.Use(func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Access-Control-Allow-Private-Network", "true")
-			w.Header().Set("X-Frame-Options", "SAMEORIGIN")
 			w.Header().Set("X-Content-Type-Options", "nosniff")
 			w.Header().Set("X-XSS-Protection", "1; mode=block")
 			w.Header().Set("Referrer-Policy", "same-origin")

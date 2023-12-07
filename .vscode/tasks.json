@@ -13,9 +13,9 @@
             }
         },
         {
-            "label": "build tweety",
+            "label": "install tweety",
             "type": "shell",
-            "command": "go build -o tweety",
+            "command": "go install",
             "group": {
                 "kind": "build"
             }
@@ -24,7 +24,7 @@
             "label": "build",
             "dependsOn": [
                 "build frontend",
-                "build tweety"
+                "install tweety"
             ],
             "dependsOrder": "sequence",
             "group": {

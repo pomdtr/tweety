@@ -1,0 +1,27 @@
+{
+  "manifest_version": 3,
+  "name": "Tweety",
+  "version": "1.0.0",
+  "description": "An integrated terminal for your browser",
+  "icons": {
+    "256": "./icons/icon@256px.png"
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_popup": "./popup.html"
+  },
+  "permissions": ["storage", "contextMenus"],
+  "options_ui": {
+    "page": "./options.html"
+  },
+  "commands": {
+    "create_terminal_tab": {
+      "description": "Create terminal tab"
+    },
+    "create_terminal_window": {
+      "description": "Create terminal window"
+    }
+  }
+}
