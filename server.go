@@ -24,9 +24,6 @@ import (
 
 func NewHandler() (http.Handler, error) {
 	r := chi.NewRouter()
-	r.Use(cors.Handler(cors.Options{
-		AllowedOrigins: []string{"https://local.tweety.sh"},
-	}))
 
 	// Middleware to set the required header for private network access
 	r.Use(func(next http.Handler) http.Handler {
@@ -35,6 +32,10 @@ func NewHandler() (http.Handler, error) {
 			next.ServeHTTP(w, r)
 		})
 	})
+
+	r.Use(cors.Handler(cors.Options{
+		AllowedOrigins: []string{"https://local.tweety.sh"},
+	}))
 
 	r.Get("/config", func(w http.ResponseWriter, r *http.Request) {
 		config, err := LoadConfig(configPath)
