@@ -12,9 +12,16 @@
   "action": {
     "default_popup": "./popup.html"
   },
-  "permissions": ["storage", "contextMenus"],
+  "permissions": [
+    "storage",
+    "contextMenus",
+    "sidePanel"
+  ],
   "options_ui": {
     "page": "./options.html"
+  },
+  "side_panel": {
+    "default_path": "popup.html"
   },
   "commands": {
     "create_terminal_tab": {
