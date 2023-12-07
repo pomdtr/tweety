@@ -37,14 +37,11 @@ func main() {
 			}
 
 			browserUrl, _ := url.Parse("https://local.tweety.sh")
-			query := browserUrl.Query()
 			if cmd.Flags().Changed("port") {
+				query := browserUrl.Query()
 				query.Set("port", fmt.Sprintf("%d", flags.port))
+				browserUrl.RawQuery = query.Encode()
 			}
-			if cmd.Flags().Changed("host") {
-				query.Set("host", flags.host)
-			}
-			browserUrl.RawQuery = query.Encode()
 
 			cmd.PrintErrln("Listening on", fmt.Sprintf("http://%s:%d", flags.host, port))
 			cmd.PrintErrln("Browser Friendly URL:", browserUrl.String())

@@ -18,8 +18,8 @@ async function fetchJSON(url: string | URL, options?: RequestInit) {
 async function main() {
     const params = new URLSearchParams(window.location.search);
     let origin: URL
-    if (params.has("host") || params.has("port")) {
-        origin = new URL(`http://${params.get("host") || "localhost"}:${params.get("port") || 9999}`)
+    if (params.has("port")) {
+        origin = new URL(`http://localhost:${params.get("port")}`)
     } else if (__TWEETY_ORIGIN__) {
         origin = new URL(__TWEETY_ORIGIN__)
     } else {
