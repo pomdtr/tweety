@@ -1,6 +1,6 @@
 const iframe = document.createElement("iframe");
 
-const { origin = "http://localhost:9999" } = chrome.storage.local.get([
+const { origin = "http://localhost:9999" } = await chrome.storage.local.get([
   "origin",
 ]);
 iframe.src = origin;
