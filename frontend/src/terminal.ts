@@ -19,7 +19,7 @@ async function main() {
     const params = new URLSearchParams(window.location.search);
     let origin: URL
     if (params.has("host") || params.has("port")) {
-        origin = new URL(`${params.get("host") || "localhost"}:${params.get("port") || 9999}`)
+        origin = new URL(`http://${params.get("host") || "localhost"}:${params.get("port") || 9999}`)
     } else if (__TWEETY_ORIGIN__) {
         origin = new URL(__TWEETY_ORIGIN__)
     } else {
