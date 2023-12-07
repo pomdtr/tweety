@@ -6,8 +6,9 @@ import { AttachAddon } from "xterm-addon-attach";
 import { nanoid } from "nanoid";
 import { Config } from "./config";
 
-async function importTheme(name: string) {
-    return fetchJSON(`${import.meta.env.BASE_URL}themes/${name}.json`) as Promise<ITheme>
+async function fetchTheme(name: string, origin: URL) {
+    const themeUrl = new URL(`/themes/${name}.json`, origin)
+    return fetchJSON(themeUrl) as Promise<ITheme>
 }
 
 async function fetchJSON(url: string | URL, options?: RequestInit) {
@@ -27,8 +28,8 @@ async function main() {
     }
 
     const config = await fetchJSON(new URL("/config", origin)) as Config
-    const lightTheme = await importTheme(config.theme || "Tomorrow")
-    const darkTheme = await importTheme(config.themeDark || config.theme || "Tomorrow Night")
+    const lightTheme = await fetchTheme(config.theme || "Tomorrow", origin)
+    const darkTheme = await fetchTheme(config.themeDark || config.theme || "Tomorrow Night", origin)
     const terminal = new Terminal({
         cursorBlink: true,
         allowProposedApi: true,

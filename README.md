@@ -55,5 +55,5 @@ custom path.
 ## Endpoints
 
 - `/` - Open Default Profile
-- `/p/<profile>` - Open Profile
-- `/config` - View Configuration
+- `/?reload=true` - Reload the Page when the Command Exits
+- `/?profile=<profile>` - Open Specific Profile

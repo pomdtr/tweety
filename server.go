@@ -50,6 +50,15 @@ func NewHandler() (http.Handler, error) {
 			return
 		}
 
+		config.Env = nil
+		for k, profile := range config.Profiles {
+			profile.Command = ""
+			profile.Args = nil
+			profile.Cwd = ""
+			profile.Env = nil
+			config.Profiles[k] = profile
+		}
+
 		encoder := json.NewEncoder(w)
 		encoder.SetIndent("", "  ")
 		encoder.SetEscapeHTML(false)
@@ -59,11 +68,6 @@ func NewHandler() (http.Handler, error) {
 			w.Write([]byte(err.Error()))
 			return
 		}
-	})
-
-	r.Get("/p/{profileName}", func(w http.ResponseWriter, r *http.Request) {
-		profileName := chi.URLParam(r, "profileName")
-		http.Redirect(w, r, fmt.Sprintf("/?profile=%s", profileName), http.StatusFound)
 	})
 
 	ttyMap := make(map[string]*os.File)
@@ -193,6 +197,13 @@ func NewHandler() (http.Handler, error) {
 		w.Write([]byte("Resized"))
 	})
 
+	themeHandler, err := ThemeHandler()
+	if err != nil {
+		return nil, err
+	}
+
+	r.Handle("/themes/*", http.StripPrefix("/themes", themeHandler))
+
 	frontendHandler, err := FrontendHandler()
 	if err != nil {
 		return nil, err
@@ -207,6 +218,18 @@ var frontendDist embed.FS
 
 func FrontendHandler() (http.Handler, error) {
 	fs, err := fs.Sub(frontendDist, "frontend/dist")
+	if err != nil {
+		return nil, err
+	}
+
+	return http.FileServer(http.FS(fs)), nil
+}
+
+//go:embed all:themes
+var themes embed.FS
+
+func ThemeHandler() (http.Handler, error) {
+	fs, err := fs.Sub(themes, "themes")
 	if err != nil {
 		return nil, err
 	}

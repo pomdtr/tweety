@@ -1,9 +1,9 @@
-// @ts-check
+#!/usr/bin/env deno run -A
 
-import degit from "degit"
-import os from "os"
-import path from "path"
-import fs from "fs/promises"
+import degit from "npm:degit"
+import * as path from "https://deno.land/std/path/mod.ts"
+import { existsSync } from "https://deno.land/std/fs/mod.ts";
+
 
 const dirname = path.dirname(new URL(import.meta.url).pathname)
 const emitter = await degit('mbadolato/iTerm2-Color-Schemes/vscode', {
@@ -12,14 +12,14 @@ const emitter = await degit('mbadolato/iTerm2-Color-Schemes/vscode', {
     verbose: true
 })
 
-emitter.on('info', info => {
+emitter.on('info', (info: any) => {
     console.log(info.message)
 })
 
-const cloneDir = path.join(os.tmpdir(), "degit")
+const cloneDir = path.join(Deno.makeTempDirSync(), "degit")
 await emitter.clone(cloneDir)
 
-const entries = await fs.readdir(cloneDir, { withFileTypes: true })
+const entries = await Deno.readDirSync(cloneDir)
 const keyMapping = {
     "terminal.foreground": "foreground",
     "terminal.background": "background",
@@ -41,19 +41,21 @@ const keyMapping = {
     "terminal.ansiBrightYellow": "ansiBrightYellow",
     "terminal.selectionBackground": "selectionBackground",
     "terminalCursor.foreground": "cursor"
-}
-const themeDir = path.join(dirname, "..", "public", "themes")
+} as Record<string, string>
+const themeDir = path.join(dirname, "..", "themes")
 
-await fs.rm(themeDir, { recursive: true, force: true })
-await fs.mkdir(themeDir)
+if (existsSync(themeDir)) {
+    Deno.removeSync(themeDir, { recursive: true })
+}
+Deno.mkdirSync(themeDir)
 
 for (const entry of entries) {
-    const vscodeTheme = JSON.parse(await fs.readFile(path.join(cloneDir, entry.name), { encoding: "utf-8" }))
-    const xtermTheme = {}
+    const vscodeTheme = JSON.parse(Deno.readTextFileSync(path.join(cloneDir, entry.name)))
+    const xtermTheme: Record<string, string> = {}
     for (const [key, value] of Object.entries(vscodeTheme["workbench.colorCustomizations"])) {
-        xtermTheme[keyMapping[key]] = value
+        xtermTheme[keyMapping[key]] = value as string
     }
-    await fs.writeFile(path.join(themeDir, entry.name), JSON.stringify(xtermTheme, null, 4))
+    await Deno.writeTextFileSync(path.join(themeDir, entry.name), JSON.stringify(xtermTheme, null, 4))
 }
 
-await fs.rm(path.join(cloneDir), { recursive: true, force: true })
+Deno.removeSync(path.join(cloneDir), { recursive: true })
