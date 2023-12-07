@@ -27,6 +27,15 @@ func NewHandler() (http.Handler, error) {
 	r.Use(cors.Handler(cors.Options{
 		AllowedOrigins: []string{"https://local.tweety.sh"},
 	}))
+
+	// Middleware to set the required header for private network access
+	r.Use(func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Access-Control-Allow-Private-Network", "true")
+			next.ServeHTTP(w, r)
+		})
+	})
+
 	r.Get("/config", func(w http.ResponseWriter, r *http.Request) {
 		config, err := LoadConfig(configPath)
 		if err != nil {

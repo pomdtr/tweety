@@ -115,6 +115,7 @@ async function main() {
         });
 
     window.onbeforeunload = () => {
+        ws.onclose = () => { };
         ws.close();
     }
 
