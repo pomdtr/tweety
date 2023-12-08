@@ -15,6 +15,35 @@ import (
 	"github.com/spf13/cobra"
 )
 
+//go:embed com.pomdtr.tweety.plist
+var service []byte
+
+func NewCmdService() *cobra.Command {
+	cmd := &cobra.Command{
+		Use: "service",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			homeDir, err := os.UserHomeDir()
+			if err != nil {
+				return err
+			}
+
+			execPath, err := os.Executable()
+			if err != nil {
+				return err
+			}
+
+			tmpl := template.New("service")
+			tmpl.Parse(string(service))
+			return tmpl.Execute(os.Stdout, map[string]interface{}{
+				"ExecPath": execPath,
+				"HomeDir":  homeDir,
+			})
+		},
+	}
+
+	return cmd
+}
+
 //go:embed extension/com.pomdtr.tweety.json
 var manifest []byte
 
@@ -114,9 +143,11 @@ func main() {
 		},
 	}
 
-	cmd.AddCommand(NewCmdManifest())
 	cmd.Flags().StringVarP(&flags.host, "host", "H", "localhost", "host to listen on")
 	cmd.Flags().IntVarP(&flags.port, "port", "p", 9999, "port to listen on")
+
+	cmd.AddCommand(NewCmdManifest())
+	cmd.AddCommand(NewCmdService())
 
 	if err := cmd.Execute(); err != nil {
 		os.Exit(1)
