@@ -38,7 +38,7 @@ func NewHandler() (http.Handler, error) {
 	})
 
 	r.Use(cors.Handler(cors.Options{
-		AllowedOrigins: []string{"https://local.tweety.sh"},
+		AllowedOrigins: []string{"https://local.tweety.sh", "chrome-extension://*"},
 	}))
 
 	r.Get("/config", func(w http.ResponseWriter, r *http.Request) {

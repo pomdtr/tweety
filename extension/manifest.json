@@ -7,10 +7,10 @@
     "256": "./icons/icon@256px.png"
   },
   "background": {
-    "service_worker": "background.js"
+    "service_worker": "worker.js"
   },
   "action": {
-    "default_popup": "./popup.html"
+    "default_title": "Tweety"
   },
   "permissions": [
     "storage",
@@ -19,6 +19,9 @@
   ],
   "options_ui": {
     "page": "./options.html"
+  },
+  "omnibox": {
+    "keyword": "tty"
   },
   "side_panel": {
     "default_path": "panel.html"
