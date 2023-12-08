@@ -1,8 +1,4 @@
-<div class="oranda-hide">
-
 # Tweety - An Integrated Terminal for your Browser
-
-</div>
 
 Minimize your context switching by interacting with your terminal directly from your browser.
 
