@@ -12,6 +12,7 @@ chrome.runtime.onStartup.addListener(async function () {
     console.log("onStartup");
     const { nativeMessaging } = await chrome.storage.local.get(["nativeMessaging"]);
     if (nativeMessaging) {
+        console.log("Connecting to native messaging host");
         chrome.runtime.connectNative("com.pomdtr.tweety")
     }
 })
