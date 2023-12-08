@@ -28,8 +28,9 @@ async function main() {
     }
 
     // check if tweety is running
-    const resp = await fetch(new URL("/ping", origin))
-    if (!resp.ok) {
+    try {
+        await fetch(new URL("/ping", origin))
+    } catch (e) {
         confirm("Tweety is not running. Reload?")
         window.close()
         return
