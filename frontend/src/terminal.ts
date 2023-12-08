@@ -27,6 +27,14 @@ async function main() {
         origin = new URL(window.location.origin)
     }
 
+    // check if tweety is running
+    const resp = await fetch(new URL("/ping", origin))
+    if (!resp.ok) {
+        confirm("Tweety is not running. Reload?")
+        window.close()
+        return
+    }
+
     const config = await fetchJSON(new URL("/config", origin)) as Config
     const lightTheme = await fetchTheme(config.theme || "Tomorrow", origin)
     const darkTheme = await fetchTheme(config.themeDark || config.theme || "Tomorrow Night", origin)
