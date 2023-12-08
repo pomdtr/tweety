@@ -12,6 +12,7 @@
   "action": {
     "default_title": "Tweety"
   },
+  "devtools_page": "devtools.html",
   "permissions": [
     "storage",
     "contextMenus",
