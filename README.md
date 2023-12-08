@@ -6,18 +6,41 @@ An integrated terminal for your browser.
 
 ## Usage
 
-```
-tweety [-H <host>] [-p <port>]
+```sh
+tweety [-p <port>]
 ```
 
 ## Installation
 
-```
+```sh
 brew install pomdtr/tap/tweety
 go install github.com/pomdtr/tweety@latest
 ```
 
 or download a binary from [releases](https://github.com/pomdtr/tweety/releases).
+
+See the `tweety completions` command to generate completion scripts for your shell.
+
+## Browser Friendly URL
+
+By default, tweety will start on port 9999, so you can access it at <http://localhost:9999>.
+
+If you prefer to use a browser friendly URL, you can go to `https://local.tweety.sh` instead. The page will access Tweety on port 9999.
+
+> Note: This feature is not available on Safari, and requires to disable the Shield feature on Brave.
+
+## Starting Tweety on boot
+
+### MacOS
+
+```sh
+tweety service > ~/Library/LaunchAgents/com.pomdtr.tweety.plist
+launchctl load ~/Library/LaunchAgents/com.pomdtr.tweety.plist
+```
+
+### Linux
+
+TODO
 
 ## Chrome Extension
 
@@ -31,6 +54,18 @@ A chrome extension is availaible in the extension folder. To install it:
 
 By default, the extension will try to connect to `localhost:9999`. You can
 customize the origin in the extension options.
+
+You can also configure the extension to start Tweety automatically when your browser starts. In order to do that, you need to tell your browser how to start Tweety. This is achieved by putting a manifest file in a specific location using the `tweety manifest` command.
+
+```sh
+# ex for chrome on MacOS
+# the extension id can be found in chrome://extensions
+tweety manifest --extension-id=<extension-id> > ~/Application\ Support/Google/Chrome/NativeMessagingHosts/com.pomdtr.tweety.json
+```
+
+The next time you start your browser, Tweety will be started automatically on port 9999.
+
+> Warning: Arc Browser Native Messaging is buggy right now, so you probably want to use the [Start Tweety on boot](#starting-tweety-on-boot) method instead.
 
 ## Configuration
 
@@ -51,15 +86,16 @@ custom path.
   "defaultProfile": "default",
   "profiles": {
     "default": {
-      "shell": "bash",
+      "command": "bash",
       "args": ["--login"],
       "env": {
         "EDITOR": "vim"
       }
     },
     "fish": {
-      "shell": "fish",
-      "args": ["--login"]
+      "command": "fish",
+      "args": ["--login"],
+      "favicon": "https://fishshell.com/favicon.ico"
     }
   }
 }
@@ -67,6 +103,6 @@ custom path.
 
 ## Endpoints
 
-- `/` - Open Default Profile
-- `/?reload=true` - Reload the Page when the Command Exits
-- `/?profile=<profile>` - Open Specific Profile
+- `/` - open the default profile
+- `/?reload=true` - reload the page when the command exits
+- `/?profile=<profile>` - open a specific profile
