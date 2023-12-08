@@ -1,14 +1,24 @@
-# Tweety
+<div class="oranda-hide">
 
-An integrated terminal for your browser.
+# Tweety - An Integrated Terminal for your Browser
 
-![Tweety](./media/screenshot.jpg)
+</div>
 
-## Usage
+Minimize your context switching by interacting with your terminal directly from your browser.
 
-```sh
-tweety [-p <port>]
-```
+## Features
+
+### Mix Web and Terminal tabs
+
+![tweety running from the browser](./static/tabs.png)
+
+### Side by side mode
+
+![tweety running in a split pane](./static/panel.png)
+
+### Developer-Console Integration
+
+![tweety running in the developer panel](./static/devtools.png)
 
 ## Installation
 
@@ -21,26 +31,18 @@ or download a binary from [releases](https://github.com/pomdtr/tweety/releases).
 
 See the `tweety completions` command to generate completion scripts for your shell.
 
-## Browser Friendly URL
+## Usage
+
+```sh
+tweety [-p <port>]
+```
 
 By default, tweety will start on port 9999, so you can access it at <http://localhost:9999>.
 
-If you prefer to use a browser friendly URL, you can go to `https://local.tweety.sh` instead. The page will access Tweety on port 9999.
+If you prefer to use a browser friendly URL, you can go to `https://local.tweety.sh` instead.
+The page will access Tweety on port 9999.
 
-> Note: This feature is not available on Safari, and requires to disable the Shield feature on Brave.
-
-## Starting Tweety on boot
-
-### MacOS
-
-```sh
-tweety service > ~/Library/LaunchAgents/com.pomdtr.tweety.plist
-launchctl load ~/Library/LaunchAgents/com.pomdtr.tweety.plist
-```
-
-### Linux
-
-TODO
+> Note: Browser Friendly urls are not available on Safari, and requires to disable the Shield feature on Brave.
 
 ## Chrome Extension
 
@@ -66,6 +68,19 @@ tweety manifest --extension-id=<extension-id> > ~/Application\ Support/Google/Ch
 The next time you start your browser, Tweety will be started automatically on port 9999.
 
 > Warning: Arc Browser Native Messaging is buggy right now, so you probably want to use the [Start Tweety on boot](#starting-tweety-on-boot) method instead.
+
+## Starting Tweety on boot
+
+### MacOS
+
+```sh
+tweety service > ~/Library/LaunchAgents/com.pomdtr.tweety.plist
+launchctl load ~/Library/LaunchAgents/com.pomdtr.tweety.plist
+```
+
+### Linux
+
+TODO
 
 ## Configuration
 
@@ -106,3 +121,9 @@ custom path.
 - `/` - open the default profile
 - `/?reload=true` - reload the page when the command exits
 - `/?profile=<profile>` - open a specific profile
+
+## FAQ
+
+### Firefox version?
+
+Firefox should be quite easy to support, the browser integration is minimal. Contributions are welcome!
