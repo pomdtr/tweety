@@ -1,0 +1,9 @@
+{
+    "name": "com.pomdtr.tweety",
+    "description": "An integrated terminal for your browser",
+    "path": "{{ .ExecPath }}",
+    "type": "stdio",
+    "allowed_origins": [
+        "chrome-extension://{{ .ExtensionID }}/"
+    ]
+}

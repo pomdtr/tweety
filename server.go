@@ -41,6 +41,10 @@ func NewHandler() (http.Handler, error) {
 		AllowedOrigins: []string{"https://local.tweety.sh", "chrome-extension://*"},
 	}))
 
+	r.Get("/ping", func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte("pong"))
+	})
+
 	r.Get("/config", func(w http.ResponseWriter, r *http.Request) {
 		config, err := LoadConfig(configPath)
 		if err != nil {

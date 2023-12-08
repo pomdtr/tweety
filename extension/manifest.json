@@ -15,6 +15,7 @@
   "devtools_page": "devtools.html",
   "permissions": [
     "storage",
+    "nativeMessaging",
     "contextMenus",
     "sidePanel"
   ],

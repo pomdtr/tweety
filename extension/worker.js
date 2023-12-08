@@ -1,4 +1,5 @@
-chrome.runtime.onInstalled.addListener(async function () {
+chrome.runtime.onInstalled.addListener(function () {
+    console.log("onInstalled");
     chrome.contextMenus.removeAll();
     chrome.contextMenus.create({
         id: "create_terminal_window",
@@ -6,6 +7,14 @@ chrome.runtime.onInstalled.addListener(async function () {
         contexts: ["action"],
     });
 });
+
+chrome.runtime.onStartup.addListener(async function () {
+    console.log("onStartup");
+    const { nativeMessaging } = await chrome.storage.local.get(["nativeMessaging"]);
+    if (nativeMessaging) {
+        chrome.runtime.connectNative("com.pomdtr.tweety")
+    }
+})
 
 chrome.contextMenus.onClicked.addListener(function (info) {
     handleCommand(info.menuItemId);
