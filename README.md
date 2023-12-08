@@ -6,7 +6,7 @@ Minimize your context switching by interacting with your terminal directly from 
 
 ### Mix Web and Terminal tabs
 
-![tweety running from the browser](./static/tabs.png)
+![tweety running from the browser](./static/tabs.min.png)
 
 ### Side by side mode
 
@@ -123,3 +123,8 @@ custom path.
 ### Firefox version?
 
 Firefox should be quite easy to support, the browser integration is minimal. Contributions are welcome!
+
+### Windows version?
+
+The library used to create the terminal UI (xterm.js) does not support Windows yet.
+But it's planned, so stay tuned!
