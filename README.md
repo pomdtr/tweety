@@ -6,7 +6,7 @@ Minimize your context switching by interacting with your terminal directly from 
 
 ### Mix Web and Terminal tabs
 
-![tweety running from the browser](./static/tabs.min.png)
+![tweety running from the browser](./static/tabs.png)
 
 ### Side by side mode
 
