@@ -37,8 +37,8 @@ div#terminal {
 .tooltip {
     box-sizing: border-box;
     position: fixed;
-    font-size: 10px;
-    font-size: medium;
+    font-size: 13px;
+    font-family: courier-new, courier, monospace;
     border-radius: 3px;
     padding: 3px;
     color: hsl(0, 0%, 0%);
