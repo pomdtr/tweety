@@ -74,7 +74,7 @@ async function main() {
             tooltip.id = 'tooltip';
             tooltip.className = 'tooltip';
             tooltip.style.position = 'fixed';
-            tooltip.innerHTML = `<a href="${text}" target="_blank">Follow Link</a>`;
+            tooltip.innerHTML = `<a href="${text}" target="_blank">Follow link</a>`;
             tooltip.style.visibility = 'hidden';
             document.body.appendChild(tooltip);
 
