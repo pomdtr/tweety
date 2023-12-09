@@ -67,7 +67,7 @@ async function main() {
             window.open(uri, "_blank");
         }
     }, {
-        hover: (event, text) => {
+        hover: (_, text) => {
             if (document.getElementById('tooltip')) {
                 document.getElementById('tooltip')!.remove();
             }
