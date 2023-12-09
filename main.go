@@ -2,9 +2,11 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"os"
+	"runtime"
 	"strings"
 	"text/template"
 	"time"
@@ -16,28 +18,61 @@ import (
 )
 
 //go:embed com.pomdtr.tweety.plist
-var service []byte
+var launchdService []byte
+
+func LaunchdService(write io.Writer) error {
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return err
+	}
+
+	execPath, err := os.Executable()
+	if err != nil {
+		return err
+	}
+
+	tmpl := template.New("service")
+	tmpl.Parse(string(launchdService))
+	return tmpl.Execute(os.Stdout, map[string]interface{}{
+		"ExecPath": execPath,
+		"HomeDir":  homeDir,
+	})
+}
+
+//go:embed tweety.service
+var systemdService []byte
+
+func SystemdService(write io.Writer) error {
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return err
+	}
+
+	execPath, err := os.Executable()
+	if err != nil {
+		return err
+	}
+
+	tmpl := template.New("service")
+	tmpl.Parse(string(systemdService))
+	return tmpl.Execute(os.Stdout, map[string]interface{}{
+		"ExecPath": execPath,
+		"HomeDir":  homeDir,
+	})
+}
 
 func NewCmdService() *cobra.Command {
 	cmd := &cobra.Command{
 		Use: "service",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			homeDir, err := os.UserHomeDir()
-			if err != nil {
-				return err
+			switch runtime.GOOS {
+			case "darwin":
+				return LaunchdService(os.Stdout)
+			case "linux":
+				return SystemdService(os.Stdout)
+			default:
+				return fmt.Errorf("unsupported platform: %s", runtime.GOOS)
 			}
-
-			execPath, err := os.Executable()
-			if err != nil {
-				return err
-			}
-
-			tmpl := template.New("service")
-			tmpl.Parse(string(service))
-			return tmpl.Execute(os.Stdout, map[string]interface{}{
-				"ExecPath": execPath,
-				"HomeDir":  homeDir,
-			})
 		},
 	}
 
