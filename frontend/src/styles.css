@@ -28,7 +28,33 @@ div#terminal {
 }
 
 .xterm {
+    box-sizing: border-box;
     padding: 10px;
     height: 100%;
     width: 100%;
+}
+
+.tooltip {
+    box-sizing: border-box;
+    position: fixed;
+    font-size: 10px;
+    font-size: medium;
+    border-radius: 3px;
+    padding: 3px;
+    color: hsl(0, 0%, 0%);
+    background-color: #fff;
+    border: 1px solid #C8C8C8;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+
+    /* Dark mode */
+    @media (prefers-color-scheme: dark) {
+        background-color: #2E333A;
+        color: #fff;
+        border: 1px solid #454545;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    }
+}
+
+.tooltip a {
+    color: #6599EE;
 }

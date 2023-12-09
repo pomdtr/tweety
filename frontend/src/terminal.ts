@@ -52,7 +52,62 @@ async function main() {
 
     const webglAddon = new WebglAddon();
     const fitAddon = new FitAddon();
-    const webLinksAddon = new WebLinksAddon();
+    const webLinksAddon = new WebLinksAddon((event, uri) => {
+        // check if cmd key is pressed
+        if (event.metaKey || event.ctrlKey) {
+            window.open(uri, "_blank");
+        }
+    }, {
+        hover: (_, text, location) => {
+            const terminalElement = document.getElementById("terminal")!;
+            const terminalRowHeight = terminalElement.getBoundingClientRect().height / terminal.rows;
+            const terminalColumnWidth = terminalElement.getBoundingClientRect().width / terminal.cols;
+
+            const locationTop = (location.start.y - 1) * terminalRowHeight + 10;
+            const locationLeft = (location.start.x - 1) * terminalColumnWidth + 10;
+
+            if (document.getElementById('tooltip')) {
+                document.getElementById('tooltip')!.remove();
+            }
+
+            const tooltip = document.createElement('div');
+            tooltip.id = 'tooltip';
+            tooltip.className = 'tooltip';
+            tooltip.style.position = 'fixed';
+            tooltip.innerHTML = `<a href="${text}" target="_blank">Follow Link</a>`;
+            tooltip.style.visibility = 'hidden';
+            document.body.appendChild(tooltip);
+
+            const tooltipHeight = tooltip.getBoundingClientRect().height;
+            if (locationTop - tooltipHeight > 0) {
+                tooltip.style.top = `${locationTop - tooltipHeight}px`;
+            } else {
+                tooltip.style.top = `${locationTop + terminalRowHeight}px`;
+            }
+            tooltip.style.left = `${locationLeft}px`;
+            tooltip.style.zIndex = '1000';
+
+            // Add a delay of 1 second before showing the tooltip
+            setTimeout(() => {
+                // check if the tooltip still exists
+                const tooltip = document.getElementById('tooltip');
+                if (tooltip) {
+                    tooltip.style.visibility = 'visible';
+                }
+            }, 1500);
+        },
+        leave: () => {
+            const tooltip = document.getElementById('tooltip');
+            if (tooltip && !tooltip.matches(':hover')) {
+                tooltip.remove();
+                return
+            }
+
+            tooltip!.addEventListener('mouseleave', () => {
+                tooltip!.remove();
+            });
+        },
+    });
     terminal.loadAddon(fitAddon);
     terminal.loadAddon(webglAddon);
     terminal.loadAddon(webLinksAddon);
