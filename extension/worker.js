@@ -8,15 +8,6 @@ chrome.runtime.onInstalled.addListener(function () {
     });
 });
 
-chrome.runtime.onStartup.addListener(async function () {
-    try {
-        console.log("Connecting to native messaging host");
-        chrome.runtime.connectNative("com.pomdtr.tweety")
-    } catch (e) {
-        console.log("Failed to connect to native messaging host: " + e);
-    }
-})
-
 chrome.contextMenus.onClicked.addListener(function (info) {
     handleCommand(info.menuItemId);
 });

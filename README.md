@@ -53,18 +53,6 @@ A chrome extension is availaible in the extension folder. To install it:
 By default, the extension will try to connect to `localhost:9999`. You can
 customize the origin in the extension options.
 
-You can also configure the extension to start Tweety automatically when your browser starts. In order to do that, you need to tell your browser how to start Tweety. This is achieved by putting a manifest file in a specific location using the `tweety manifest` command.
-
-```sh
-# ex for chrome on MacOS
-# the extension id can be found in chrome://extensions
-tweety manifest --extension-id=<extension-id> > ~/Application\ Support/Google/Chrome/NativeMessagingHosts/com.pomdtr.tweety.json
-```
-
-The next time you start your browser, Tweety will be started automatically on port 9999.
-
-> Warning: Arc Browser Native Messaging is buggy right now, so you probably want to use the [Start Tweety on boot](#starting-tweety-on-boot) method instead.
-
 ## Starting Tweety on boot
 
 ### MacOS
