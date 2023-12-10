@@ -103,7 +103,7 @@ func main() {
 				port = p
 			}
 
-			browserUrl, _ := url.Parse("https://local.tweety.sh")
+			browserUrl, _ := url.Parse("https://tweety.sh")
 			if cmd.Flags().Changed("port") {
 				query := browserUrl.Query()
 				query.Set("port", fmt.Sprintf("%d", port))
