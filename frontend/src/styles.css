@@ -39,8 +39,8 @@ div#terminal {
     position: fixed;
     font-size: 13px;
     font-family: courier-new, courier, monospace;
-    border-radius: 3px;
-    padding: 3px;
+    border-radius: 5px;
+    padding: 5px;
     color: hsl(0, 0%, 0%);
     background-color: #fff;
     border: 1px solid #C8C8C8;

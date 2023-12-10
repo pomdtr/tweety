@@ -68,12 +68,21 @@ async function main() {
         }
     }, {
         hover: (_, text) => {
-            if (document.getElementById('tooltip')) {
-                document.getElementById('tooltip')!.remove();
+            let tooltip = document.getElementById('tooltip');
+            if (tooltip) {
+                if (tooltip.id === `${text}-tooltip`) {
+                    return;
+                }
+
+                if (tooltip.matches(':hover')) {
+                    return;
+                }
+                tooltip.remove();
             }
 
-            const tooltip = document.createElement('div');
-            tooltip.id = 'tooltip';
+            const tooltipId = `${text}-tooltip`;
+            tooltip = document.createElement('div');
+            tooltip.id = tooltipId;
             tooltip.className = 'tooltip';
             tooltip.style.position = 'fixed';
             tooltip.innerHTML = `<a href="${text}" target="_blank">Follow link</a>`;
@@ -86,7 +95,7 @@ async function main() {
             // Add a delay of 1 second before showing the tooltip
             setTimeout(() => {
                 // check if the tooltip still exists
-                const tooltip = document.getElementById('tooltip');
+                const tooltip = document.getElementById(tooltipId);
                 if (tooltip) {
                     if (mouseX - tootlipSize.height > 0) {
                         tooltip.style.top = `${mouseY - tootlipSize.height}px`;
@@ -97,10 +106,10 @@ async function main() {
                     tooltip.style.left = `${mouseX - tootlipSize.width / 2}px`;
                     tooltip.style.visibility = 'visible';
                 }
-            }, 1500);
+            }, 1000);
         },
-        leave: () => {
-            const tooltip = document.getElementById('tooltip');
+        leave: (_, text) => {
+            const tooltip = document.getElementById(`${text}-tooltip`);
             if (tooltip && !tooltip.matches(':hover')) {
                 tooltip.remove();
                 return
