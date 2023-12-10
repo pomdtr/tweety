@@ -36,27 +36,6 @@ async function handleCommand(command) {
     }
 }
 
-chrome.omnibox.onInputStarted.addListener(async () => {
-    const { origin = "http://localhost:9999" } = await chrome.storage.local.get([
-        "origin",
-    ]);
-    const resp = await fetch(new URL("/config", origin))
-    const config = await resp.json();
-    chrome.storage.session.set({ config })
-})
-
-chrome.omnibox.onInputChanged.addListener(async function (text, suggest) {
-    const { config = {} } = await chrome.storage.session.get(["config"])
-    const profiles = Object.keys(config.profiles || {}).filter(profile => profile.includes(text))
-
-    suggest(
-        profiles.map((profile) => ({
-            content: profile,
-            description: profile
-        }))
-    )
-});
-
 chrome.omnibox.onInputEntered.addListener(async function (text) {
     const { origin = "http://localhost:9999" } = await chrome.storage.local.get([
         "origin",
