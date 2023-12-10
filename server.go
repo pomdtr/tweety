@@ -38,7 +38,17 @@ func NewHandler() (http.Handler, error) {
 	})
 
 	r.Use(cors.Handler(cors.Options{
-		AllowedOrigins: []string{"https://tweety.sh", "https://wwww.tweety.sh", "chrome-extension://*"},
+		AllowOriginFunc: func(r *http.Request, origin string) bool {
+			if origin == "https://www.tweety.sh" || origin == "https://tweety.sh" {
+				return true
+			}
+
+			if strings.HasPrefix(origin, "chrome-extension://") {
+				return true
+			}
+
+			return false
+		},
 	}))
 
 	r.Get("/ping", func(w http.ResponseWriter, r *http.Request) {
