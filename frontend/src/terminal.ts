@@ -133,7 +133,7 @@ async function main() {
     websocketUrl.searchParams.set("cols", terminal.cols.toString())
     websocketUrl.searchParams.set("rows", terminal.rows.toString())
 
-    const profileID = params.get("profile") || config.defaultProfile;
+    const profileID = params.get("profile") || params.get("p") || config.defaultProfile;
     const profile = config.profiles[profileID];
     if (!profile) {
         terminal.writeln(`Profile not found: ${profileID}`);
