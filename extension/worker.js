@@ -36,6 +36,13 @@ async function handleCommand(command) {
     }
 }
 
+chrome.omnibox.onInputChanged.addListener(function (text) {
+    chrome.omnibox.setDefaultSuggestion({
+        description: `Open <match>${text}</match> profile`,
+    });
+});
+
+
 chrome.omnibox.onInputEntered.addListener(async function (text) {
     const { origin = "http://localhost:9999" } = await chrome.storage.local.get([
         "origin",
