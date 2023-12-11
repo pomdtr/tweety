@@ -18,14 +18,19 @@ Minimize your context switching by interacting with your terminal directly from 
 
 ## Installation
 
+Tweety is available on macOS, Linux.
+
 ```sh
+# Homebrew (recommended)
 brew install pomdtr/tap/tweety
+
+# From source
 go install github.com/pomdtr/tweety@latest
 ```
 
 or download a binary from [releases](https://github.com/pomdtr/tweety/releases).
 
-See the `tweety completions` command to generate completion scripts for your shell.
+See the `tweety completion` command to generate completion scripts for your shell.
 
 ## Usage
 
@@ -55,16 +60,17 @@ customize the origin in the extension options.
 
 ## Starting Tweety on boot
 
-### MacOS
+If you have installed Tweety using Homebrew, you can use the following command:
 
 ```sh
-tweety service > ~/Library/LaunchAgents/com.pomdtr.tweety.plist
-launchctl load ~/Library/LaunchAgents/com.pomdtr.tweety.plist
+brew services start tweety
 ```
 
-### Linux
+To unload the service, use:
 
-TODO
+```sh
+brew services stop tweety
+```
 
 ## Configuration
 
