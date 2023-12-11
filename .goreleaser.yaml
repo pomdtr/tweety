@@ -30,6 +30,12 @@ snapshot:
 brews:
   - name: tweety
     homepage: https://pomdtr.github.io/tweety
+    service: |
+      run [ opt_bin/"tweety" ]
+      keep_alive true
+      working_dir HOMEBREW_PREFIX
+      log_path var/"log/tweety.log"
+      error_log_path var/"log/tweety.log"
     repository:
       owner: pomdtr
       name: homebrew-tap
