@@ -1,6 +1,6 @@
 #!/usr/bin/env -S deno run -A
-import * as path from "https://deno.land/std/path/mod.ts";
-import * as fs from "https://deno.land/std/fs/mod.ts";
+import * as path from "https://deno.land/std@0.208.0/path/mod.ts";
+import * as fs from "https://deno.land/std@0.203.0/fs/mod.ts";
 
 const __dirname = new URL(".", import.meta.url).pathname;
 
@@ -11,7 +11,7 @@ Deno.removeSync(firefoxDir, { recursive: true });
 fs.copySync(chromeDir, firefoxDir);
 
 const manifestPath = path.join(firefoxDir, "manifest.json");
-let chromeManifest = JSON.parse(Deno.readTextFileSync(manifestPath));
+const chromeManifest = JSON.parse(Deno.readTextFileSync(manifestPath));
 
 const firefoxManifest = chromeManifest;
 
