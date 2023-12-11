@@ -45,18 +45,28 @@ The page will access Tweety on port 9999.
 
 > Note: Browser Friendly urls are not available on Safari, and requires to disable the Shield feature on Brave.
 
-## Chrome Extension
+## Browser Extension
 
-A chrome extension is availaible in the extension folder. To install it:
+Browser extensions for Chrome and Firefox are available in the `extension` folder.
+
+## Chrome Extension
 
 - Clone the repository
 - Go to `chrome://extensions`
 - Enable `Developer mode`
 - Click on `Load unpacked`
-- Select the `extension` folder
+- Select the `extension/chrome` folder
 
 By default, the extension will try to connect to `localhost:9999`. You can
 customize the origin in the extension options.
+
+## Firefox Extension
+
+- Clone the repository
+- Go to `about:debugging
+- Click on `This Firefox`
+- Click on `Load Temporary Add-on...`
+- Select the `extension/firefox/manifest.json` file
 
 ## Starting Tweety on Boot
 
@@ -113,10 +123,6 @@ custom path.
 - `/?profile=<profile>` - open a specific profile
 
 ## FAQ
-
-### Firefox Version?
-
-Firefox should be quite easy to support, the browser integration is minimal. Contributions are welcome!
 
 ### Windows Version?
 
