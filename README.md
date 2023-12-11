@@ -4,11 +4,11 @@ Minimize your context switching by interacting with your terminal directly from 
 
 ## Features
 
-### Mix Web and Terminal tabs
+### Mix Web and Terminal Tabs
 
 ![tweety running from the browser](./static/tabs.png)
 
-### Side by side mode
+### Side by Side Mode
 
 ![tweety running in a split pane](./static/panel.png)
 
@@ -58,7 +58,7 @@ A chrome extension is availaible in the extension folder. To install it:
 By default, the extension will try to connect to `localhost:9999`. You can
 customize the origin in the extension options.
 
-## Starting Tweety on boot
+## Starting Tweety on Boot
 
 If you have installed Tweety using Homebrew, you can use the following command:
 
@@ -114,11 +114,11 @@ custom path.
 
 ## FAQ
 
-### Firefox version?
+### Firefox Version?
 
 Firefox should be quite easy to support, the browser integration is minimal. Contributions are welcome!
 
-### Windows version?
+### Windows Version?
 
 The library used to create the terminal UI (xterm.js) does not support Windows yet.
 But it's planned, so stay tuned!
