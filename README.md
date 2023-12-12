@@ -23,14 +23,21 @@ Tweety is available on macOS, Linux.
 ```sh
 # Homebrew (recommended)
 brew install pomdtr/tap/tweety
-
-# From source
-go install github.com/pomdtr/tweety@latest
 ```
 
 or download a binary from [releases](https://github.com/pomdtr/tweety/releases).
 
+If you want to compile it yourself, you can use the following command:
+
+```sh
+git clone https://github.com/pomdtr/tweety
+cd tweety
+make install
+```
+
 See the `tweety completion` command to generate completion scripts for your shell.
+
+
 
 ## Usage
 
