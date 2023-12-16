@@ -74,6 +74,7 @@ async function main() {
     for (const row of rows) {
       terminal.writeln(row);
     }
+    terminal.scrollToTop();
     return;
   }
 
@@ -93,6 +94,7 @@ async function main() {
     theme: window.matchMedia("(prefers-color-scheme: dark)").matches
       ? darkTheme
       : lightTheme,
+    ...config.xterm,
   });
 
   const fitAddon = new FitAddon();
@@ -197,6 +199,9 @@ async function main() {
   }
 
   websocketUrl.searchParams.set("profile", profileID);
+  if (params.has("input")) {
+    websocketUrl.searchParams.set("input", params.get("input")!);
+  }
   const ws = new WebSocket(websocketUrl);
   ws.onclose = () => {
     if (params.has("reload")) {

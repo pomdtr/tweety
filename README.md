@@ -102,6 +102,9 @@ custom path.
   "$schema": "https://github.com/pomdtr/tweety/releases/latest/download/config.schema.json",
   "theme": "Tomorrow",
   "themeDark": "Tomorrow Night",
+  "xterm": {
+    "fontSize": 14,
+  },
   "env": {
     "EDITOR": "kak"
   },
@@ -122,6 +125,8 @@ custom path.
   }
 }
 ```
+
+The `xterm` section is passed directly to xterm.js, see the [documentation](https://xtermjs.org/docs/api/terminal/interfaces/iterminaloptions/).
 
 ## Endpoints
 
