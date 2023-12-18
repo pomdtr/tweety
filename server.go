@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"os/user"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -118,6 +119,15 @@ func NewHandler() (http.Handler, error) {
 
 		cmd := exec.Command(profile.Command, profile.Args...)
 		cmd.Env = append(cmd.Env, "TERM=xterm-256color")
+		currentUser, err := user.Current()
+		if err != nil {
+			log.Printf("failed to get current user: %s", err)
+			w.WriteHeader(http.StatusInternalServerError)
+			w.Write([]byte(err.Error()))
+			return
+		}
+		cmd.Env = append(cmd.Env, fmt.Sprintf("USER=%s", currentUser.Username))
+
 		for k, v := range config.Env {
 			cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", k, v))
 		}
