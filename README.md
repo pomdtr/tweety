@@ -138,5 +138,6 @@ The `xterm` section is passed directly to xterm.js, see the [documentation](http
 
 ### Windows Version?
 
-The library used to create the terminal UI (xterm.js) does not support Windows yet.
-But it's planned, so stay tuned!
+The [package](https://github.com/creack/pty) used to create the terminal UI does not support Windows.
+
+But it's planned, so stay tuned! In the meantime, you can run tweety from [WSL](https://learn.microsoft.com/en-us/windows/wsl/install).
