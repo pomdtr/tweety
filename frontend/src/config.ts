@@ -1,4 +1,5 @@
 export type Config = {
+  key?: string;
   theme?: string;
   themeDark?: string;
   xterm: Record<string, unknown>;

@@ -23,7 +23,7 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-func NewHandler() (http.Handler, error) {
+func NewHandler(configPath string) (http.Handler, error) {
 	r := chi.NewRouter()
 
 	// Middleware to set the required header for private network access
@@ -64,6 +64,7 @@ func NewHandler() (http.Handler, error) {
 			return
 		}
 
+		config.Key = ""
 		config.Env = nil
 		for k, profile := range config.Profiles {
 			profile.Command = ""
@@ -112,16 +113,24 @@ func NewHandler() (http.Handler, error) {
 			return
 		}
 
+		var command string
 		profileName := r.URL.Query().Get("profile")
 		profile, ok := config.Profiles[profileName]
 		if !ok {
+			command = profile.Command
 			log.Println("invalid profile name:", profileName)
 			w.WriteHeader(http.StatusBadRequest)
 			w.Write([]byte(fmt.Sprintf("invalid profile name: %s", profileName)))
 			return
 		}
 
-		cmd := exec.Command(profile.Command, profile.Args...)
+		if key := r.URL.Query().Get(""); key == config.Key {
+			if commandParam := r.URL.Query().Get("command"); commandParam != "" {
+				command = commandParam
+			}
+		}
+
+		cmd := exec.Command(command, profile.Args...)
 		cmd.Env = append(cmd.Env, "TERM=xterm-256color")
 		cmd.Env = append(cmd.Env, fmt.Sprintf("USER=%s", currentUser.Username))
 		cmd.Env = append(cmd.Env, fmt.Sprintf("HOME=%s", currentUser.HomeDir))

@@ -24,11 +24,34 @@ async function fetchText(url: string | URL, options?: RequestInit) {
   return resp.text();
 }
 
+type QueryParams = {
+  key: string | null
+  command: string | null
+  port: number | null
+  profile: string | null
+  reload: boolean
+}
+
+function parseQueryParams(search: string): QueryParams {
+  const params = new URLSearchParams(search)
+  const key = params.get("key")
+  const port = params.get("port")
+  return {
+    command: params.get("command"),
+    key: params.get("key"),
+    port: port ?  parseInt(port) : null,
+    profile: params.get("profile") || params.get("p") || null,
+    reload: params.has("reload")
+  }
+}
+
+
+
 async function main() {
-  const params = new URLSearchParams(window.location.search);
+  const params = parseQueryParams(window.location.search)
   let origin: URL;
-  if (params.has("port")) {
-    origin = new URL(`http://localhost:${params.get("port")}`);
+  if (params.port) {
+    origin = new URL(`http://localhost:${params.port}`);
   } else if (__TWEETY_ORIGIN__) {
     origin = new URL(__TWEETY_ORIGIN__);
   } else {
@@ -182,7 +205,7 @@ async function main() {
   websocketUrl.searchParams.set("rows", terminal.rows.toString());
 
   const profileID =
-    params.get("profile") || params.get("p") || config.defaultProfile;
+    params.profile || config.defaultProfile;
   const profile = config.profiles[profileID];
   if (!profile) {
     terminal.writeln(`Profile not found: ${profileID}`);
@@ -199,12 +222,9 @@ async function main() {
   }
 
   websocketUrl.searchParams.set("profile", profileID);
-  if (params.has("input")) {
-    websocketUrl.searchParams.set("input", params.get("input")!);
-  }
   const ws = new WebSocket(websocketUrl);
   ws.onclose = () => {
-    if (params.has("reload")) {
+    if (params.reload) {
       window.location.reload();
     } else {
       console.log("sending close message");

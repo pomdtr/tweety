@@ -17,6 +17,7 @@ type Config struct {
 	Theme          string             `json:"theme"`
 	ThemeDark      string             `json:"themeDark"`
 	XTerm          map[string]any     `json:"xterm,omitempty"`
+	Key            string             `json:"key,omitempty"`
 	Env            map[string]string  `json:"env,omitempty"`
 	DefaultProfile string             `json:"defaultProfile"`
 	Profiles       map[string]Profile `json:"profiles"`
@@ -43,7 +44,6 @@ var DefaultConfig = Config{
 }
 
 var schemaBytes, _ = json.MarshalIndent(DefaultConfig, "", "  ")
-var configPath string = FindConfigPath()
 var schema *jsonschema.Schema
 
 func init() {

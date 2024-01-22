@@ -14,8 +14,9 @@ import (
 
 func main() {
 	var flags struct {
-		host string
-		port int
+		host   string
+		port   int
+		config string
 	}
 	cmd := cobra.Command{
 		Use:          "tweety",
@@ -23,7 +24,12 @@ func main() {
 		SilenceUsage: true,
 		Args:         cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			handler, err := NewHandler()
+			configPath := flags.config
+			if configPath == "" {
+				configPath = FindConfigPath()
+			}
+
+			handler, err := NewHandler(configPath)
 			if err != nil {
 				return err
 			}
@@ -54,6 +60,7 @@ func main() {
 
 	cmd.Flags().StringVarP(&flags.host, "host", "H", "localhost", "host to listen on")
 	cmd.Flags().IntVarP(&flags.port, "port", "p", 9999, "port to listen on")
+	cmd.Flags().StringVarP(&flags.config, "config", "c", "", "config path")
 
 	cmd.AddCommand(NewCompletionCmd(cmd.Name()))
 	if err := cmd.Execute(); err != nil {
