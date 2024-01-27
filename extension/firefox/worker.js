@@ -2,6 +2,11 @@ chrome.runtime.onInstalled.addListener(function () {
     console.log("onInstalled");
     chrome.contextMenus.removeAll();
     chrome.contextMenus.create({
+        id: "create_terminal_tab",
+        title: "Create Terminal Tab",
+        contexts: ["action"],
+    });
+    chrome.contextMenus.create({
         id: "create_terminal_window",
         title: "Create Terminal Window",
         contexts: ["action"],
@@ -10,10 +15,6 @@ chrome.runtime.onInstalled.addListener(function () {
 
 chrome.contextMenus.onClicked.addListener(function (info) {
     handleCommand(info.menuItemId);
-});
-
-chrome.action.onClicked.addListener(function () {
-    handleCommand("create_terminal_tab");
 });
 
 chrome.commands.onCommand.addListener(handleCommand);

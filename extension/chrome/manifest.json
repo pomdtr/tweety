@@ -14,6 +14,7 @@
     "service_worker": "worker.js"
   },
   "action": {
+    "default_popup": "./popup.html",
     "default_icon": {
       "16": "./icons/icon@16px.png",
       "24": "./icons/icon@24px.png",
