@@ -1,28 +1,34 @@
-<!doctype html>
+<!DOCTYPE html>
 <html>
-
-<head>
+  <head>
     <meta charset="utf-8" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <title>Tweety</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <style>
+      body {
+        margin: 0px;
+        width: 750px;
+        height: 440px;
+        background-color: white;
+      }
+
+      /* Media query for dark theme */
+      @media (prefers-color-scheme: dark) {
         body {
-            margin: 0px;
-            width: 750px;
-            height: 450px;
+          background-color: black; /* Dark background color */
         }
+      }
 
-        iframe {
-            display: block;
-            border: 0px;
-            width: 100%;
-            height: 100%;
-        }
+      iframe {
+        display: block;
+        border: 0px;
+        width: 100%;
+        height: 100%;
+      }
     </style>
-    <script type="module" src="terminal.js" defer></script>
-</head>
+    <script type="module" src="terminal.js"></script>
+  </head>
 
-<body></body>
-
+  <body></body>
 </html>
