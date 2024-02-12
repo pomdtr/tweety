@@ -27,11 +27,15 @@
         params.delete("port");
         const iframe = document.createElement("iframe");
         iframe.src = `${base}/?${params}`;
-        window.onmessage = (e) => {
+        window.addEventListener("message", (e) => {
+          if (e.source !== iframe.contentWindow) {
+            return;
+          }
+
           if (e.data === "close") {
             window.close();
           }
-        };
+        });
 
         document.body.appendChild(iframe);
         iframe.focus();
