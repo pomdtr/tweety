@@ -9,7 +9,7 @@ import { Config } from "./config";
 async function fetchTheme(name: string, origin?: string | URL) {
   const themeUrl = new URL(
     `/themes/${name}.json`,
-    origin || window.location.origin
+    origin || window.location.origin,
   );
   return fetchJSON(themeUrl) as Promise<ITheme>;
 }
@@ -29,8 +29,6 @@ async function main() {
   let origin: URL;
   if (params.has("port")) {
     origin = new URL(`http://localhost:${params.get("port")}`);
-  } else if (__TWEETY_ORIGIN__) {
-    origin = new URL(__TWEETY_ORIGIN__);
   } else {
     origin = new URL(window.location.origin);
   }
@@ -82,7 +80,7 @@ async function main() {
   const lightTheme = await fetchTheme(config.theme || "Tomorrow", origin);
   const darkTheme = await fetchTheme(
     config.themeDark || config.theme || "Tomorrow Night",
-    origin
+    origin,
   );
   const terminal = new Terminal({
     cursorBlink: true,
@@ -158,7 +156,7 @@ async function main() {
           tooltip!.remove();
         });
       },
-    }
+    },
   );
   let [mouseX, mouseY] = [0, 0];
   document.addEventListener("mousemove", (e) => {
@@ -175,14 +173,14 @@ async function main() {
   const terminalID = nanoid();
   const websocketProtocol = origin.protocol === "https:" ? "wss" : "ws";
   const websocketUrl = new URL(
-    `${websocketProtocol}://${origin.host}/pty/${terminalID}`
+    `${websocketProtocol}://${origin.host}/pty/${terminalID}`,
   );
 
   websocketUrl.searchParams.set("cols", terminal.cols.toString());
   websocketUrl.searchParams.set("rows", terminal.rows.toString());
 
-  const profileID =
-    params.get("profile") || params.get("p") || config.defaultProfile;
+  const profileID = params.get("profile") || params.get("p") ||
+    config.defaultProfile;
   const profile = config.profiles[profileID];
   if (!profile) {
     terminal.writeln(`Profile not found: ${profileID}`);

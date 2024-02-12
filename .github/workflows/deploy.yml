@@ -33,22 +33,12 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: "21"
-      - name: Build Website
-        run: npm ci && npm run build
-        env:
-          TWEETY_ORIGIN: http://localhost:9999
-        working-directory: frontend
       - name: Setup Pages
         uses: actions/configure-pages@v4
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v2
         with:
-          # Upload entire repository
-          path: 'frontend/dist'
+          path: website
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v3
