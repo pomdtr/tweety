@@ -33,6 +33,7 @@
           }
 
           if (e.data === "close") {
+            window.parent.postMessage("close", "*");
             window.close();
           }
         });
