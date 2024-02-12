@@ -13,13 +13,14 @@ iframe.src = url.toString();
 document.body.appendChild(iframe);
 
 window.addEventListener("message", (event) => {
+  console.log("Message received", event);
+
   if (event.source !== iframe.contentWindow) {
     console.error("Message not from iframe");
     return;
   }
-  if (event.data !== "close") {
-    console.error("Message not close");
+  if (event.data === "close") {
+    window.close();
     return;
   }
-  window.close();
 });

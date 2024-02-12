@@ -33,6 +33,7 @@
           }
 
           if (e.data === "close") {
+            console.log("sending close message to parent and closing window");
             window.parent.postMessage("close", "*");
             window.close();
           }
