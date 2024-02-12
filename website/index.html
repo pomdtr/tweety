@@ -27,6 +27,12 @@
         params.delete("port");
         const iframe = document.createElement("iframe");
         iframe.src = `${base}/?${params}`;
+        window.onmessage = (e) => {
+          if (e.data === "close") {
+            window.close();
+          }
+        };
+
         document.body.appendChild(iframe);
         iframe.focus();
       } catch (e) {
