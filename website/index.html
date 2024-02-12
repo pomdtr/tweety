@@ -13,7 +13,25 @@
     </style>
   </head>
   <body>
-    <iframe src="http://localhost:9999"></iframe>
+    <script type="module">
+      try {
+        const params = new URLSearchParams(window.location.search);
+        const port = params.get("port") || 9999;
+
+        const base = `http://localhost:${port}`;
+        const resp = await fetch(`${base}/ping`);
+        if (!resp.ok) {
+          throw new Error("Server not found");
+        }
+
+        params.delete("port");
+        const iframe = document.createElement("iframe");
+        iframe.src = `${base}/?${params}`;
+        document.body.appendChild(iframe);
+        iframe.focus();
+      } catch (e) {
+        window.location.replace("https://github.com/pomdtr/tweety");
+      }
+    </script>
   </body>
 </html>
-,
