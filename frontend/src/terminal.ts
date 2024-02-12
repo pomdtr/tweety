@@ -19,11 +19,6 @@ async function fetchJSON(url: string | URL, options?: RequestInit) {
   return resp.json();
 }
 
-async function fetchText(url: string | URL, options?: RequestInit) {
-  const resp = await fetch(url, options);
-  return resp.text();
-}
-
 async function main() {
   const params = new URLSearchParams(window.location.search);
   let origin: URL;
@@ -31,49 +26,6 @@ async function main() {
     origin = new URL(`http://localhost:${params.get("port")}`);
   } else {
     origin = new URL(window.location.origin);
-  }
-
-  // check if tweety is running
-  try {
-    const resp = await fetch(new URL("/ping", origin));
-    if (!resp.ok) {
-      throw new Error("Not running");
-    }
-  } catch (e) {
-    // if tweety is not running, show the readme
-    const terminal = new Terminal({
-      cursorBlink: true,
-      allowProposedApi: true,
-      macOptionIsMeta: true,
-      macOptionClickForcesSelection: true,
-      fontSize: 13,
-      fontFamily: "Consolas,Liberation Mono,Menlo,Courier,monospace",
-      theme: window.matchMedia("(prefers-color-scheme: dark)").matches
-        ? await fetchTheme("Tomorrow Night", window.location.origin)
-        : await fetchTheme("Tomorrow", window.location.origin),
-    });
-
-    const fitAddon = new FitAddon();
-    terminal.loadAddon(fitAddon);
-    terminal.loadAddon(new WebglAddon());
-    terminal.loadAddon(new WebLinksAddon());
-
-    terminal.open(document.getElementById("terminal")!);
-
-    fitAddon.fit();
-    window.onresize = () => {
-      fitAddon.fit();
-    };
-
-    const readme = window.matchMedia("(prefers-color-scheme: dark)").matches
-      ? await fetchText("/readme/dark.ansi")
-      : await fetchText("/readme/light.ansi");
-    const rows = readme.split("\n");
-    for (const row of rows) {
-      terminal.writeln(row);
-    }
-    terminal.scrollToTop();
-    return;
   }
 
   const config = (await fetchJSON(new URL("/config", origin))) as Config;
