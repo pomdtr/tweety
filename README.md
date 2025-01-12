@@ -37,8 +37,6 @@ make install
 
 See the `tweety completion` command to generate completion scripts for your shell.
 
-
-
 ## Usage
 
 ```sh
