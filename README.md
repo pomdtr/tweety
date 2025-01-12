@@ -47,11 +47,6 @@ tweety [-p <port>]
 
 By default, tweety will start on port 9999, so you can access it at <http://localhost:9999>.
 
-If you prefer to use a browser friendly URL, you can go to <https://tweety.sh> instead.
-The page will access Tweety on port 9999.
-
-> Note: Browser Friendly urls are not available on Safari, and requires to disable the Shield feature on Brave.
-
 ## Browser Extension
 
 Browser extensions for Chrome and Firefox are available in the `extension` folder.
