@@ -14,32 +14,15 @@ import (
 )
 
 type Config struct {
-	Theme          string             `json:"theme"`
-	ThemeDark      string             `json:"themeDark"`
-	XTerm          map[string]any     `json:"xterm,omitempty"`
-	Env            map[string]string  `json:"env,omitempty"`
-	DefaultProfile string             `json:"defaultProfile"`
-	Profiles       map[string]Profile `json:"profiles"`
-}
-
-type Profile struct {
-	Command string            `json:"command,omitempty"`
-	Args    []string          `json:"args,omitempty"`
-	Cwd     string            `json:"cwd,omitempty"`
-	Env     map[string]string `json:"env,omitempty"`
-	Favicon string            `json:"favicon,omitempty"`
+	Theme     string            `json:"theme"`
+	ThemeDark string            `json:"themeDark"`
+	XTerm     map[string]any    `json:"xterm,omitempty"`
+	Env       map[string]string `json:"env,omitempty"`
 }
 
 var DefaultConfig = Config{
-	Theme:          "Tomorrow",
-	ThemeDark:      "Tomorrow Night",
-	DefaultProfile: "default",
-	Profiles: map[string]Profile{
-		"default": {
-			Command: defaultShell(),
-			Args:    []string{"-l"},
-		},
-	},
+	Theme:     "Tomorrow",
+	ThemeDark: "Tomorrow Night",
 }
 
 var schemaBytes, _ = json.MarshalIndent(DefaultConfig, "", "  ")

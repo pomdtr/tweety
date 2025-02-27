@@ -5,13 +5,10 @@
             "name": "Launch Package",
             "type": "go",
             "request": "launch",
-            "preLaunchTask": "build frontend",
+            // "preLaunchTask": "build frontend",
             "mode": "auto",
             "program": "${workspaceFolder}",
-            "args": [
-                "--port",
-                "7777"
-            ]
+            "args": []
         }
     ],
 }

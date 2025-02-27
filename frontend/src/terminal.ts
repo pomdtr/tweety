@@ -3,7 +3,6 @@ import { FitAddon } from "xterm-addon-fit";
 import { WebglAddon } from "xterm-addon-webgl";
 import { WebLinksAddon } from "xterm-addon-web-links";
 import { AttachAddon } from "xterm-addon-attach";
-import { nanoid } from "nanoid";
 import { Config } from "./config";
 
 async function fetchTheme(name: string, origin?: string | URL) {
@@ -122,7 +121,22 @@ async function main() {
 
   terminal.open(document.getElementById("terminal")!);
   fitAddon.fit();
-  const terminalID = nanoid();
+
+  const resp = await fetch("/exec", {
+    method: "POST",
+  });
+
+  if (!resp.ok) {
+    console.error("Failed to create terminal");
+    return;
+  }
+
+  const terminalID = await resp.text();
+  if (!resp.ok) {
+    console.error("Failed to create terminal");
+    return;
+  }
+
   const websocketProtocol = origin.protocol === "https:" ? "wss" : "ws";
   const websocketUrl = new URL(
     `${websocketProtocol}://${origin.host}/pty/${terminalID}`,
@@ -131,39 +145,7 @@ async function main() {
   websocketUrl.searchParams.set("cols", terminal.cols.toString());
   websocketUrl.searchParams.set("rows", terminal.rows.toString());
 
-  const profileID = params.get("profile") || params.get("p") ||
-    config.defaultProfile;
-  const profile = config.profiles[profileID];
-  if (!profile) {
-    terminal.writeln(`Profile not found: ${profileID}`);
-    return;
-  }
-
-  document.title = [profile.command, ...(profile.args || [])].join(" ");
-
-  if (profile.favicon) {
-    const link = document.getElementById("favicon") as HTMLLinkElement | null;
-    if (link) {
-      link.href = profile.favicon;
-    }
-  }
-
-  websocketUrl.searchParams.set("profile", profileID);
-  if (params.has("input")) {
-    websocketUrl.searchParams.set("input", params.get("input")!);
-  }
   const ws = new WebSocket(websocketUrl);
-  ws.onclose = () => {
-    if (params.has("reload")) {
-      window.location.reload();
-    } else {
-      console.log("sending close message");
-      window.parent.postMessage("close", "*");
-      window.opener = window;
-      window.close();
-    }
-  };
-
   window.onresize = () => {
     fitAddon.fit();
   };
@@ -191,7 +173,6 @@ async function main() {
     });
 
   window.onbeforeunload = () => {
-    ws.onclose = () => {};
     ws.close();
   };
 

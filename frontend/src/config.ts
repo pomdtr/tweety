@@ -3,8 +3,6 @@ export type Config = {
   themeDark?: string;
   xterm: Record<string, unknown>;
   env: Record<string, string>;
-  defaultProfile: string;
-  profiles: Record<string, Profile>;
 };
 
 export type Profile = {

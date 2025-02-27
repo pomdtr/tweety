@@ -2,12 +2,14 @@ package main
 
 import (
 	"bytes"
+	"crypto/rand"
 	"embed"
 	"encoding/json"
 	"fmt"
 	"io/fs"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
 	"os/exec"
 	"os/user"
@@ -65,14 +67,6 @@ func NewHandler() (http.Handler, error) {
 		}
 
 		config.Env = nil
-		for k, profile := range config.Profiles {
-			profile.Command = ""
-			profile.Args = nil
-			profile.Cwd = ""
-			profile.Env = nil
-			config.Profiles[k] = profile
-		}
-
 		encoder := json.NewEncoder(w)
 		encoder.SetIndent("", "  ")
 		encoder.SetEscapeHTML(false)
@@ -89,15 +83,55 @@ func NewHandler() (http.Handler, error) {
 		return nil, fmt.Errorf("error getting current user: %w", err)
 	}
 	ttyMap := make(map[string]*os.File)
-	r.Get("/pty/{terminalID}", func(w http.ResponseWriter, r *http.Request) {
-		terminalID := chi.URLParam(r, "terminalID")
-		config, err := LoadConfig(configPath)
+
+	r.Post("/exec", func(w http.ResponseWriter, r *http.Request) {
+		refererUrl, err := url.Parse(r.Referer())
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			w.Write([]byte(fmt.Sprintf("invalid referer URL: %s", err)))
+			return
+		}
+
+		appDir := filepath.Join(os.Getenv("HOME"), ".config", "tweety", "apps")
+		cmd, err := urlToCommand(appDir, refererUrl)
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			w.Write([]byte(err.Error()))
 			return
 		}
 
+		cmd.Env = append(cmd.Env, "TERM=xterm-256color")
+		cmd.Env = append(cmd.Env, fmt.Sprintf("USER=%s", currentUser.Username))
+		cmd.Env = append(cmd.Env, fmt.Sprintf("HOME=%s", currentUser.HomeDir))
+
+		homeDir, err := os.UserHomeDir()
+		if err != nil {
+			log.Printf("failed to get user home directory: %s", err)
+			w.WriteHeader(http.StatusInternalServerError)
+			w.Write([]byte(err.Error()))
+			return
+		}
+
+		cmd.Dir = homeDir
+
+		log.Println("executing command:", cmd.String())
+		tty, err := pty.Start(cmd)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			w.Write([]byte(err.Error()))
+			return
+		}
+
+		id := rand.Text()
+		ttyMap[id] = tty
+
+		w.Header().Set("Content-Type", "text/plain")
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(id))
+	})
+
+	r.Get("/pty/{terminalID}", func(w http.ResponseWriter, r *http.Request) {
+		terminalID := chi.URLParam(r, "terminalID")
 		cols, err := strconv.Atoi(r.URL.Query().Get("cols"))
 		if err != nil {
 			w.WriteHeader(http.StatusBadRequest)
@@ -112,61 +146,18 @@ func NewHandler() (http.Handler, error) {
 			return
 		}
 
-		profileName := r.URL.Query().Get("profile")
-		profile, ok := config.Profiles[profileName]
-		if !ok {
-			log.Println("invalid profile name:", profileName)
+		tty := ttyMap[terminalID]
+		if tty == nil {
 			w.WriteHeader(http.StatusBadRequest)
-			w.Write([]byte(fmt.Sprintf("invalid profile name: %s", profileName)))
+			w.Write([]byte(fmt.Sprintf("invalid terminal ID: %s", terminalID)))
 			return
 		}
 
-		cmd := exec.Command(profile.Command, profile.Args...)
-		cmd.Env = append(cmd.Env, "TERM=xterm-256color")
-		cmd.Env = append(cmd.Env, fmt.Sprintf("USER=%s", currentUser.Username))
-		cmd.Env = append(cmd.Env, fmt.Sprintf("HOME=%s", currentUser.HomeDir))
-
-		for k, v := range config.Env {
-			cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", k, v))
-		}
-
-		for k, v := range profile.Env {
-			cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", k, v))
-		}
-
-		homeDir, err := os.UserHomeDir()
-		if err != nil {
-			log.Printf("failed to get user home directory: %s", err)
-			w.WriteHeader(http.StatusInternalServerError)
-			w.Write([]byte(err.Error()))
-			return
-		}
-
-		if profile.Cwd != "" {
-			if profile.Cwd == "~" {
-				cmd.Dir = homeDir
-			} else if strings.HasPrefix(profile.Cwd, "~/") {
-				cmd.Dir = filepath.Join(homeDir, profile.Cwd[2:])
-			} else {
-				cmd.Dir = profile.Cwd
-			}
-		} else {
-			cmd.Dir = homeDir
-		}
-
-		log.Println("executing command:", cmd.String())
-		tty, err := pty.Start(cmd)
-		if err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
-			w.Write([]byte(err.Error()))
-			return
-		}
 		defer func() {
-			log.Print("killing spawned process")
-			cmd.Process.Kill()
-			if err := tty.Close(); err != nil {
-				log.Printf("failed to close spawned tty gracefully: %s", err)
-			}
+			// cleanup
+			delete(ttyMap, terminalID)
+			// send the signal to the process
+			tty.Close()
 		}()
 
 		if err := pty.Setsize(tty, &pty.Winsize{
@@ -243,7 +234,18 @@ func FrontendHandler() (http.Handler, error) {
 		return nil, err
 	}
 
-	return http.FileServer(http.FS(fs)), nil
+	fileServer := http.FileServer(http.FS(fs))
+
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// check if the asset exists
+		_, err := fs.Open(strings.TrimPrefix(r.URL.Path, "/"))
+		if err != nil && os.IsNotExist(err) {
+			r.URL.Path = "/"
+		}
+
+		fileServer.ServeHTTP(w, r)
+	}), nil
+
 }
 
 //go:embed all:themes
@@ -374,4 +376,59 @@ var WebsocketMessageType = map[int]string{
 	websocket.CloseMessage:  "close",
 	websocket.PingMessage:   "ping",
 	websocket.PongMessage:   "pong",
+}
+
+func urlToArgs(u *url.URL) []string {
+	var args []string
+
+	// Add path segments as arguments
+	if u.Path != "/" {
+		args = append(args, strings.Split(strings.TrimPrefix(u.Path, "/"), "/")...)
+	}
+
+	// Add query parameters as arguments
+	for key, values := range u.Query() {
+		for _, value := range values {
+			if value != "" {
+				args = append(args, formatArg(key, value))
+			} else {
+				args = append(args, formatArg(key, ""))
+			}
+		}
+	}
+
+	return args
+}
+
+func formatArg(key, value string) string {
+	if len(key) == 1 {
+		if value != "" {
+			return fmt.Sprintf("-%s=%s", key, value)
+		}
+		return fmt.Sprintf("-%s", key)
+	}
+
+	if value != "" {
+		return fmt.Sprintf("--%s=%s", key, value)
+	}
+	return fmt.Sprintf("--%s", key)
+}
+
+func urlToCommand(appDir string, u *url.URL) (*exec.Cmd, error) {
+	appname := strings.Split(u.Host, ".")[0]
+	entries, err := os.ReadDir(appDir)
+	if err != nil {
+		return &exec.Cmd{}, err
+	}
+
+	for _, entry := range entries {
+		scriptname := strings.TrimSuffix(entry.Name(), filepath.Ext(entry.Name()))
+		if scriptname == appname {
+			args := urlToArgs(u)
+			command := exec.Command(filepath.Join(appDir, entry.Name()), args...)
+			return command, nil
+		}
+	}
+
+	return &exec.Cmd{}, fmt.Errorf("no script found for %s", appname)
 }
