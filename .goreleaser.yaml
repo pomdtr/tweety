@@ -22,8 +22,6 @@ archives:
       - LICENSE-MIT
 release:
   prerelease: auto
-  extra_files:
-    - glob: config.schema.json
 checksum:
   name_template: "checksums.txt"
 snapshot:
