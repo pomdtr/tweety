@@ -18,13 +18,9 @@ import (
 	"sync"
 	"time"
 
-	"regexp"
-
 	"github.com/creack/pty"
 	"github.com/go-chi/chi/v5"
 	"github.com/gorilla/websocket"
-
-	_ "embed"
 
 	"github.com/spf13/cobra"
 )
@@ -42,10 +38,12 @@ var (
 
 func main() {
 	var flags struct {
-		host string
-		port int
-		cert string
-		key  string
+		host      string
+		port      int
+		cert      string
+		key       string
+		theme     string
+		themeDark string
 	}
 
 	cmd := cobra.Command{
@@ -54,7 +52,17 @@ func main() {
 		SilenceUsage: true,
 		Args:         cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			handler, err := NewHandler(args[0])
+			themeLight := flags.theme
+			themeDark := flags.themeDark
+			if themeDark == "" {
+				themeDark = flags.theme
+			}
+
+			handler, err := NewHandler(HandlerParams{
+				Entrypoint: args[0],
+				ThemeLight: themeLight,
+				ThemeDark:  themeDark,
+			})
 			if err != nil {
 				return err
 			}
@@ -75,13 +83,21 @@ func main() {
 	cmd.Flags().IntVarP(&flags.port, "port", "p", 9999, "port to listen on")
 	cmd.Flags().StringVarP(&flags.cert, "cert", "c", "", "tls certificate file")
 	cmd.Flags().StringVarP(&flags.key, "key", "k", "", "tls key file")
+	cmd.Flags().StringVar(&flags.theme, "theme", "Tomorrow Night", "default theme to use")
+	cmd.Flags().StringVar(&flags.themeDark, "theme-dark", "", "default dark theme to use, if not set, it will use the same as theme")
 
 	if err := cmd.Execute(); err != nil {
 		os.Exit(1)
 	}
 }
 
-func NewHandler(entrypoint string) (http.Handler, error) {
+type HandlerParams struct {
+	Entrypoint string
+	ThemeLight string
+	ThemeDark  string
+}
+
+func NewHandler(params HandlerParams) (http.Handler, error) {
 	r := chi.NewRouter()
 
 	// Middleware to set the required header for private network access
@@ -117,7 +133,7 @@ func NewHandler(entrypoint string) (http.Handler, error) {
 			return
 		}
 
-		cmd := exec.Command(entrypoint, args...)
+		cmd := exec.Command(params.Entrypoint, args...)
 
 		cmd.Env = os.Environ()
 		cmd.Env = append(cmd.Env, "TERM=xterm-256color")
@@ -229,50 +245,25 @@ func NewHandler(entrypoint string) (http.Handler, error) {
 		return nil, fmt.Errorf("failed to parse index.html: %w", err)
 	}
 
+	themeBytes, err := themeFS.ReadFile(fmt.Sprintf("themes/%s.json", strings.Trim(params.ThemeLight, " ")))
+	if err != nil {
+		return nil, fmt.Errorf("failed to read theme file: %w", err)
+	}
+
+	themeDarkBytes, err := themeFS.ReadFile(fmt.Sprintf("themes/%s.json", strings.Trim(params.ThemeDark, " ")))
+	if err != nil {
+		return nil, fmt.Errorf("failed to read dark theme file: %w", err)
+	}
+
 	r.HandleFunc("/*", func(w http.ResponseWriter, r *http.Request) {
-		content, err := os.ReadFile(entrypoint)
-
-		if err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
-			w.Write([]byte(fmt.Sprintf("failed to read script %s: %s", entrypoint, err)))
-			return
-		}
-
-		theme := extractMeta(content, "theme", "Tomorrow Night")
-		themeDark := extractMeta(content, "themeDark", theme)
-
-		themeBytes, err := themeFS.ReadFile(fmt.Sprintf("themes/%s.json", strings.Trim(theme, " ")))
-		if err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
-			w.Write([]byte(fmt.Sprintf("failed to read theme file: %s", err)))
-			return
-		}
-
-		themeDarkBytes, err := themeFS.ReadFile(fmt.Sprintf("themes/%s.json", strings.Trim(themeDark, " ")))
-		if err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
-			w.Write([]byte(fmt.Sprintf("failed to read themeDark file: %s", err)))
-			return
-		}
-
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		index.Execute(w, map[string]interface{}{
-			"Favicon":    extractMeta(content, "favicon", "/_tweety/icon.png"),
 			"ThemeLight": string(themeBytes),
 			"ThemeDark":  string(themeDarkBytes),
 		})
 	})
 
 	return r, nil
-}
-
-func extractMeta(content []byte, name string, defaultValue string) string {
-	re := regexp.MustCompile(fmt.Sprintf(`@tweety\.%s\s+(.+)`, regexp.QuoteMeta(name)))
-	matches := re.FindSubmatch(content)
-	if len(matches) < 2 {
-		return defaultValue
-	}
-	return string(matches[1])
 }
 
 func HandleWebsocket(tty *os.File) http.HandlerFunc {

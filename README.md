@@ -46,22 +46,10 @@ Any path or query parameter will be passed as arguments to the script.
 
 Make sure to properly parse and validate params in your entrypoint script.
 
-## Configuration
-
-You can use `@tweety.<name>` directives to configure tweety from your script.
-
-- `@tweety.theme <theme>`: Set the theme for the terminal.
-- `@tweety.themeDark <theme>`: Set the dark theme for the terminal.
-- `@tweety.favicon <url>`: Set the favicon for the terminal.
-
 ## Example entrypoint
 
 ```ts
 #!/usr/bin/env -S deno run -A
-
-// @tweety.theme Tomorrow
-// @tweety.themeDark Tomorrow Night
-// @tweety.favicon https://fav.farm/🔥
 
 import { program } from 'npm:@commander-js/extra-typings'
 
