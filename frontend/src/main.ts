@@ -166,6 +166,17 @@ async function main() {
   globalThis.onbeforeunload = () => {
     ws.close();
   };
+  ws.onclose = () => {
+    terminal.writeln(
+      "Connection closed. Hit Enter to refresh the page.",
+    );
+
+    terminal.onKey((event) => {
+      if (event.key === "\r" || event.key === "\n") {
+        globalThis.location.reload();
+      }
+    });
+  }
 
   globalThis.onfocus = () => {
     terminal.focus();

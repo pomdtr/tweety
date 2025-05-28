@@ -1,9 +1,5 @@
 #!/usr/bin/env -S deno run -A
 
-// @tweety.theme Tomorrow
-// @tweety.themeDark Tomorrow Night
-// @tweety.favicon https://fav.farm/🔥
-
 import { program } from 'npm:@commander-js/extra-typings'
 
 async function runCommand(command: string, args?: string[]): Promise<number> {
