@@ -1,38 +1,30 @@
-import { ITheme, Terminal } from "xterm";
+import { Terminal } from "xterm";
 import { FitAddon } from "xterm-addon-fit";
 import { WebglAddon } from "xterm-addon-webgl";
 import { WebLinksAddon } from "xterm-addon-web-links";
 import { AttachAddon } from "xterm-addon-attach";
-import { Config } from "./config";
-
-async function fetchTheme(name: string, origin?: string | URL) {
-  const themeUrl = new URL(
-    `/themes/${name}.json`,
-    origin || window.location.origin,
-  );
-  return fetchJSON(themeUrl) as Promise<ITheme>;
-}
-
-async function fetchJSON(url: string | URL, options?: RequestInit) {
-  const resp = await fetch(url, options);
-  return resp.json();
-}
 
 async function main() {
-  const params = new URLSearchParams(window.location.search);
+  const targetElem = document.getElementById("terminal");
+  if (!targetElem) {
+    console.error("Terminal element not found");
+    return;
+  }
+
+  const themeLigt = JSON.parse(targetElem.getAttribute("data-theme-light") || "{}");
+  const themeDark = JSON.parse(
+    targetElem.getAttribute("data-theme-dark") || "{}",
+  );
+
+  const params = new URLSearchParams(globalThis.location.search);
   let origin: URL;
   if (params.has("port")) {
     origin = new URL(`http://localhost:${params.get("port")}`);
   } else {
-    origin = new URL(window.location.origin);
+    origin = new URL(globalThis.location.origin);
   }
 
-  const config = (await fetchJSON(new URL("/config", origin))) as Config;
-  const lightTheme = await fetchTheme(config.theme || "Tomorrow", origin);
-  const darkTheme = await fetchTheme(
-    config.themeDark || config.theme || "Tomorrow Night",
-    origin,
-  );
+
   const terminal = new Terminal({
     cursorBlink: true,
     allowProposedApi: true,
@@ -40,10 +32,9 @@ async function main() {
     macOptionClickForcesSelection: true,
     fontSize: 13,
     fontFamily: "Consolas,Liberation Mono,Menlo,Courier,monospace",
-    theme: window.matchMedia("(prefers-color-scheme: dark)").matches
-      ? darkTheme
-      : lightTheme,
-    ...config.xterm,
+    theme: globalThis.matchMedia("(prefers-color-scheme: dark)").matches
+      ? themeDark
+      : themeLigt,
   });
 
   const fitAddon = new FitAddon();
@@ -51,7 +42,7 @@ async function main() {
     (event, uri) => {
       // check if cmd key is pressed
       if (event.metaKey || event.ctrlKey) {
-        window.open(uri, "_blank");
+        globalThis.open(uri, "_blank");
       }
     },
     {
@@ -122,7 +113,7 @@ async function main() {
   terminal.open(document.getElementById("terminal")!);
   fitAddon.fit();
 
-  const resp = await fetch("/exec", {
+  const resp = await fetch("/_tweety/exec", {
     method: "POST",
   });
 
@@ -139,14 +130,15 @@ async function main() {
 
   const websocketProtocol = origin.protocol === "https:" ? "wss" : "ws";
   const websocketUrl = new URL(
-    `${websocketProtocol}://${origin.host}/pty/${terminalID}`,
+    `${websocketProtocol}://${origin.host}/_tweety/pty/${terminalID}`,
   );
 
   websocketUrl.searchParams.set("cols", terminal.cols.toString());
   websocketUrl.searchParams.set("rows", terminal.rows.toString());
 
   const ws = new WebSocket(websocketUrl);
-  window.onresize = () => {
+
+  globalThis.onresize = () => {
     fitAddon.fit();
   };
 
@@ -154,10 +146,9 @@ async function main() {
     document.title = title;
   });
 
-  terminal.onResize((size) => {
+  terminal.onResize(async (size) => {
     const { cols, rows } = size;
-    const url = new URL(`/resize/${terminalID}`, origin);
-    fetch(url, {
+    await fetch(new URL(`/_tweety/resize/${terminalID}`, origin), {
       method: "POST",
       body: JSON.stringify({ cols, rows }),
     });
@@ -166,17 +157,17 @@ async function main() {
   const attachAddon = new AttachAddon(ws);
   terminal.loadAddon(attachAddon);
 
-  window
+  globalThis
     .matchMedia("(prefers-color-scheme: dark)")
     .addEventListener("change", function (e) {
-      terminal.options.theme = e.matches ? darkTheme : lightTheme;
+      terminal.options.theme = e.matches ? themeDark : themeLigt;
     });
 
-  window.onbeforeunload = () => {
+  globalThis.onbeforeunload = () => {
     ws.close();
   };
 
-  window.onfocus = () => {
+  globalThis.onfocus = () => {
     terminal.focus();
   };
 

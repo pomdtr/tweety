@@ -2,19 +2,9 @@
 
 Minimize your context switching by interacting with your terminal directly from your browser.
 
-## Features
-
-### Mix Web and Terminal Tabs
-
 ![tweety running from the browser](./static/tabs.png)
 
-### Side by Side Mode
-
-![tweety running in a split pane](./static/panel.png)
-
-### Developer-Console Integration
-
-![tweety running in the developer panel](./static/devtools.png)
+## Features
 
 ## Installation
 
@@ -35,102 +25,74 @@ cd tweety
 make install
 ```
 
-See the `tweety completion` command to generate completion scripts for your shell.
-
 ## Usage
 
 ```sh
-tweety [-p <port>]
+tweety <script-path>
 ```
 
 By default, tweety will start on port 9999, so you can access it at <http://localhost:9999>.
 
-## Browser Extension
-
-Browser extensions for Chrome and Firefox are available in the `extension` folder.
-
-## Chrome Extension
-
-- Clone the repository
-- Go to `chrome://extensions`
-- Enable `Developer mode`
-- Click on `Load unpacked`
-- Select the `extension/chrome` folder
-
-By default, the extension will try to connect to `localhost:9999`. You can
-customize the origin in the extension options.
-
-## Firefox Extension
-
-- Clone the repository
-- Go to `about:debugging
-- Click on `This Firefox`
-- Click on `Load Temporary Add-on...`
-- Select the `extension/firefox/manifest.json` file
-
-## Starting Tweety on Boot
-
-If you have installed Tweety using Homebrew, you can use the following command:
+You can use the `--host` and `--port` flags to change the host and port:
 
 ```sh
-brew services start tweety
+tweety --host 0.0.0.0 --port 8080 <script-path>
 ```
 
-To unload the service, use:
+Any path or query parameter will be passed as arguments to the script.
 
-```sh
-brew services stop tweety
-```
+- `http://localhost:9999/ssh/example.com` will run the command `<script-path> ssh example.com`
+- `http://localhost:9999/nvim?file=/home/pomdtr/.zshrc` will run the command `<script-path> nvim --file=/home/pomdtr/.zshrc`
+
+Make sure to properly parse and validate params in your entrypoint script.
 
 ## Configuration
 
-Use the `$XDG_CONFIG_DIR/tweety/tweety.json` file to configure Tweety (defaults
-to `~/.config/tweety/tweety.json`).
+You can use `@tweety.<name>` directives to configure tweety from your script.
 
-Alternatively, you can use the `TWEETY_CONFIG` environment variable to specify a
-custom path.
+- `@tweety.theme <theme>`: Set the theme for the terminal.
+- `@tweety.themeDark <theme>`: Set the dark theme for the terminal.
+- `@tweety.favicon <url>`: Set the favicon for the terminal.
 
-```json
-{
-  "$schema": "https://github.com/pomdtr/tweety/releases/latest/download/config.schema.json",
-  "theme": "Tomorrow",
-  "themeDark": "Tomorrow Night",
-  "xterm": {
-    "fontSize": 14,
-  },
-  "env": {
-    "EDITOR": "kak"
-  },
-  "defaultProfile": "default",
-  "profiles": {
-    "default": {
-      "command": "bash",
-      "args": ["--login"],
-      "env": {
-        "EDITOR": "vim"
-      }
-    },
-    "fish": {
-      "command": "fish",
-      "args": ["--login"],
-      "favicon": "https://fishshell.com/favicon.ico"
-    }
-  }
+## Example entrypoint
+
+```ts
+#!/usr/bin/env -S deno run -A
+
+// @tweety.theme Tomorrow
+// @tweety.themeDark Tomorrow Night
+// @tweety.favicon https://fav.farm/🔥
+
+import { program } from 'npm:@commander-js/extra-typings'
+
+async function runCommand(command: string, args?: string[]): Promise<number> {
+    const cmd = new Deno.Command(command, { args });
+    const process = cmd.spawn();
+    const status = await process.status;
+    return status.code
+}
+
+// url: http://localhost:9999/
+program.name("tweety").action(async () => {
+    Deno.exitCode = await runCommand("fish")
+})
+
+// url: http://localhost:9999/htop
+program.command("htop").action(async () => {
+    Deno.exitCode = await runCommand("htop");
+})
+
+// url: http://localhost:9999/ssh/example.com
+program.command("ssh").argument("<host>").action(async (host: string) => {
+    Deno.exitCode = await runCommand("ssh", [host]);
+})
+
+// url: http://localhost:9999/nvim?file=/path/to/file
+program.command("edit").option("-f, --file <file>", "File to open in editor").action(async (options) => {
+    Deno.exitCode = await runCommand("nvim", options.file ? [options.file] : []);
+})
+
+if (import.meta.main) {
+    await program.parseAsync();
 }
 ```
-
-The `xterm` section is passed directly to xterm.js, see the [documentation](https://xtermjs.org/docs/api/terminal/interfaces/iterminaloptions/).
-
-## Endpoints
-
-- `/` - open the default profile
-- `/?reload=true` - reload the page when the command exits
-- `/?profile=<profile>` - open a specific profile
-
-## FAQ
-
-### Windows Version?
-
-The [package](https://github.com/creack/pty) used to create the terminal UI does not support Windows.
-
-But it's planned, so stay tuned! In the meantime, you can run tweety from [WSL](https://learn.microsoft.com/en-us/windows/wsl/install).

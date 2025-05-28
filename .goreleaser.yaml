@@ -3,7 +3,7 @@ before:
   hooks:
     - go mod tidy
 changelog:
-  skip: true
+  disable: true
 builds:
   - binary: tweety
     env:
@@ -29,13 +29,7 @@ snapshot:
   name_template: "{{ incpatch .Version }}-next"
 brews:
   - name: tweety
-    homepage: https://pomdtr.github.io/tweety
-    service: |
-      run [ opt_bin/"tweety" ]
-      keep_alive true
-      working_dir HOMEBREW_PREFIX
-      log_path var/"log/tweety.log"
-      error_log_path var/"log/tweety.log"
+    homepage: https://github.com/pomdtr/tweety
     repository:
       owner: pomdtr
       name: homebrew-tap

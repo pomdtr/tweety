@@ -1,7 +1,4 @@
 {
-    "deno.enablePaths": [
-        "./scripts"
-    ],
     "json.schemas": [
         {
             "fileMatch": [
