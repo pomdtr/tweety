@@ -28,7 +28,7 @@ make install
 ## Usage
 
 ```sh
-tweety <script-path>
+tweety <entrypoint>
 ```
 
 By default, tweety will start on port 9999, so you can access it at <http://localhost:9999>.
@@ -39,10 +39,10 @@ You can use the `--host` and `--port` flags to change the host and port:
 tweety --host 0.0.0.0 --port 8080 <script-path>
 ```
 
-Any path or query parameter will be passed as arguments to the script.
+You can pass arguments to your entrypoint script using the `cmd` query parameter. The provided command will be splitted by the [shlex](https://pkg.go.dev/github.com/google/shlex) library, then passed as arguments to your entrypoint script.
 
-- `http://localhost:9999/ssh/example.com` will run the command `<script-path> ssh example.com`
-- `http://localhost:9999/nvim?file=/home/pomdtr/.zshrc` will run the command `<script-path> nvim --file=/home/pomdtr/.zshrc`
+- `http://localhost:9999/?cmd=ssh+example.com` will run the command `<entrypoint> ssh example.com`
+- `http://localhost:9999/?cmd=nvim+/home/pomdtr/.zshrc` will run the command `<entrypoint> nvim /home/pomdtr/.zshrc`
 
 Make sure to properly parse and validate params in your entrypoint script.
 
