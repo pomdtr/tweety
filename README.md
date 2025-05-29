@@ -53,7 +53,7 @@ Make sure to properly parse and validate params in your entrypoint script.
 
 import { program } from 'npm:@commander-js/extra-typings'
 
-async function runCommand(command: string, args?: string[]): Promise<number> {
+async function run(command: string, args?: string[]): Promise<number> {
     const cmd = new Deno.Command(command, { args });
     const process = cmd.spawn();
     const status = await process.status;
@@ -62,22 +62,22 @@ async function runCommand(command: string, args?: string[]): Promise<number> {
 
 // url: http://localhost:9999/
 program.name("tweety").action(async () => {
-    Deno.exitCode = await runCommand("fish")
+    await run("fish")
 })
 
-// url: http://localhost:9999/htop
+// url: http://localhost:9999/?cmd=htop
 program.command("htop").action(async () => {
-    Deno.exitCode = await runCommand("htop");
+    await run("htop");
 })
 
-// url: http://localhost:9999/ssh/example.com
+// url: http://localhost:9999/?cmd=ssh+example.com
 program.command("ssh").argument("<host>").action(async (host: string) => {
-    Deno.exitCode = await runCommand("ssh", [host]);
+    await run("ssh", [host]);
 })
 
-// url: http://localhost:9999/nvim?file=/path/to/file
-program.command("edit").option("-f, --file <file>", "File to open in editor").action(async (options) => {
-    Deno.exitCode = await runCommand("nvim", options.file ? [options.file] : []);
+// url: http://localhost:9999/?cmd=nvim+/path/to/file
+program.command("nvim").argument("<file>", "File to open in editor").action(async (file) => {
+    await run("nvim", file ? [file] : []);
 })
 
 if (import.meta.main) {
