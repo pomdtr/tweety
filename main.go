@@ -44,6 +44,7 @@ func main() {
 		key       string
 		theme     string
 		themeDark string
+		fontSize  int
 	}
 
 	cmd := cobra.Command{
@@ -62,6 +63,7 @@ func main() {
 				Entrypoint: args[0],
 				ThemeLight: themeLight,
 				ThemeDark:  themeDark,
+				FontSize:   flags.fontSize,
 			})
 			if err != nil {
 				return err
@@ -85,6 +87,7 @@ func main() {
 	cmd.Flags().StringVarP(&flags.key, "key", "k", "", "tls key file")
 	cmd.Flags().StringVar(&flags.theme, "theme", "Tomorrow Night", "default theme to use")
 	cmd.Flags().StringVar(&flags.themeDark, "theme-dark", "", "default dark theme to use, if not set, it will use the same as theme")
+	cmd.Flags().IntVarP(&flags.fontSize, "font-size", "f", 13, "font size to use")
 
 	if err := cmd.Execute(); err != nil {
 		os.Exit(1)
@@ -95,6 +98,7 @@ type HandlerParams struct {
 	Entrypoint string
 	ThemeLight string
 	ThemeDark  string
+	FontSize   int
 }
 
 func NewHandler(params HandlerParams) (http.Handler, error) {
@@ -260,6 +264,7 @@ func NewHandler(params HandlerParams) (http.Handler, error) {
 		index.Execute(w, map[string]interface{}{
 			"ThemeLight": string(themeBytes),
 			"ThemeDark":  string(themeDarkBytes),
+			"FontSize":   params.FontSize,
 		})
 	})
 

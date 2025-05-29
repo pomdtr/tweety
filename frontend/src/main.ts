@@ -15,13 +15,14 @@ async function main() {
   const themeDark = JSON.parse(
     targetElem.getAttribute("data-theme-dark") || "{}",
   );
+  const fontSize = parseInt(targetElem.getAttribute("data-font-size") || "13", 10);
 
   const terminal = new Terminal({
     cursorBlink: true,
     allowProposedApi: true,
     macOptionIsMeta: true,
     macOptionClickForcesSelection: true,
-    fontSize: 13,
+    fontSize: fontSize,
     fontFamily: "Consolas,Liberation Mono,Menlo,Courier,monospace",
     theme: globalThis.matchMedia("(prefers-color-scheme: dark)").matches
       ? themeDark
