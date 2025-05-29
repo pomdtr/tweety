@@ -372,11 +372,3 @@ func getConnectionUpgrader(
 		WriteBufferSize:  maxBufferSizeBytes,
 	}
 }
-
-var WebsocketMessageType = map[int]string{
-	websocket.BinaryMessage: "binary",
-	websocket.TextMessage:   "text",
-	websocket.CloseMessage:  "close",
-	websocket.PingMessage:   "ping",
-	websocket.PongMessage:   "pong",
-}
