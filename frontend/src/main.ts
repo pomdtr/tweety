@@ -16,15 +16,6 @@ async function main() {
     targetElem.getAttribute("data-theme-dark") || "{}",
   );
 
-  const params = new URLSearchParams(globalThis.location.search);
-  let origin: URL;
-  if (params.has("port")) {
-    origin = new URL(`http://localhost:${params.get("port")}`);
-  } else {
-    origin = new URL(globalThis.location.origin);
-  }
-
-
   const terminal = new Terminal({
     cursorBlink: true,
     allowProposedApi: true,
@@ -113,7 +104,17 @@ async function main() {
   terminal.open(document.getElementById("terminal")!);
   fitAddon.fit();
 
-  const resp = await fetch("/_tweety/exec", {
+  const url = new URL(globalThis.location.href);
+  const execUrl = new URL("/_tweety/exec", url)
+  for (const param of ["cmd", "cwd"]) {
+    const value = url.searchParams.get(param);
+    if (value) {
+      execUrl.searchParams.set(param, value);
+    }
+  }
+
+
+  const resp = await fetch(execUrl, {
     method: "POST",
   });
 
@@ -128,9 +129,9 @@ async function main() {
     return;
   }
 
-  const websocketProtocol = origin.protocol === "https:" ? "wss" : "ws";
+  const websocketProtocol = url.protocol === "https:" ? "wss" : "ws";
   const websocketUrl = new URL(
-    `${websocketProtocol}://${origin.host}/_tweety/pty/${terminalID}`,
+    `${websocketProtocol}://${url.host}/_tweety/pty/${terminalID}`,
   );
 
   websocketUrl.searchParams.set("cols", terminal.cols.toString());

@@ -10,19 +10,15 @@ async function runCommand(command: string, args?: string[]): Promise<number> {
 }
 
 program.name("tweety").action(async () => {
-    Deno.exitCode = await runCommand("fish")
+    await runCommand("fish")
 })
 
 program.command("htop").action(async () => {
-    Deno.exitCode = await runCommand("htop");
+    await runCommand("htop");
 })
 
 program.command("ssh").argument("<host>").action(async (host: string) => {
-    Deno.exitCode = await runCommand("ssh", [host]);
-})
-
-program.command("kak").option("-f, --file <file>", "File to open in Kakoune").action(async (options) => {
-    Deno.exitCode = await runCommand("kak", options.file ? [options.file] : []);
+    await runCommand("ssh", [host]);
 })
 
 

@@ -10,7 +10,6 @@ import (
 	"io/fs"
 	"log"
 	"net/http"
-	"net/url"
 	"os"
 	"os/exec"
 	"strconv"
@@ -20,6 +19,7 @@ import (
 
 	"github.com/creack/pty"
 	"github.com/go-chi/chi/v5"
+	"github.com/google/shlex"
 	"github.com/gorilla/websocket"
 
 	"github.com/spf13/cobra"
@@ -119,24 +119,26 @@ func NewHandler(params HandlerParams) (http.Handler, error) {
 	ttyMap := make(map[string]*os.File)
 
 	r.Post("/_tweety/exec", func(w http.ResponseWriter, r *http.Request) {
-		refererUrl, err := url.Parse(r.Referer())
-		if err != nil {
-			w.WriteHeader(http.StatusBadRequest)
-			w.Write([]byte(fmt.Sprintf("invalid referer URL: %s", err)))
-			return
-		}
+		var args []string
+		if cmd := r.URL.Query().Get("cmd"); cmd != "" {
+			a, err := shlex.Split(cmd)
+			if err != nil {
+				w.WriteHeader(http.StatusBadRequest)
+				w.Write([]byte(fmt.Sprintf("invalid command: %s", err)))
+				return
+			}
 
-		args, err := urlToArgs(refererUrl)
-		if err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
-			w.Write([]byte(err.Error()))
-			return
+			args = a
 		}
 
 		cmd := exec.Command(params.Entrypoint, args...)
 
 		cmd.Env = os.Environ()
 		cmd.Env = append(cmd.Env, "TERM=xterm-256color")
+
+		if cwd := r.URL.Query().Get("cwd"); cwd != "" {
+			cmd.Dir = cwd
+		}
 
 		log.Println("executing command:", cmd.String())
 		tty, err := pty.Start(cmd)
@@ -238,8 +240,6 @@ func NewHandler(params HandlerParams) (http.Handler, error) {
 		return nil, err
 	}
 
-	r.Handle("/_tweety/*", http.StripPrefix("/_tweety", http.FileServer(http.FS(frontendFS))))
-
 	index, err := template.ParseFS(frontendFS, "index.html")
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse index.html: %w", err)
@@ -255,13 +255,15 @@ func NewHandler(params HandlerParams) (http.Handler, error) {
 		return nil, fmt.Errorf("failed to read dark theme file: %w", err)
 	}
 
-	r.HandleFunc("/*", func(w http.ResponseWriter, r *http.Request) {
+	r.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		index.Execute(w, map[string]interface{}{
 			"ThemeLight": string(themeBytes),
 			"ThemeDark":  string(themeDarkBytes),
 		})
 	})
+
+	r.Handle("/*", http.FileServer(http.FS(frontendFS)))
 
 	return r, nil
 }
@@ -377,38 +379,4 @@ var WebsocketMessageType = map[int]string{
 	websocket.CloseMessage:  "close",
 	websocket.PingMessage:   "ping",
 	websocket.PongMessage:   "pong",
-}
-
-func formatArg(key, value string) string {
-	if len(key) == 1 {
-		if value != "" {
-			return fmt.Sprintf("-%s=%s", key, value)
-		}
-		return fmt.Sprintf("-%s", key)
-	}
-
-	if value != "" {
-		return fmt.Sprintf("--%s=%s", key, value)
-	}
-	return fmt.Sprintf("--%s", key)
-}
-
-func urlToArgs(u *url.URL) ([]string, error) {
-	var args []string
-	// Add path segments as arguments
-	if u.Path != "/" {
-		args = append(args, strings.Split(strings.TrimPrefix(u.Path, "/"), "/")...)
-	}
-
-	// Add query parameters as arguments
-	for key, values := range u.Query() {
-		for _, value := range values {
-			if value != "" {
-				args = append(args, formatArg(key, value))
-			} else {
-				args = append(args, formatArg(key, ""))
-			}
-		}
-	}
-	return args, nil
 }
