@@ -3,7 +3,9 @@ package main
 import (
 	"bytes"
 	"crypto/rand"
+	"crypto/subtle"
 	"embed"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"html/template"
@@ -34,17 +36,20 @@ var themeFS embed.FS
 var (
 	maxBufferSizeBytes   = 512
 	keepalivePingTimeout = 20 * time.Second
+	activeSessions       = make(map[string]time.Time)
+	sessionMutex         sync.RWMutex
 )
 
 func main() {
 	var flags struct {
-		host      string
-		port      int
-		cert      string
-		key       string
-		theme     string
-		themeDark string
-		fontSize  int
+		host       string
+		port       int
+		cert       string
+		key        string
+		theme      string
+		themeDark  string
+		fontSize   int
+		passphrase string
 	}
 
 	cmd := cobra.Command{
@@ -64,6 +69,7 @@ func main() {
 				ThemeLight: themeLight,
 				ThemeDark:  themeDark,
 				FontSize:   flags.fontSize,
+				Passphrase: flags.passphrase,
 			})
 			if err != nil {
 				return err
@@ -88,6 +94,7 @@ func main() {
 	cmd.Flags().StringVar(&flags.theme, "theme", "Tomorrow Night", "default theme to use")
 	cmd.Flags().StringVar(&flags.themeDark, "theme-dark", "", "default dark theme to use, if not set, it will use the same as theme")
 	cmd.Flags().IntVarP(&flags.fontSize, "font-size", "f", 13, "font size to use")
+	cmd.Flags().StringVar(&flags.passphrase, "passphrase", "", "optional passphrase")
 
 	if err := cmd.Execute(); err != nil {
 		os.Exit(1)
@@ -99,10 +106,153 @@ type HandlerParams struct {
 	ThemeLight string
 	ThemeDark  string
 	FontSize   int
+	Passphrase string
+}
+
+func generateSecureToken() (string, error) {
+	b := make([]byte, 32)
+	if _, err := rand.Read(b); err != nil {
+		return "", err
+	}
+	return base64.URLEncoding.EncodeToString(b), nil
+}
+
+func passphraseMiddleware(passphrase string) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			// Skip auth for ping endpoint and static assets
+			if r.URL.Path == "/_tweety/ping" ||
+				strings.HasPrefix(r.URL.Path, "/assets/") ||
+				r.URL.Path == "/icon.png" {
+				next.ServeHTTP(w, r)
+				return
+			}
+
+			// If no passphrase is set, let folks in
+			if passphrase == "" {
+				next.ServeHTTP(w, r)
+				return
+			}
+
+			// Check for valid session token
+			if cookie, err := r.Cookie("session"); err == nil {
+				sessionMutex.RLock()
+				expiry, exists := activeSessions[cookie.Value]
+				sessionMutex.RUnlock()
+
+				if exists && time.Now().Before(expiry) {
+					next.ServeHTTP(w, r)
+					return
+				}
+				// If session expired or invalid, remove it
+				sessionMutex.Lock()
+				delete(activeSessions, cookie.Value)
+				sessionMutex.Unlock()
+			}
+
+			// Handle POST request for passphrase
+			if r.Method == "POST" && r.URL.Path == "/_tweety/auth" {
+				if err := r.ParseForm(); err != nil {
+					http.Error(w, "Bad Request", http.StatusBadRequest)
+					return
+				}
+
+				providedPassphrase := r.FormValue("passphrase")
+				if subtle.ConstantTimeCompare([]byte(providedPassphrase), []byte(passphrase)) == 1 {
+					// Generate secure session token
+					token, err := generateSecureToken()
+					if err != nil {
+						http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+						return
+					}
+
+					// Store session with expiration
+					sessionMutex.Lock()
+					activeSessions[token] = time.Now().Add(24 * time.Hour)
+					sessionMutex.Unlock()
+
+					// Set secure session cookie
+					http.SetCookie(w, &http.Cookie{
+						Name:     "session",
+						Value:    token,
+						Path:     "/",
+						HttpOnly: true,
+						Secure:   r.TLS != nil,
+						SameSite: http.SameSiteStrictMode,
+						MaxAge:   86400, // 24 hours
+					})
+					w.WriteHeader(http.StatusOK)
+					return
+				}
+				http.Error(w, "Unauthorized", http.StatusUnauthorized)
+				return
+			}
+
+			// If no valid session, show the form
+			if r.URL.Path == "/" {
+				w.Header().Set("Content-Type", "text/html")
+				w.Write([]byte(`
+					<!DOCTYPE html>
+					<html lang="en">
+					<head>
+						<title>Tweety Access</title>
+						<style>
+							body { font-family: system-ui; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background: #f5f5f5; }
+							.container { background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+							input { padding: 0.5rem; margin: 0.5rem 0; width: 100%; }
+							button { padding: 0.5rem 1rem; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; }
+							.error { color: #dc3545; margin-top: 1rem; display: none; }
+						</style>
+					</head>
+					<body>
+						<div class="container">
+							<h1>Tweety Access</h1>
+							<form id="passphraseForm">
+								<input type="password" id="passphrase" placeholder="Enter passphrase" required>
+								<button type="submit">Access Tweety</button>
+							</form>
+							<div id="error" class="error">Incorrect passphrase. Try again.</div>
+						</div>
+						<script>
+							document.getElementById('passphraseForm').onsubmit = async function(e) {
+								e.preventDefault();
+								const passphrase = document.getElementById('passphrase').value;
+								
+								try {
+									const response = await fetch('/_tweety/auth', {
+										method: 'POST',
+										headers: {
+											'Content-Type': 'application/x-www-form-urlencoded',
+										},
+										body: 'passphrase=' + encodeURIComponent(passphrase)
+									});
+
+									if (response.ok) {
+										window.location.href = '/';
+									} else {
+										document.getElementById('error').style.display = 'block';
+									}
+								} catch (error) {
+									console.error('Error:', error);
+									document.getElementById('error').style.display = 'block';
+								}
+							};
+						</script>
+					</body>
+					</html>
+				`))
+				return
+			}
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		})
+	}
 }
 
 func NewHandler(params HandlerParams) (http.Handler, error) {
 	r := chi.NewRouter()
+
+	// Passphrase middleware
+	r.Use(passphraseMiddleware(params.Passphrase))
 
 	// Middleware to set the required header for private network access
 	r.Use(func(next http.Handler) http.Handler {
@@ -367,8 +517,8 @@ func HandleWebsocket(tty *os.File) http.HandlerFunc {
 
 func getConnectionUpgrader(
 	maxBufferSizeBytes int,
-) websocket.Upgrader {
-	return websocket.Upgrader{
+) *websocket.Upgrader {
+	return &websocket.Upgrader{
 		CheckOrigin: func(r *http.Request) bool {
 			return true
 		},
