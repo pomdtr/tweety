@@ -38,12 +38,13 @@ var (
 
 func main() {
 	var flags struct {
-		host      string
-		port      int
-		cert      string
-		key       string
-		theme     string
-		themeDark string
+		host        string
+		port        int
+		credentials string
+		cert        string
+		key         string
+		theme       string
+		themeDark   string
 	}
 
 	cmd := cobra.Command{
@@ -59,9 +60,10 @@ func main() {
 			}
 
 			handler, err := NewHandler(HandlerParams{
-				Entrypoint: args[0],
-				ThemeLight: themeLight,
-				ThemeDark:  themeDark,
+				Credentials: flags.credentials,
+				Entrypoint:  args[0],
+				ThemeLight:  themeLight,
+				ThemeDark:   themeDark,
 			})
 			if err != nil {
 				return err
@@ -85,6 +87,7 @@ func main() {
 	cmd.Flags().StringVarP(&flags.key, "key", "k", "", "tls key file")
 	cmd.Flags().StringVar(&flags.theme, "theme", "Tomorrow Night", "default theme to use")
 	cmd.Flags().StringVar(&flags.themeDark, "theme-dark", "", "default dark theme to use, if not set, it will use the same as theme")
+	cmd.Flags().StringVar(&flags.credentials, "credentials", "", "basic auth credential in the format user:password")
 
 	if err := cmd.Execute(); err != nil {
 		os.Exit(1)
@@ -92,9 +95,10 @@ func main() {
 }
 
 type HandlerParams struct {
-	Entrypoint string
-	ThemeLight string
-	ThemeDark  string
+	Credentials string
+	Entrypoint  string
+	ThemeLight  string
+	ThemeDark   string
 }
 
 func NewHandler(params HandlerParams) (http.Handler, error) {
@@ -108,6 +112,30 @@ func NewHandler(params HandlerParams) (http.Handler, error) {
 			w.Header().Set("X-XSS-Protection", "1; mode=block")
 			w.Header().Set("Referrer-Policy", "same-origin")
 			w.Header().Set("Content-Security-Policy", "script-src 'self';")
+			next.ServeHTTP(w, r)
+		})
+	})
+
+	r.Use(func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if params.Credentials == "" {
+				next.ServeHTTP(w, r)
+				return
+			}
+
+			userpass := strings.SplitN(params.Credentials, ":", 2)
+			if len(userpass) != 2 {
+				http.Error(w, "invalid credential format", http.StatusInternalServerError)
+				return
+			}
+			username, password := userpass[0], userpass[1]
+
+			u, p, ok := r.BasicAuth()
+			if !ok || u != username || p != password {
+				w.Header().Set("WWW-Authenticate", `Basic realm="Restricted"`)
+				http.Error(w, "Unauthorized", http.StatusUnauthorized)
+				return
+			}
 			next.ServeHTTP(w, r)
 		})
 	})
