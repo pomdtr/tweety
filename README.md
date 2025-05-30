@@ -49,38 +49,53 @@ Make sure to properly parse and validate params in your entrypoint script.
 ## Example entrypoint
 
 ```ts
-#!/usr/bin/env -S deno run -A
+#!/usr/bin/env -S deno run --allow-run
 
 import { program } from 'npm:@commander-js/extra-typings'
+import { existsSync } from "jsr:@std/fs"
 
-async function run(command: string, args?: string[]): Promise<number> {
+// little helper to run commands
+async function run(command: string, ...args: string[]) {
     const cmd = new Deno.Command(command, { args });
     const process = cmd.spawn();
-    const status = await process.status;
-    return status.code
+    await process.status;
 }
 
-// url: http://localhost:9999/
-program.name("tweety").action(async () => {
-    await run("fish")
+// handle http://localhost:9999/
+program.action(async () => {
+    await run("bash")
 })
 
-// url: http://localhost:9999/?cmd=htop
+// handle http://localhost:9999?cmd=htop
 program.command("htop").action(async () => {
     await run("htop");
 })
 
-// url: http://localhost:9999/?cmd=ssh+example.com
+// handle http://localhost:9999?cmd=ssh+<host>
 program.command("ssh").argument("<host>").action(async (host: string) => {
-    await run("ssh", [host]);
+    await run("ssh", host);
 })
 
-// url: http://localhost:9999/?cmd=nvim+/path/to/file
-program.command("nvim").argument("<file>", "File to open in editor").action(async (file) => {
-    await run("nvim", file ? [file] : []);
+// handle http://localhost:9999?cmd=config
+program.command("config").action(async () => {
+    const scriptPath = new URL(import.meta.url).pathname;
+    await run("nvim", scriptPath)
+})
+
+// handle http://localhost:9999?cmd=nvim+<file>
+program.command("nvim").argument("<file>").action(async (file) => {
+    // protect use again `nvim 'term://<malicious-command>'`
+    if (file.startsWith("term://")) {
+        console.error("Invalid file path: cannot use 'term://' prefix");
+        Deno.exitCode = 1;
+        return;
+    }
+
+    await run("nvim", file)
 })
 
 if (import.meta.main) {
+    // parse arguments and run the appropriate command
     await program.parseAsync();
 }
 ```
