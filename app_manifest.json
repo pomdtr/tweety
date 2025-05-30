@@ -1,0 +1,9 @@
+{
+    "name": "com.github.pomdtr.tweety",
+    "description": "An integrated terminal for your browser",
+    "type": "stdio",
+    "path": "{{ .Path }}",
+    "allowed_origins": [
+        "chrome-extension://pofgojebniiboodkmmjfbapckcnbkhpi/"
+    ]
+}

@@ -1,0 +1,30 @@
+{
+  "name": "vite-web-extension",
+  "displayName": "Vite Web Extension",
+  "type": "module",
+  "scripts": {
+    "build": "tsc && vite build",
+    "watch": "vite build --watch --mode development --minify false",
+    "dev": "vite",
+    "serve:firefox": "web-ext run --start-url \"about:debugging#/runtime/this-firefox\"  --source-dir ./dist/",
+    "serve:chrome": "web-ext run -t chromium --start-url \"https://example.com\" --source-dir ./dist/"
+  },
+  "license": "MIT",
+  "devDependencies": {
+    "@samrum/vite-plugin-web-extension": "^5.0.0",
+    "@types/chrome": "^0.0.325",
+    "@types/webextension-polyfill": "^0.12.3",
+    "typescript": "^5.2.2",
+    "vite": "^5.0.0",
+    "web-ext": "^7.8.0"
+  },
+  "dependencies": {
+    "@xterm/addon-attach": "^0.11.0",
+    "@xterm/addon-fit": "^0.10.0",
+    "@xterm/addon-web-links": "^0.11.0",
+    "@xterm/addon-webgl": "^0.18.0",
+    "@xterm/xterm": "^5.5.0",
+    "shlex": "^2.1.2",
+    "webextension-polyfill": "^0.10.0"
+  }
+}

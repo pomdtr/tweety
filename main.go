@@ -3,33 +3,27 @@ package main
 import (
 	"bytes"
 	"crypto/rand"
-	"embed"
-	"encoding/json"
 	"fmt"
-	"html/template"
-	"io/fs"
 	"log"
+	"net"
 	"net/http"
 	"os"
-	"os/exec"
+	"path/filepath"
 	"strconv"
-	"strings"
 	"sync"
 	"time"
 
 	"github.com/creack/pty"
 	"github.com/go-chi/chi/v5"
-	"github.com/google/shlex"
 	"github.com/gorilla/websocket"
+	jsonparser "github.com/knadh/koanf/parsers/json"
+	"github.com/knadh/koanf/providers/file"
+	"github.com/knadh/koanf/v2"
 
 	"github.com/spf13/cobra"
 )
 
-//go:embed all:frontend/dist
-var frontendDist embed.FS
-
-//go:embed all:themes
-var themeFS embed.FS
+var k = koanf.New(".")
 
 var (
 	maxBufferSizeBytes   = 512
@@ -37,68 +31,71 @@ var (
 )
 
 func main() {
-	var flags struct {
-		host        string
-		port        int
-		credentials string
-		cert        string
-		key         string
-		theme       string
-		themeDark   string
-	}
+	configPath := filepath.Join(os.Getenv("HOME"), ".config", "tweety", "config.json")
 
-	cmd := cobra.Command{
-		Use:          "tweety [entrypoint]",
-		Short:        "An integrated terminal for your web browser",
-		SilenceUsage: true,
-		Args:         cobra.ExactArgs(1),
-		RunE: func(cmd *cobra.Command, args []string) error {
-			themeLight := flags.theme
-			themeDark := flags.themeDark
-			if themeDark == "" {
-				themeDark = flags.theme
+	cmd := &cobra.Command{
+		Use:   "tweety",
+		Short: "An integrated terminal for your web browser",
+		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+			if err := k.Load(file.Provider(configPath), jsonparser.Parser()); err != nil {
+				return fmt.Errorf("failed to load config: %w", err)
 			}
 
-			handler, err := NewHandler(HandlerParams{
-				Credentials: flags.credentials,
-				Entrypoint:  args[0],
-				ThemeLight:  themeLight,
-				ThemeDark:   themeDark,
-			})
-			if err != nil {
-				return err
-			}
-
-			if flags.cert != "" && flags.key != "" {
-				cmd.PrintErrln("Listening on", fmt.Sprintf("https://%s:%d", flags.host, flags.port))
-				cmd.Println("Press Ctrl+C to exit")
-				return http.ListenAndServeTLS(fmt.Sprintf("%s:%d", flags.host, flags.port), flags.cert, flags.key, handler)
-			}
-
-			cmd.PrintErrln("Listening on", fmt.Sprintf("http://%s:%d", flags.host, flags.port))
-			cmd.Println("Press Ctrl+C to exit")
-			return http.ListenAndServe(fmt.Sprintf("%s:%d", flags.host, flags.port), handler)
+			return nil
 		},
 	}
 
-	cmd.Flags().StringVarP(&flags.host, "host", "H", "localhost", "host to listen on")
-	cmd.Flags().IntVarP(&flags.port, "port", "p", 9999, "port to listen on")
-	cmd.Flags().StringVarP(&flags.cert, "cert", "c", "", "tls certificate file")
-	cmd.Flags().StringVarP(&flags.key, "key", "k", "", "tls key file")
-	cmd.Flags().StringVar(&flags.theme, "theme", "Tomorrow Night", "default theme to use")
-	cmd.Flags().StringVar(&flags.themeDark, "theme-dark", "", "default dark theme to use, if not set, it will use the same as theme")
-	cmd.Flags().StringVar(&flags.credentials, "credentials", "", "basic auth credential in the format user:password")
+	cmd.AddCommand(NewCmdServe())
+	cmd.AddCommand(NewCmdInstall())
 
 	if err := cmd.Execute(); err != nil {
 		os.Exit(1)
 	}
 }
 
+func NewCmdServe() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:          "serve",
+		SilenceUsage: true,
+		Args:         cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			port, err := getFreePort()
+			if err != nil {
+				return fmt.Errorf("failed to get free port: %w", err)
+			}
+
+			token := rand.Text()
+
+			handler, err := NewHandler(HandlerParams{
+				Entrypoint: args[0],
+				Port:       port,
+				Token:      token,
+			})
+			if err != nil {
+				return err
+			}
+
+			cmd.PrintErrf("Listening on http://localhost:%d\n", port)
+			cmd.Println("Press Ctrl+C to exit")
+			return http.ListenAndServe(fmt.Sprintf(":%d", port), handler)
+		},
+	}
+
+	return cmd
+}
+
+func NewCmdInstall() *cobra.Command {
+	cmd := &cobra.Command{
+		Use: "install",
+	}
+
+	return cmd
+}
+
 type HandlerParams struct {
-	Credentials string
-	Entrypoint  string
-	ThemeLight  string
-	ThemeDark   string
+	Entrypoint string
+	Port       int
+	Token      string
 }
 
 func NewHandler(params HandlerParams) (http.Handler, error) {
@@ -116,73 +113,51 @@ func NewHandler(params HandlerParams) (http.Handler, error) {
 		})
 	})
 
-	r.Use(func(next http.Handler) http.Handler {
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			if params.Credentials == "" {
-				next.ServeHTTP(w, r)
-				return
-			}
-
-			userpass := strings.SplitN(params.Credentials, ":", 2)
-			if len(userpass) != 2 {
-				http.Error(w, "invalid credential format", http.StatusInternalServerError)
-				return
-			}
-			username, password := userpass[0], userpass[1]
-
-			u, p, ok := r.BasicAuth()
-			if !ok || u != username || p != password {
-				w.Header().Set("WWW-Authenticate", `Basic realm="Restricted"`)
-				http.Error(w, "Unauthorized", http.StatusUnauthorized)
-				return
-			}
-			next.ServeHTTP(w, r)
-		})
-	})
-
-	r.Get("/_tweety/ping", func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("pong"))
-	})
+	// r.Get("/_tweety/ping", func(w http.ResponseWriter, r *http.Request) {
+	// 	w.Write([]byte("pong"))
+	// })
 
 	ttyMap := make(map[string]*os.File)
 
-	r.Post("/_tweety/exec", func(w http.ResponseWriter, r *http.Request) {
-		var args []string
-		if cmd := r.URL.Query().Get("cmd"); cmd != "" {
-			a, err := shlex.Split(cmd)
-			if err != nil {
-				w.WriteHeader(http.StatusBadRequest)
-				w.Write([]byte(fmt.Sprintf("invalid command: %s", err)))
-				return
-			}
+	// r.Post("/_tweety/exec", func(w http.ResponseWriter, r *http.Request) {
+	// 	var args []string
+	// 	if param := r.URL.Query().Get("args"); param != "" {
+	// 		a, err := shlex.Split(param)
+	// 		if err != nil {
+	// 			w.WriteHeader(http.StatusBadRequest)
+	// 			w.Write([]byte(fmt.Sprintf("invalid command: %s", err)))
+	// 			return
+	// 		}
 
-			args = a
-		}
+	// 		args = a
+	// 	}
 
-		cmd := exec.Command(params.Entrypoint, args...)
+	// 	cmd := exec.Command(params.Entrypoint, args...)
 
-		cmd.Env = os.Environ()
-		cmd.Env = append(cmd.Env, "TERM=xterm-256color")
+	// 	cmd.Env = os.Environ()
+	// 	cmd.Env = append(cmd.Env, "TERM=xterm-256color")
+	// 	cmd.Env = append(cmd.Env, fmt.Sprintf("TWEETY_PORT=%d", params.Port))
+	// 	cmd.Env = append(cmd.Env, fmt.Sprintf("TWEETY_TOKEN=%s", params.Token))
 
-		if cwd := r.URL.Query().Get("cwd"); cwd != "" {
-			cmd.Dir = cwd
-		}
+	// 	if cwd := r.URL.Query().Get("cwd"); cwd != "" {
+	// 		cmd.Dir = cwd
+	// 	}
 
-		log.Println("executing command:", cmd.String())
-		tty, err := pty.Start(cmd)
-		if err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
-			w.Write([]byte(err.Error()))
-			return
-		}
+	// 	log.Println("executing command:", cmd.String())
+	// 	tty, err := pty.Start(cmd)
+	// 	if err != nil {
+	// 		w.WriteHeader(http.StatusInternalServerError)
+	// 		w.Write([]byte(err.Error()))
+	// 		return
+	// 	}
 
-		id := rand.Text()
-		ttyMap[id] = tty
+	// 	id := rand.Text()
+	// 	ttyMap[id] = tty
 
-		w.Header().Set("Content-Type", "text/plain")
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(id))
-	})
+	// 	w.Header().Set("Content-Type", "text/plain")
+	// 	w.WriteHeader(http.StatusOK)
+	// 	w.Write([]byte(id))
+	// })
 
 	r.Get("/_tweety/pty/{terminalID}", func(w http.ResponseWriter, r *http.Request) {
 		terminalID := chi.URLParam(r, "terminalID")
@@ -226,72 +201,42 @@ func NewHandler(params HandlerParams) (http.Handler, error) {
 		HandleWebsocket(tty)(w, r)
 	})
 
-	r.Post("/_tweety/resize/{terminalID}", func(w http.ResponseWriter, r *http.Request) {
-		terminalID := chi.URLParam(r, "terminalID")
-		tty, ok := ttyMap[terminalID]
+	// r.Post("/_tweety/resize/{terminalID}", func(w http.ResponseWriter, r *http.Request) {
+	// 	terminalID := chi.URLParam(r, "terminalID")
+	// 	tty, ok := ttyMap[terminalID]
 
-		if !ok {
-			availableTerminals := make([]string, 0, len(ttyMap))
-			for k := range ttyMap {
-				availableTerminals = append(availableTerminals, k)
-			}
+	// 	if !ok {
+	// 		availableTerminals := make([]string, 0, len(ttyMap))
+	// 		for k := range ttyMap {
+	// 			availableTerminals = append(availableTerminals, k)
+	// 		}
 
-			w.WriteHeader(http.StatusBadRequest)
-			w.Write([]byte(fmt.Sprintf("invalid terminal ID: %s, available terminal: %v", terminalID, availableTerminals)))
-			return
-		}
+	// 		w.WriteHeader(http.StatusBadRequest)
+	// 		w.Write([]byte(fmt.Sprintf("invalid terminal ID: %s, available terminal: %v", terminalID, availableTerminals)))
+	// 		return
+	// 	}
 
-		var resizePayload struct {
-			Rows uint16 `json:"rows"`
-			Cols uint16 `json:"cols"`
-		}
-		if err := json.NewDecoder(r.Body).Decode(&resizePayload); err != nil {
-			w.WriteHeader(http.StatusBadRequest)
-			w.Write([]byte(fmt.Sprintf("invalid resize payload: %s", err)))
-			return
-		}
+	// 	var resizePayload struct {
+	// 		Rows uint16 `json:"rows"`
+	// 		Cols uint16 `json:"cols"`
+	// 	}
+	// 	if err := json.NewDecoder(r.Body).Decode(&resizePayload); err != nil {
+	// 		w.WriteHeader(http.StatusBadRequest)
+	// 		w.Write([]byte(fmt.Sprintf("invalid resize payload: %s", err)))
+	// 		return
+	// 	}
 
-		if err := pty.Setsize(tty, &pty.Winsize{
-			Rows: resizePayload.Rows,
-			Cols: resizePayload.Cols,
-		}); err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
-			w.Write([]byte(err.Error()))
-			return
-		}
+	// 	if err := pty.Setsize(tty, &pty.Winsize{
+	// 		Rows: resizePayload.Rows,
+	// 		Cols: resizePayload.Cols,
+	// 	}); err != nil {
+	// 		w.WriteHeader(http.StatusInternalServerError)
+	// 		w.Write([]byte(err.Error()))
+	// 		return
+	// 	}
 
-		w.Write([]byte("Resized"))
-	})
-
-	frontendFS, err := fs.Sub(frontendDist, "frontend/dist")
-	if err != nil {
-		return nil, err
-	}
-
-	index, err := template.ParseFS(frontendFS, "index.html")
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse index.html: %w", err)
-	}
-
-	themeBytes, err := themeFS.ReadFile(fmt.Sprintf("themes/%s.json", strings.Trim(params.ThemeLight, " ")))
-	if err != nil {
-		return nil, fmt.Errorf("failed to read theme file: %w", err)
-	}
-
-	themeDarkBytes, err := themeFS.ReadFile(fmt.Sprintf("themes/%s.json", strings.Trim(params.ThemeDark, " ")))
-	if err != nil {
-		return nil, fmt.Errorf("failed to read dark theme file: %w", err)
-	}
-
-	r.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		index.Execute(w, map[string]interface{}{
-			"ThemeLight": string(themeBytes),
-			"ThemeDark":  string(themeDarkBytes),
-		})
-	})
-
-	r.Handle("/*", http.FileServer(http.FS(frontendFS)))
+	// 	w.Write([]byte("Resized"))
+	// })
 
 	return r, nil
 }
@@ -399,4 +344,19 @@ func getConnectionUpgrader(
 		ReadBufferSize:   maxBufferSizeBytes,
 		WriteBufferSize:  maxBufferSizeBytes,
 	}
+}
+
+// GetFreePort asks the kernel for a free open port that is ready to use.
+func getFreePort() (int, error) {
+	addr, err := net.ResolveTCPAddr("tcp", "localhost:0")
+	if err != nil {
+		return 0, err
+	}
+
+	l, err := net.ListenTCP("tcp", addr)
+	if err != nil {
+		return 0, err
+	}
+	defer l.Close()
+	return l.Addr().(*net.TCPAddr).Port, nil
 }
