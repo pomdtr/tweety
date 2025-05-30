@@ -1,27 +1,15 @@
 import { Terminal } from "@xterm/xterm";
 import { FitAddon } from "@xterm/addon-fit";
+import { AttachAddon } from "@xterm/addon-attach";
 import { WebglAddon } from "@xterm/addon-webgl";
 import { WebLinksAddon } from "@xterm/addon-web-links";
-import { AttachAddon } from "@xterm/addon-attach";
 import { split } from "shlex";
 
-async function getTheme(variant: "light" | "dark") {
-    const { theme } = await chrome.runtime.sendMessage({
-        method: "getTheme",
-        params: {
-            variant,
-        },
-    });
-
-    return theme;
-}
-
 async function main() {
-    const targetElem = document.getElementById("terminal");
-    if (!targetElem) {
-        console.error("Terminal element not found");
-        return;
-    }
+    // const config = await chrome.runtime.sendMessage({
+    //     method: "getConfig",
+    //     params: {}
+    // })
 
     const terminal = new Terminal({
         cursorBlink: true,
@@ -30,9 +18,9 @@ async function main() {
         macOptionClickForcesSelection: true,
         fontSize: 13,
         fontFamily: "Consolas,Liberation Mono,Menlo,Courier,monospace",
-        theme: globalThis.matchMedia("(prefers-color-scheme: dark)").matches
-            ? await getTheme("dark")
-            : await getTheme("light"),
+        // theme: globalThis.matchMedia("(prefers-color-scheme: dark)").matches
+        //     ? await getTheme("dark")
+        //     : await getTheme("light"),
     });
 
     const fitAddon = new FitAddon();
@@ -112,21 +100,62 @@ async function main() {
     fitAddon.fit();
 
     const url = new URL(globalThis.location.href);
-    const args = url.searchParams.get("args");
-    const { id } = await chrome.runtime.sendMessage({
-        method: "exec",
-        params: {
-            args: args ? split(args) : [],
-            cwd: url.searchParams.get("cwd"),
+    const argsParam = url.searchParams.get("args");
+
+    const requestId = crypto.randomUUID();
+    chrome.runtime.onMessage.addListener((message) => {
+        console.log("Received message from extension worker:", message);
+
+        if (message.id !== requestId) {
+            return;
+        }
+
+        const ws = new WebSocket(message.result.url);
+        const attachAddon = new AttachAddon(ws);
+        terminal.loadAddon(attachAddon);
+
+        terminal.onResize(async (size) => {
+            const { cols, rows } = size;
+            await chrome.runtime.sendMessage({
+                jsonrpc: "2.0",
+                method: "resize",
+                params: {
+                    id: message.result.id,
+                    cols,
+                    rows,
+                },
+            })
+        });
+
+        globalThis.onbeforeunload = () => {
+            ws.onclose = () => { }
+            ws.close();
+        };
+
+        ws.onclose = () => {
+            terminal.writeln(
+                "Connection closed. Hit Enter to refresh the page.",
+            );
+
+            terminal.onKey((event) => {
+                if (event.key === "\r" || event.key === "\n") {
+                    globalThis.location.reload();
+                }
+            });
         }
     })
 
-    const websocketUrl = new URL(`ws://localhost:9999/_tweety/pty/${id}`,);
-
-    websocketUrl.searchParams.set("cols", terminal.cols.toString());
-    websocketUrl.searchParams.set("rows", terminal.rows.toString());
-
-    const ws = new WebSocket(websocketUrl);
+    chrome.runtime.sendMessage({
+        jsonrpc: "2.0",
+        id: requestId,
+        method: "exec",
+        params: {
+            args: argsParam ? split(argsParam) : [],
+            cwd: url.searchParams.get("cwd"),
+            cols: terminal.cols,
+            rows: terminal.rows,
+        }
+    })
 
     globalThis.onresize = () => {
         fitAddon.fit();
@@ -136,47 +165,17 @@ async function main() {
         document.title = title;
     });
 
-    terminal.onResize(async (size) => {
-        const { cols, rows } = size;
-        await chrome.runtime.sendMessage({
-            method: "resize",
-            params: {
-                id,
-                cols,
-                rows,
-            },
-        })
-    });
-
-    const attachAddon = new AttachAddon(ws);
-    terminal.loadAddon(attachAddon);
-
-    globalThis
-        .matchMedia("(prefers-color-scheme: dark)")
-        .addEventListener("change", async function (e) {
-            terminal.options.theme = e.matches ? await getTheme("dark") : await getTheme("light");
-        });
-
-    globalThis.onbeforeunload = () => {
-        ws.close();
-    };
-    ws.onclose = () => {
-        terminal.writeln(
-            "Connection closed. Hit Enter to refresh the page.",
-        );
-
-        terminal.onKey((event) => {
-            if (event.key === "\r" || event.key === "\n") {
-                globalThis.location.reload();
-            }
-        });
-    }
-
     globalThis.onfocus = () => {
         terminal.focus();
     };
 
     terminal.focus();
+
+    // globalThis
+    //     .matchMedia("(prefers-color-scheme: dark)")
+    //     .addEventListener("change", async function (e) {
+    //         terminal.options.theme = e.matches ? await getTheme("dark") : await getTheme("light");
+    //     });
 }
 
 main();
