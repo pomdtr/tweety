@@ -28,21 +28,15 @@ make install
 ## Usage
 
 ```sh
-tweety <entrypoint>
+tweety <command>
 ```
 
 By default, tweety will start on port 9999, so you can access it at <http://localhost:9999>.
 
-You can use the `--host` and `--port` flags to change the host and port:
+You can pass arguments to your entrypoint script using the `args` query parameter. The provided command will be splitted by the [shlex](https://pkg.go.dev/github.com/google/shlex) library, then passed as arguments to your entrypoint script.
 
-```sh
-tweety --host 0.0.0.0 --port 8080 <script-path>
-```
-
-You can pass arguments to your entrypoint script using the `cmd` query parameter. The provided command will be splitted by the [shlex](https://pkg.go.dev/github.com/google/shlex) library, then passed as arguments to your entrypoint script.
-
-- `http://localhost:9999/?cmd=ssh+example.com` will run the command `<entrypoint> ssh example.com`
-- `http://localhost:9999/?cmd=nvim+/home/pomdtr/.zshrc` will run the command `<entrypoint> nvim /home/pomdtr/.zshrc`
+- `http://localhost:9999/?args=ssh+example.com` will run the command `<entrypoint> ssh example.com`
+- `http://localhost:9999/?args=nvim+/home/pomdtr/.zshrc` will run the command `<entrypoint> nvim /home/pomdtr/.zshrc`
 
 Make sure to properly parse and validate params in your entrypoint script.
 
@@ -66,23 +60,23 @@ program.action(async () => {
     await run("bash")
 })
 
-// handle http://localhost:9999?cmd=htop
+// handle http://localhost:9999?args=htop
 program.command("htop").action(async () => {
     await run("htop");
 })
 
-// handle http://localhost:9999?cmd=ssh+<host>
+// handle http://localhost:9999?args=ssh+<host>
 program.command("ssh").argument("<host>").action(async (host: string) => {
     await run("ssh", host);
 })
 
-// handle http://localhost:9999?cmd=config
+// handle http://localhost:9999?args=config
 program.command("config").action(async () => {
     const scriptPath = new URL(import.meta.url).pathname;
     await run("nvim", scriptPath)
 })
 
-// handle http://localhost:9999?cmd=nvim+<file>
+// handle http://localhost:9999?args=nvim+<file>
 program.command("nvim").argument("<file>").action(async (file) => {
     // protect use again `nvim 'term://<malicious-command>'`
     if (file.startsWith("term://")) {

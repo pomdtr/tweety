@@ -106,7 +106,7 @@ async function main() {
 
   const url = new URL(globalThis.location.href);
   const execUrl = new URL("/_tweety/exec", url)
-  for (const param of ["cmd", "cwd"]) {
+  for (const param of ["args", "cwd"]) {
     const value = url.searchParams.get(param);
     if (value) {
       execUrl.searchParams.set(param, value);

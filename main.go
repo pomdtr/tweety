@@ -148,7 +148,7 @@ func NewHandler(params HandlerParams) (http.Handler, error) {
 
 	r.Post("/_tweety/exec", func(w http.ResponseWriter, r *http.Request) {
 		var args []string
-		if cmd := r.URL.Query().Get("cmd"); cmd != "" {
+		if cmd := r.URL.Query().Get("args"); cmd != "" {
 			a, err := shlex.Split(cmd)
 			if err != nil {
 				w.WriteHeader(http.StatusBadRequest)
