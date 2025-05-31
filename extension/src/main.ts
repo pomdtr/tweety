@@ -4,6 +4,7 @@ import { AttachAddon } from "@xterm/addon-attach";
 import { WebglAddon } from "@xterm/addon-webgl";
 import { WebLinksAddon } from "@xterm/addon-web-links";
 import { RequestCreateTTY, RequestGetXtermConfig, RequestResizeTTY, ResponseCreateTTY, ResponseGetXtermConfig } from "./rpc";
+import shlex from "shlex";
 
 async function main() {
     const { result: config } = await chrome.runtime.sendMessage<RequestGetXtermConfig, ResponseGetXtermConfig>({
@@ -92,13 +93,15 @@ async function main() {
     const requestId = crypto.randomUUID();
 
     const url = new URL(globalThis.location.href);
+    const command = url.searchParams.get("command") || url.searchParams.get("cmd") || undefined;
+    const args = url.searchParams.has("args") ? shlex.split(url.searchParams.get("args")!) : undefined;
     const resp = await chrome.runtime.sendMessage<RequestCreateTTY, ResponseCreateTTY>({
         jsonrpc: "2.0",
         id: requestId,
         method: "create_tty",
         params: {
-            command: url.searchParams.get("command") || url.searchParams.get("cmd") || undefined,
-            cwd: url.searchParams.get("cwd") || undefined,
+            command,
+            args,
             cols: terminal.cols,
             rows: terminal.rows,
         }

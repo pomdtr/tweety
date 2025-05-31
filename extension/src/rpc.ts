@@ -20,7 +20,7 @@ export type RequestResizeTTY = JSONRPCRequestBase<"resize_tty", {
 
 export type RequestCreateTTY = JSONRPCRequestBase<"create_tty", {
     command?: string;
-    cwd?: string;
+    args?: string[];
     cols?: number;
     rows?: number;
 }>

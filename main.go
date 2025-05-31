@@ -22,7 +22,6 @@ import (
 
 	"github.com/creack/pty"
 	"github.com/go-chi/chi/v5"
-	"github.com/google/shlex"
 	"github.com/gorilla/websocket"
 	jsonparser "github.com/knadh/koanf/parsers/json"
 	"github.com/knadh/koanf/providers/file"
@@ -38,7 +37,7 @@ var (
 	keepalivePingTimeout = 20 * time.Second
 )
 
-type Request struct {
+type JSONRPCRequest struct {
 	JSONRPCVersion string          `json:"jsonrpc"`
 	ID             string          `json:"id"`
 	Method         string          `json:"method"`
@@ -46,10 +45,10 @@ type Request struct {
 }
 
 type RequestParamsRunCommand struct {
-	Cwd     string `json:"cwd"`
-	Command string `json:"command"`
-	Rows    uint16 `json:"rows"`
-	Cols    uint16 `json:"cols"`
+	Command string   `json:"command"`
+	Args    []string `json:"args"`
+	Rows    uint16   `json:"rows"`
+	Cols    uint16   `json:"cols"`
 }
 
 type RequestParamsResizeTTY struct {
@@ -237,153 +236,146 @@ func NewHandler(handlerParams HandlerParams) (http.Handler, error) {
 	r := chi.NewRouter()
 
 	var ttyMap = make(map[string]*os.File)
-	go func() {
-		for {
-			msg, err := readNativeMessage()
-			if err != nil {
-				continue
-			}
+	host := NewHost()
 
-			var request Request
-			if err := json.Unmarshal(msg, &request); err != nil {
-				log.Printf("failed to unmarshal message: %s", err)
-				continue
-			}
-
-			log.Printf("received request: %s", request.Method)
-			switch request.Method {
-			case "create_tty":
-				var requestParams RequestParamsRunCommand
-				if err := json.Unmarshal(request.Params, &requestParams); err != nil {
-					log.Printf("failed to unmarshal exec params: %s", err)
-					continue
-				}
-
-				entrypoint := k.Strings("entrypoint")
-				if len(entrypoint) == 0 {
-					log.Println("no entrypoint defined in config, skipping command execution")
-					continue
-				}
-
-				name, args := entrypoint[0], entrypoint[1:]
-				if _, err := exec.LookPath(name); err != nil && !filepath.IsAbs(name) {
-					name = filepath.Join(configDir, name)
-				}
-
-				if requestParams.Command != "" {
-					commandArgs, err := shlex.Split(requestParams.Command)
-					if err != nil {
-						log.Printf("failed to split command: %s", err)
-						continue
-					}
-
-					args = append(args, commandArgs...)
-				}
-
-				cmd := exec.Command(name, args...)
-
-				cmd.Env = os.Environ()
-				cmd.Env = append(cmd.Env, "TERM=xterm-256color")
-				cmd.Env = append(cmd.Env, fmt.Sprintf("TWEETY_PORT=%d", handlerParams.Port))
-				cmd.Env = append(cmd.Env, fmt.Sprintf("TWEETY_TOKEN=%s", handlerParams.Token))
-				for key, value := range k.StringMap("env") {
-					cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", key, value))
-				}
-
-				if requestParams.Cwd != "" {
-					cmd.Dir = requestParams.Cwd
-				} else {
-					cmd.Dir = os.Getenv("HOME")
-				}
-
-				log.Println("executing command:", cmd.String())
-				tty, err := pty.Start(cmd)
-				if err != nil {
-					log.Printf("failed to start pty: %s", err)
-					return
-				}
-
-				if err := pty.Setsize(tty, &pty.Winsize{Rows: requestParams.Rows, Cols: requestParams.Cols}); err != nil {
-					log.Printf("failed to set size for tty: %s", err)
-					return
-				}
-
-				ttyID := strings.ToLower(rand.Text())
-				ttyMap[ttyID] = tty
-
-				writeMessage(map[string]interface{}{
-					"id":      request.ID,
-					"jsonrpc": "2.0",
-					"result": map[string]string{
-						"url": fmt.Sprintf("ws://127.0.0.1:%d/tty/%s", handlerParams.Port, ttyID),
-						"id":  ttyID,
-					},
-				})
-			case "resize_tty":
-				var requestParams RequestParamsResizeTTY
-				if err := json.Unmarshal(request.Params, &requestParams); err != nil {
-					log.Printf("failed to unmarshal resize params: %s", err)
-					continue
-				}
-
-				tty, ok := ttyMap[requestParams.TTY]
-				if !ok {
-					log.Printf("no tty found for ID: %s", requestParams.TTY)
-					continue
-				}
-
-				if err := pty.Setsize(tty, &pty.Winsize{Rows: requestParams.Rows, Cols: requestParams.Cols}); err != nil {
-					log.Printf("failed to set size for tty %s: %s", requestParams.TTY, err)
-					continue
-				}
-			case "get_xterm_config":
-				xtermConfig := map[string]interface{}{
-					"cursorBlink":                   true,
-					"allowProposedApi":              true,
-					"macOptionIsMeta":               true,
-					"macOptionClickForcesSelection": true,
-					"fontSize":                      13,
-					"fontFamily":                    "Consolas,Liberation Mono,Menlo,Courier,monospace",
-					"theme": map[string]interface{}{
-						"foreground":          "#c5c8c6",
-						"background":          "#1d1f21",
-						"ansiBlack":           "#000000",
-						"ansiBlue":            "#81a2be",
-						"ansiCyan":            "#8abeb7",
-						"ansiGreen":           "#b5bd68",
-						"ansiMagenta":         "#b294bb",
-						"ansiRed":             "#cc6666",
-						"ansiWhite":           "#ffffff",
-						"ansiYellow":          "#f0c674",
-						"ansiBrightBlack":     "#000000",
-						"ansiBrightBlue":      "#81a2be",
-						"ansiBrightCyan":      "#8abeb7",
-						"ansiBrightGreen":     "#b5bd68",
-						"ansiBrightMagenta":   "#b294bb",
-						"ansiBrightRed":       "#cc6666",
-						"ansiBrightWhite":     "#ffffff",
-						"ansiBrightYellow":    "#f0c674",
-						"selectionBackground": "#373b41",
-						"cursor":              "#c5c8c6",
-					},
-				}
-
-				if err := k.Unmarshal("xterm", &xtermConfig); err != nil {
-					log.Printf("failed to unmarshal xterm config: %s", err)
-					continue
-				}
-
-				if err := writeMessage(map[string]interface{}{
-					"id":      request.ID,
-					"jsonrpc": "2.0",
-					"result":  xtermConfig,
-				}); err != nil {
-					log.Printf("failed to write theme message: %s", err)
-					continue
-				}
-			}
+	host.HandleRequest("create_tty", func(input []byte) (any, error) {
+		var requestParams RequestParamsRunCommand
+		if err := json.Unmarshal(input, &requestParams); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal exec params: %w", err)
 		}
-	}()
+
+		var command string
+		var args []string
+		if name := requestParams.Command; name != "" {
+			commandsDir := filepath.Join(configDir, "commands")
+			entries, err := os.ReadDir(commandsDir)
+
+			if err != nil {
+				return nil, fmt.Errorf("failed to read commands directory: %w", err)
+			}
+
+			for _, entry := range entries {
+				if entry.IsDir() {
+					continue
+				}
+
+				entryName := strings.TrimSuffix(entry.Name(), filepath.Ext(entry.Name()))
+				if entryName != name {
+					continue
+				}
+
+				entryPath := filepath.Join(commandsDir, entry.Name())
+				// make sure the command is executable
+				if entry.Type().IsRegular() {
+					if err := os.Chmod(entryPath, 0755); err != nil {
+						return nil, fmt.Errorf("failed to make command executable: %w", err)
+					}
+				}
+
+				command = filepath.Join(entryPath)
+				args = requestParams.Args
+				break
+			}
+
+			if command == "" {
+				return nil, fmt.Errorf("command not found: %s", name)
+			}
+
+		} else {
+			command = k.String("command")
+			args = k.Strings("args")
+		}
+
+		cmd := exec.Command(command, args...)
+		cmd.Env = os.Environ()
+		cmd.Env = append(cmd.Env, "TERM=xterm-256color")
+		cmd.Env = append(cmd.Env, fmt.Sprintf("TWEETY_PORT=%d", handlerParams.Port))
+		cmd.Env = append(cmd.Env, fmt.Sprintf("TWEETY_TOKEN=%s", handlerParams.Token))
+		for key, value := range k.StringMap("env") {
+			cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", key, value))
+		}
+
+		cmd.Dir = os.Getenv("HOME")
+		log.Println("executing command:", cmd.String())
+		tty, err := pty.Start(cmd)
+		if err != nil {
+			log.Printf("failed to start pty: %s", err)
+			return nil, fmt.Errorf("failed to start pty: %w", err)
+		}
+
+		if err := pty.Setsize(tty, &pty.Winsize{Rows: requestParams.Rows, Cols: requestParams.Cols}); err != nil {
+			log.Printf("failed to set size for tty: %s", err)
+			return nil, fmt.Errorf("failed to set size for tty: %w", err)
+		}
+
+		ttyID := strings.ToLower(rand.Text())
+		ttyMap[ttyID] = tty
+
+		return map[string]string{
+			"url": fmt.Sprintf("ws://127.0.0.1:%d/tty/%s", handlerParams.Port, ttyID),
+			"id":  ttyID,
+		}, nil
+
+	})
+
+	host.HandleNotification("resize_tty", func(input []byte) error {
+		var requestParams RequestParamsResizeTTY
+		if err := json.Unmarshal(input, &requestParams); err != nil {
+			return fmt.Errorf("failed to unmarshal resize params: %w", err)
+		}
+
+		tty, ok := ttyMap[requestParams.TTY]
+		if !ok {
+			return fmt.Errorf("invalid tty ID: %s", requestParams.TTY)
+		}
+
+		if err := pty.Setsize(tty, &pty.Winsize{Rows: requestParams.Rows, Cols: requestParams.Cols}); err != nil {
+			return fmt.Errorf("failed to set size for tty: %w", err)
+		}
+
+		return nil
+	})
+
+	host.HandleRequest("get_xterm_config", func(input []byte) (any, error) {
+		xtermConfig := map[string]interface{}{
+			"cursorBlink":                   true,
+			"allowProposedApi":              true,
+			"macOptionIsMeta":               true,
+			"macOptionClickForcesSelection": true,
+			"fontSize":                      13,
+			"fontFamily":                    "Consolas,Liberation Mono,Menlo,Courier,monospace",
+			"theme": map[string]interface{}{
+				"foreground":          "#c5c8c6",
+				"background":          "#1d1f21",
+				"ansiBlack":           "#000000",
+				"ansiBlue":            "#81a2be",
+				"ansiCyan":            "#8abeb7",
+				"ansiGreen":           "#b5bd68",
+				"ansiMagenta":         "#b294bb",
+				"ansiRed":             "#cc6666",
+				"ansiWhite":           "#ffffff",
+				"ansiYellow":          "#f0c674",
+				"ansiBrightBlack":     "#000000",
+				"ansiBrightBlue":      "#81a2be",
+				"ansiBrightCyan":      "#8abeb7",
+				"ansiBrightGreen":     "#b5bd68",
+				"ansiBrightMagenta":   "#b294bb",
+				"ansiBrightRed":       "#cc6666",
+				"ansiBrightWhite":     "#ffffff",
+				"ansiBrightYellow":    "#f0c674",
+				"selectionBackground": "#373b41",
+				"cursor":              "#c5c8c6",
+			},
+		}
+
+		if err := k.Unmarshal("xterm", &xtermConfig); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal xterm config: %w", err)
+		}
+
+		return xtermConfig, nil
+	})
+
+	go host.Listen()
 
 	// Middleware to set the required header for private network access
 	r.Use(func(next http.Handler) http.Handler {
@@ -540,6 +532,211 @@ func getFreePort() (int, error) {
 	return l.Addr().(*net.TCPAddr).Port, nil
 }
 
+type RequestHandlerFunc = func(params []byte) (result any, err error)
+type NotificationHandlerFunc = func(params []byte) error
+
+type Host struct {
+	mu                   sync.Mutex
+	requestsHandler      map[string]RequestHandlerFunc
+	notificationsHandler map[string]NotificationHandlerFunc
+	clientChannels       map[string]chan JSONRPCResponse
+}
+
+func (h *Host) HandleRequest(method string, handler RequestHandlerFunc) {
+	h.requestsHandler[method] = handler
+}
+
+func (h *Host) HandleNotification(method string, handler NotificationHandlerFunc) {
+	h.notificationsHandler[method] = handler
+}
+
+func NewHost() *Host {
+	return &Host{
+		requestsHandler:      make(map[string]RequestHandlerFunc),
+		notificationsHandler: make(map[string]NotificationHandlerFunc),
+		clientChannels:       make(map[string]chan JSONRPCResponse),
+	}
+}
+
+func (h *Host) Listen() {
+	for {
+		lengthBytes := make([]byte, 4)
+		if _, err := io.ReadFull(os.Stdin, lengthBytes); err != nil {
+			continue
+		}
+
+		length := binary.LittleEndian.Uint32(lengthBytes)
+
+		msgBytes := make([]byte, length)
+		if _, err := io.ReadFull(os.Stdin, msgBytes); err != nil {
+			log.Printf("failed to read message: %s", err)
+			continue
+		}
+
+		var msg map[string]any
+		if err := json.Unmarshal(msgBytes, &msg); err != nil {
+			log.Printf("failed to unmarshal message: %s", err)
+			continue
+		}
+
+		if _, ok := msg["jsonrpc"]; !ok {
+			log.Printf("invalid message format, missing jsonrpc field")
+			continue
+		}
+
+		if _, ok := msg["result"]; ok {
+			var response JSONRPCResponse
+			if err := json.Unmarshal(msgBytes, &response); err != nil {
+				log.Printf("failed to unmarshal response: %s", err)
+				return
+			}
+
+			h.mu.Lock()
+			responseChan, ok := h.clientChannels[response.ID]
+			if !ok {
+				log.Printf("no client found for ID: %s", response.ID)
+				h.mu.Unlock()
+				continue
+			}
+
+			responseChan <- response
+			delete(h.clientChannels, response.ID)
+			h.mu.Unlock()
+			continue
+		}
+
+		var request JSONRPCRequest
+		if err := json.Unmarshal(msgBytes, &request); err != nil {
+			log.Printf("failed to unmarshal request: %s", err)
+			return
+		}
+
+		if request.ID == "" {
+			handler, ok := h.notificationsHandler[request.Method]
+			if !ok {
+				log.Printf("no handler found for notification method: %s", request.Method)
+				continue
+			}
+
+			if err := handler(request.Params); err != nil {
+				log.Printf("failed to handle notification %s: %s", request.Method, err)
+			}
+			continue
+		}
+
+		handler, ok := h.requestsHandler[request.Method]
+		if !ok {
+			log.Printf("no handler found for request method: %s", request.Method)
+			continue
+		}
+
+		res, err := handler(request.Params)
+		if err != nil {
+			log.Printf("failed to handle request %s: %s", request.Method, err)
+		}
+
+		resBytes, err := json.Marshal(res)
+		if err != nil {
+			log.Printf("failed to marshal result: %s", err)
+			continue
+		}
+
+		response := JSONRPCResponse{
+			JSONRPC: "2.0",
+			ID:      request.ID,
+			Result:  resBytes,
+			Error:   nil,
+		}
+
+		if err := writeMessage(response); err != nil {
+			log.Printf("failed to write response: %s", err)
+			continue
+		}
+	}
+}
+
+type JSONRPCResponse struct {
+	JSONRPC string          `json:"jsonrpc"`
+	ID      string          `json:"id"`
+	Result  json.RawMessage `json:"result,omitempty"`
+	Error   interface{}     `json:"error,omitempty"`
+}
+
+func (h *Host) Send(request JSONRPCRequest) (JSONRPCResponse, error) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+
+	if len(h.clientChannels) == 0 {
+		return JSONRPCResponse{}, fmt.Errorf("no clients registered")
+	}
+
+	responseChan, ok := h.clientChannels[request.ID]
+	if !ok {
+		return JSONRPCResponse{}, fmt.Errorf("no client found for ID: %s", request.ID)
+	}
+
+	if err := writeMessage(request); err != nil {
+		return JSONRPCResponse{}, fmt.Errorf("failed to write request: %w", err)
+	}
+
+	select {
+	case response := <-responseChan:
+		return response, nil
+	case <-time.After(10 * time.Second):
+		return JSONRPCResponse{}, fmt.Errorf("timeout waiting for response")
+	}
+}
+
+func (h *Host) SendNotification(method string, params any) error {
+	paramsBytes, err := json.Marshal(params)
+	if err != nil {
+		return fmt.Errorf("failed to marshal params: %w", err)
+	}
+
+	var notification = JSONRPCRequest{
+		JSONRPCVersion: "2.0",
+		Method:         method,
+		Params:         paramsBytes,
+	}
+
+	if err := writeMessage(notification); err != nil {
+		return fmt.Errorf("failed to write notification: %w", err)
+	}
+
+	return nil
+}
+
+func (h *Host) SendRequest(method string, params any, result any) error {
+	paramsBytes, err := json.Marshal(params)
+	if err != nil {
+		return fmt.Errorf("failed to marshal params: %w", err)
+	}
+
+	id := rand.Text()
+
+	var request = JSONRPCRequest{
+		JSONRPCVersion: "2.0",
+		ID:             id,
+		Method:         method,
+		Params:         paramsBytes,
+	}
+
+	resp, err := h.Send(request)
+	if err != nil {
+		return fmt.Errorf("failed to send request: %w", err)
+	}
+
+	if resp.Error != nil {
+		return fmt.Errorf("received error response: %v", resp.Error)
+	}
+
+	if err := json.Unmarshal(resp.Result, result); err != nil {
+		return fmt.Errorf("failed to unmarshal result: %w", err)
+	}
+
+	return nil
+}
+
 func writeMessage(data interface{}) error {
 	msg, err := json.Marshal(data)
 	if err != nil {
@@ -555,18 +752,4 @@ func writeMessage(data interface{}) error {
 	// Write the message
 	_, err = os.Stdout.Write(msg)
 	return err
-}
-
-func readNativeMessage() ([]byte, error) {
-	lengthBytes := make([]byte, 4)
-	if _, err := io.ReadFull(os.Stdin, lengthBytes); err != nil {
-		return nil, fmt.Errorf("failed to read length header: %w", err)
-	}
-	length := binary.LittleEndian.Uint32(lengthBytes)
-
-	messageBytes := make([]byte, length)
-	if _, err := io.ReadFull(os.Stdin, messageBytes); err != nil {
-		return nil, fmt.Errorf("failed to read body: %w", err)
-	}
-	return messageBytes, nil
 }
