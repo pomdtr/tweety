@@ -15,6 +15,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"strings"
 	"sync"
 	"text/template"
@@ -78,8 +79,9 @@ func main() {
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
 
 	cmd := &cobra.Command{
-		Use:   "tweety",
-		Short: "An integrated terminal for your web browser",
+		Use:          "tweety",
+		SilenceUsage: true,
+		Short:        "An integrated terminal for your web browser",
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 			if err := k.Load(file.Provider(filepath.Join(configDir, "config.json")), jsonparser.Parser()); err != nil {
 				return fmt.Errorf("failed to load config: %w", err)
@@ -91,6 +93,9 @@ func main() {
 
 	cmd.AddCommand(NewCmdServe())
 	cmd.AddCommand(NewCmdInstall())
+	cmd.AddCommand(NewCmdUninstall())
+	cmd.AddCommand(NewCmdTab())
+	cmd.AddCommand(NewCmdConfig())
 
 	if err := cmd.Execute(); err != nil {
 		os.Exit(1)
@@ -201,6 +206,167 @@ func NewCmdInstall() *cobra.Command {
 	return cmd
 }
 
+func NewCmdUninstall() *cobra.Command {
+	return &cobra.Command{
+		Use:   "uninstall",
+		Short: "Uninstall Tweety native messaging host",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			dirs, err := getManifestDirs()
+			if err != nil {
+				return fmt.Errorf("failed to get manifest directories: %w", err)
+			}
+
+			for _, dir := range dirs {
+				if _, err := os.Stat(dir); os.IsNotExist(err) {
+					continue
+				}
+
+				manifestPath := filepath.Join(dir, "com.github.pomdtr.tweety.json")
+				if err := os.Remove(manifestPath); err != nil {
+					return fmt.Errorf("failed to remove manifest file: %w", err)
+				}
+			}
+
+			hostPath := filepath.Join(dataDir, "native_messaging_host")
+			if err := os.Remove(hostPath); err != nil {
+				return fmt.Errorf("failed to remove native messaging host file: %w", err)
+			}
+
+			return nil
+		},
+	}
+}
+
+func NewCmdConfig() *cobra.Command {
+	return &cobra.Command{
+		Use:   "config",
+		Short: "Open Tweety configuration file in your editor",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return nil
+		},
+	}
+}
+
+func NewCmdTab() *cobra.Command {
+	cmd := &cobra.Command{
+		Use: "tab",
+		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+			if _, ok := os.LookupEnv("TWEETY_PORT"); !ok {
+				return fmt.Errorf("TWEETY_PORT environment variable is not set")
+			}
+
+			if _, ok := os.LookupEnv("TWEETY_TOKEN"); !ok {
+				return fmt.Errorf("TWEETY_TOKEN environment variable is not set")
+			}
+
+			return nil
+		},
+	}
+
+	cmd.AddCommand(
+		&cobra.Command{
+			Use: "list",
+			RunE: func(cmd *cobra.Command, args []string) error {
+				port, err := strconv.Atoi(os.Getenv("TWEETY_PORT"))
+				if err != nil {
+					return fmt.Errorf("invalid TWEETY_PORT environment variable: %w", err)
+				}
+				token := os.Getenv("TWEETY_TOKEN")
+
+				client := NewJSONRPCClient(port, token)
+				resp, err := client.SendRequest("get_tabs", nil)
+				if err != nil {
+					return fmt.Errorf("failed to get tabs: %w", err)
+				}
+
+				os.Stdout.Write(resp.Result)
+				return nil
+			},
+		},
+	)
+
+	cmd.AddCommand(&cobra.Command{
+		Use:   "create",
+		Short: "Create a new tab with the specified URL",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			port, err := strconv.Atoi(os.Getenv("TWEETY_PORT"))
+			if err != nil {
+				return fmt.Errorf("invalid TWEETY_PORT environment variable: %w", err)
+			}
+			token := os.Getenv("TWEETY_TOKEN")
+
+			client := NewJSONRPCClient(port, token)
+			resp, err := client.SendRequest("create_tab", map[string]interface{}{
+				"url": args[0],
+			})
+
+			if err != nil {
+				return fmt.Errorf("failed to get tabs: %w", err)
+			}
+
+			os.Stdout.Write(resp.Result)
+			return nil
+		},
+	})
+
+	return cmd
+}
+
+type JSONRPCClient struct {
+	Port  int
+	Token string
+}
+
+func NewJSONRPCClient(port int, token string) *JSONRPCClient {
+	return &JSONRPCClient{
+		Port:  port,
+		Token: token,
+	}
+}
+
+func (c *JSONRPCClient) SendRequest(method string, params interface{}) (*JSONRPCResponse, error) {
+	paramsBytes, err := json.Marshal(params)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal params: %w", err)
+	}
+
+	body, err := json.Marshal(JSONRPCRequest{
+		JSONRPCVersion: "2.0",
+		ID:             rand.Text(),
+		Method:         method,
+		Params:         paramsBytes,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal request body: %w", err)
+	}
+
+	req, err := http.NewRequest("POST", fmt.Sprintf("http://127.0.0.1:%d/jsonrpc", c.Port), bytes.NewReader(body))
+	if err != nil {
+		return nil, fmt.Errorf("failed to create request: %w", err)
+	}
+
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", c.Token))
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to send request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("unexpected status code: %d", resp.StatusCode)
+	}
+
+	var response JSONRPCResponse
+	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
+		return nil, fmt.Errorf("failed to decode response: %w", err)
+	}
+
+	return &response, nil
+}
+
 func getManifestDirs() ([]string, error) {
 	switch runtime.GOOS {
 	case "darwin":
@@ -233,8 +399,6 @@ type HandlerParams struct {
 }
 
 func NewHandler(handlerParams HandlerParams) (http.Handler, error) {
-	r := chi.NewRouter()
-
 	var ttyMap = make(map[string]*os.File)
 	host := NewHost()
 
@@ -377,16 +541,39 @@ func NewHandler(handlerParams HandlerParams) (http.Handler, error) {
 
 	go host.Listen()
 
-	// Middleware to set the required header for private network access
-	r.Use(func(next http.Handler) http.Handler {
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			w.Header().Set("Access-Control-Allow-Private-Network", "true")
-			w.Header().Set("X-Content-Type-Options", "nosniff")
-			w.Header().Set("X-XSS-Protection", "1; mode=block")
-			w.Header().Set("Referrer-Policy", "same-origin")
-			w.Header().Set("Content-Security-Policy", "script-src 'self';")
-			next.ServeHTTP(w, r)
-		})
+	r := chi.NewRouter()
+
+	r.Post("/jsonrpc", func(w http.ResponseWriter, r *http.Request) {
+		// check bearer token
+		authHeader := r.Header.Get("Authorization")
+		if !strings.HasPrefix(authHeader, "Bearer ") {
+			http.Error(w, "unauthorized", http.StatusUnauthorized)
+			return
+		}
+
+		token := strings.TrimPrefix(authHeader, "Bearer ")
+		if token != handlerParams.Token {
+			http.Error(w, "unauthorized", http.StatusUnauthorized)
+			return
+		}
+
+		var request JSONRPCRequest
+		if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+			http.Error(w, fmt.Sprintf("failed to decode request: %s", err), http.StatusBadRequest)
+			return
+		}
+
+		resp, err := host.Send(request)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("failed to send request: %s", err), http.StatusInternalServerError)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		if err := json.NewEncoder(w).Encode(resp); err != nil {
+			http.Error(w, fmt.Sprintf("failed to encode response: %s", err), http.StatusInternalServerError)
+			return
+		}
 	})
 
 	r.Get("/tty/{id}", func(w http.ResponseWriter, r *http.Request) {
@@ -664,16 +851,9 @@ type JSONRPCResponse struct {
 
 func (h *Host) Send(request JSONRPCRequest) (JSONRPCResponse, error) {
 	h.mu.Lock()
-	defer h.mu.Unlock()
-
-	if len(h.clientChannels) == 0 {
-		return JSONRPCResponse{}, fmt.Errorf("no clients registered")
-	}
-
-	responseChan, ok := h.clientChannels[request.ID]
-	if !ok {
-		return JSONRPCResponse{}, fmt.Errorf("no client found for ID: %s", request.ID)
-	}
+	responseChan := make(chan JSONRPCResponse)
+	h.clientChannels[request.ID] = responseChan
+	h.mu.Unlock()
 
 	if err := writeMessage(request); err != nil {
 		return JSONRPCResponse{}, fmt.Errorf("failed to write request: %w", err)
@@ -685,56 +865,6 @@ func (h *Host) Send(request JSONRPCRequest) (JSONRPCResponse, error) {
 	case <-time.After(10 * time.Second):
 		return JSONRPCResponse{}, fmt.Errorf("timeout waiting for response")
 	}
-}
-
-func (h *Host) SendNotification(method string, params any) error {
-	paramsBytes, err := json.Marshal(params)
-	if err != nil {
-		return fmt.Errorf("failed to marshal params: %w", err)
-	}
-
-	var notification = JSONRPCRequest{
-		JSONRPCVersion: "2.0",
-		Method:         method,
-		Params:         paramsBytes,
-	}
-
-	if err := writeMessage(notification); err != nil {
-		return fmt.Errorf("failed to write notification: %w", err)
-	}
-
-	return nil
-}
-
-func (h *Host) SendRequest(method string, params any, result any) error {
-	paramsBytes, err := json.Marshal(params)
-	if err != nil {
-		return fmt.Errorf("failed to marshal params: %w", err)
-	}
-
-	id := rand.Text()
-
-	var request = JSONRPCRequest{
-		JSONRPCVersion: "2.0",
-		ID:             id,
-		Method:         method,
-		Params:         paramsBytes,
-	}
-
-	resp, err := h.Send(request)
-	if err != nil {
-		return fmt.Errorf("failed to send request: %w", err)
-	}
-
-	if resp.Error != nil {
-		return fmt.Errorf("received error response: %v", resp.Error)
-	}
-
-	if err := json.Unmarshal(resp.Result, result); err != nil {
-		return fmt.Errorf("failed to unmarshal result: %w", err)
-	}
-
-	return nil
 }
 
 func writeMessage(data interface{}) error {

@@ -146,7 +146,7 @@ async function main() {
     };
 
     terminal.onTitleChange((title) => {
-        document.title = title;
+        document.title = `${title}  |  Tweety`
     });
 
     globalThis.onfocus = () => {

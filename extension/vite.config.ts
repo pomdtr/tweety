@@ -30,7 +30,7 @@ export default defineConfig(() => {
           },
           permissions: [
             "nativeMessaging",
-            "storage"
+            "tabs",
           ],
           host_permissions: ["*://*/*"],
           icons: {

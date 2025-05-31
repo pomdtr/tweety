@@ -18,6 +18,48 @@ nativePort.onMessage.addListener(async (message) => {
   }
 
   console.log("Message received from native messaging host:", message);
+
+
+  if (message.method === "get_tabs") {
+    if (!("id" in message) || typeof message.id !== "string") {
+      console.error("Received get_tabs request without id:", message);
+      return;
+    }
+
+    const tabs = await browser.tabs.query({});
+    return nativePort.postMessage({
+      jsonrpc: "2.0",
+      id: message.id,
+      result: {
+        tabs
+      }
+    });
+  } else if (message.method === "create_tab") {
+    if (!("id" in message) || typeof message.id !== "string") {
+      console.error("Received create_tab request without id:", message);
+      return;
+    }
+
+    if (!("params" in message) || typeof message.params !== "object" || message.params === null) {
+      console.error("Received create_tab request without params:", message);
+      return;
+    }
+
+    if (!("url" in message.params) || typeof message.params.url !== "string") {
+      console.error("Received create_tab request without url:", message);
+      return;
+    }
+
+    const tab = await browser.tabs.create({ url: message.params.url });
+    return nativePort.postMessage({
+      jsonrpc: "2.0",
+      id: message.id,
+      result: {
+        tab
+      }
+    });
+  }
+
   await browser.runtime.sendMessage(message)
 })
 
