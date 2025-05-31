@@ -3,26 +3,16 @@ import { FitAddon } from "@xterm/addon-fit";
 import { AttachAddon } from "@xterm/addon-attach";
 import { WebglAddon } from "@xterm/addon-webgl";
 import { WebLinksAddon } from "@xterm/addon-web-links";
-import { split } from "shlex";
+import { RequestCreateTTY, RequestGetXtermConfig, RequestResizeTTY, ResponseCreateTTY, ResponseGetXtermConfig } from "./rpc";
 
 async function main() {
-    // const config = await chrome.runtime.sendMessage({
-    //     method: "getConfig",
-    //     params: {}
-    // })
+    const { result: config } = await chrome.runtime.sendMessage<RequestGetXtermConfig, ResponseGetXtermConfig>({
+        jsonrpc: "2.0",
+        id: crypto.randomUUID(),
+        method: "get_xterm_config",
+    })
 
-    const terminal = new Terminal({
-        cursorBlink: true,
-        allowProposedApi: true,
-        macOptionIsMeta: true,
-        macOptionClickForcesSelection: true,
-        fontSize: 13,
-        fontFamily: "Consolas,Liberation Mono,Menlo,Courier,monospace",
-        // theme: globalThis.matchMedia("(prefers-color-scheme: dark)").matches
-        //     ? await getTheme("dark")
-        //     : await getTheme("light"),
-    });
-
+    const terminal = new Terminal(config);
     const fitAddon = new FitAddon();
     const webLinksAddon = new WebLinksAddon(
         (event, uri) => {
@@ -99,63 +89,54 @@ async function main() {
     terminal.open(document.getElementById("terminal")!);
     fitAddon.fit();
 
-    const url = new URL(globalThis.location.href);
-    const argsParam = url.searchParams.get("args");
-
     const requestId = crypto.randomUUID();
-    chrome.runtime.onMessage.addListener((message) => {
-        console.log("Received message from extension worker:", message);
 
-        if (message.id !== requestId) {
-            return;
-        }
-
-        const ws = new WebSocket(message.result.url);
-        const attachAddon = new AttachAddon(ws);
-        terminal.loadAddon(attachAddon);
-
-        terminal.onResize(async (size) => {
-            const { cols, rows } = size;
-            await chrome.runtime.sendMessage({
-                jsonrpc: "2.0",
-                method: "resize",
-                params: {
-                    id: message.result.id,
-                    cols,
-                    rows,
-                },
-            })
-        });
-
-        globalThis.onbeforeunload = () => {
-            ws.onclose = () => { }
-            ws.close();
-        };
-
-        ws.onclose = () => {
-            terminal.writeln(
-                "Connection closed. Hit Enter to refresh the page.",
-            );
-
-            terminal.onKey((event) => {
-                if (event.key === "\r" || event.key === "\n") {
-                    globalThis.location.reload();
-                }
-            });
-        }
-    })
-
-    chrome.runtime.sendMessage({
+    const url = new URL(globalThis.location.href);
+    const resp = await chrome.runtime.sendMessage<RequestCreateTTY, ResponseCreateTTY>({
         jsonrpc: "2.0",
         id: requestId,
-        method: "exec",
+        method: "create_tty",
         params: {
-            args: argsParam ? split(argsParam) : [],
-            cwd: url.searchParams.get("cwd"),
+            command: url.searchParams.get("command") || url.searchParams.get("cmd") || undefined,
+            cwd: url.searchParams.get("cwd") || undefined,
             cols: terminal.cols,
             rows: terminal.rows,
         }
     })
+
+    const ws = new WebSocket(resp.result.url);
+    const attachAddon = new AttachAddon(ws);
+    terminal.loadAddon(attachAddon);
+
+    terminal.onResize(async (size) => {
+        const { cols, rows } = size;
+        await chrome.runtime.sendMessage<RequestResizeTTY>({
+            jsonrpc: "2.0",
+            method: "resize_tty",
+            params: {
+                tty: resp.result.id,
+                cols,
+                rows,
+            },
+        })
+    });
+
+    globalThis.onbeforeunload = () => {
+        ws.onclose = () => { }
+        ws.close();
+    };
+
+    ws.onclose = () => {
+        terminal.writeln(
+            "Connection closed. Hit Enter to refresh the page.",
+        );
+
+        terminal.onKey((event) => {
+            if (event.key === "\r" || event.key === "\n") {
+                globalThis.location.reload();
+            }
+        });
+    }
 
     globalThis.onresize = () => {
         fitAddon.fit();
@@ -170,12 +151,6 @@ async function main() {
     };
 
     terminal.focus();
-
-    // globalThis
-    //     .matchMedia("(prefers-color-scheme: dark)")
-    //     .addEventListener("change", async function (e) {
-    //         terminal.options.theme = e.matches ? await getTheme("dark") : await getTheme("light");
-    //     });
 }
 
 main();

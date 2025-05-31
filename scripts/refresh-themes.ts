@@ -4,9 +4,7 @@ import degit from "npm:degit";
 import * as path from "https://deno.land/std@0.208.0/path/mod.ts";
 import { existsSync } from "https://deno.land/std@0.203.0/fs/mod.ts";
 
-const dirname = path.dirname(new URL(import.meta.url).pathname);
 const emitter = await degit("mbadolato/iTerm2-Color-Schemes/vscode", {
-  cache: true,
   force: true,
   verbose: true,
 });
@@ -41,8 +39,8 @@ const keyMapping = {
   "terminal.selectionBackground": "selectionBackground",
   "terminalCursor.foreground": "cursor",
 } as Record<string, string>;
-const themeDir = path.join(dirname, "..", "themes");
 
+const themeDir = path.join(import.meta.dirname!, "..", "embed", "themes");
 if (existsSync(themeDir)) {
   Deno.removeSync(themeDir, { recursive: true });
 }

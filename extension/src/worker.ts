@@ -1,12 +1,25 @@
 import browser from "webextension-polyfill";
 
-browser.runtime.onInstalled.addListener(() => {
-  console.log("Extension installed");
-});
-
 browser.action.onClicked.addListener(() => {
   browser.tabs.create({ url: browser.runtime.getURL("tty.html") });
 });
+
+const nativePort = browser.runtime.connectNative("com.github.pomdtr.tweety");
+
+nativePort.onMessage.addListener(async (message) => {
+  if (typeof message !== "object" || message === null) {
+    console.error("Received non-object message from native messaging host:", message);
+    return;
+  }
+
+  // Check if the message is a valid JSON-RPC request
+  if (!("method" in message) || typeof message.method !== "string") {
+    return;
+  }
+
+  console.log("Message received from native messaging host:", message);
+  await browser.runtime.sendMessage(message)
+})
 
 // @ts-ignore
 browser.runtime.onMessage.addListener((msg, sender, sendResponse) => {
@@ -22,52 +35,26 @@ browser.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     return false
   }
 
-  if (!("method" in msg) || typeof msg.method !== "string") {
-    console.error("Received message without 'method' property:", msg);
+  // if the jsonrpc request does not have an id, it is a notification
+  if (!("id" in msg)) {
+    nativePort.postMessage(msg)
     return false
   }
 
-  if (!("params" in msg) || typeof msg.params !== "object" || msg.params === null) {
-    console.error("Received message without 'params' property:", msg);
-    return false
+  const listener = (res: unknown) => {
+    if (typeof res !== "object" || res === null) {
+      return;
+    }
+
+    if (!("id" in res) || typeof res.id !== "string" || res.id !== msg.id) {
+      return;
+    }
+
+    nativePort.onMessage.removeListener(listener);
+    sendResponse(res);
   }
 
-  switch (msg.method) {
-    case "getConfig": {
-      console.log("Getting config from storage");
-      browser.storage.session.get("nativePort").then((result) => {
-        sendResponse({
-          port: result.nativePort || null,
-        })
-      })
-      break;
-    }
-    case "exec": {
-      nativePort.postMessage(msg)
-      break
-    }
-    case "resize": {
-      nativePort.postMessage(msg)
-      break;
-    }
-  }
-
-  return false; // Keep the message channel open for sendResponse
+  nativePort.onMessage.addListener(listener)
+  nativePort.postMessage(msg);
+  return true
 })
-
-
-const nativePort = browser.runtime.connectNative("com.github.pomdtr.tweety");
-
-nativePort.onMessage.addListener(async (message) => {
-  if (typeof message !== "object" || message === null) {
-    console.error("Received non-object message from native messaging host:", message);
-    return;
-  }
-
-  console.log("Message received from native messaging host:", message);
-  await browser.runtime.sendMessage(message)
-})
-
-nativePort.onDisconnect.addListener(() => {
-  console.log("Native messaging host disconnected");
-});

@@ -14,6 +14,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"sync"
 	"text/template"
@@ -21,6 +22,7 @@ import (
 
 	"github.com/creack/pty"
 	"github.com/go-chi/chi/v5"
+	"github.com/google/shlex"
 	"github.com/gorilla/websocket"
 	jsonparser "github.com/knadh/koanf/parsers/json"
 	"github.com/knadh/koanf/providers/file"
@@ -43,15 +45,15 @@ type Request struct {
 	Params         json.RawMessage `json:"params"`
 }
 
-type RequestParamsExec struct {
-	Cwd  string   `json:"cwd"`
-	Args []string `json:"args"`
-	Rows uint16   `json:"rows"`
-	Cols uint16   `json:"cols"`
+type RequestParamsRunCommand struct {
+	Cwd     string `json:"cwd"`
+	Command string `json:"command"`
+	Rows    uint16 `json:"rows"`
+	Cols    uint16 `json:"cols"`
 }
 
-type RequestParamsResize struct {
-	ID   string `json:"id"`
+type RequestParamsResizeTTY struct {
+	TTY  string `json:"tty"`
 	Rows uint16 `json:"rows"`
 	Cols uint16 `json:"cols"`
 }
@@ -111,9 +113,8 @@ func NewCmdServe() *cobra.Command {
 			token := rand.Text()
 
 			handler, err := NewHandler(HandlerParams{
-				Command: k.String("command"),
-				Port:    port,
-				Token:   token,
+				Port:  port,
+				Token: token,
 			})
 			if err != nil {
 				return err
@@ -145,18 +146,18 @@ func NewCmdInstall() *cobra.Command {
 			}
 
 			hostPath := filepath.Join(dataDir, "native_messaging_host")
-			hostFile, err := os.Create(hostPath)
+			f, err := os.Create(hostPath)
 			if err != nil {
 				return fmt.Errorf("failed to create native messaging host file: %w", err)
 			}
-			defer hostFile.Close()
+			defer f.Close()
 
 			execPath, err := os.Executable()
 			if err != nil {
 				return fmt.Errorf("failed to get executable path: %w", err)
 			}
 
-			if err := hostTemplate.Execute(hostFile, map[string]interface{}{
+			if err := hostTemplate.Execute(f, map[string]interface{}{
 				"ExecPath": execPath,
 			}); err != nil {
 				return fmt.Errorf("failed to execute template: %w", err)
@@ -171,16 +172,27 @@ func NewCmdInstall() *cobra.Command {
 				return fmt.Errorf("failed to parse manifest template: %w", err)
 			}
 
-			manifestFile, err := os.Create(filepath.Join(os.Getenv("HOME"), "Library", "Application Support", "Google", "Chrome", "NativeMessagingHosts", "com.github.pomdtr.tweety.json"))
+			dirs, err := getManifestDirs()
 			if err != nil {
-				return fmt.Errorf("failed to get manifest file path: %w", err)
+				return fmt.Errorf("failed to get manifest directories: %w", err)
 			}
-			defer manifestFile.Close()
 
-			if err := manifestTemplate.Execute(manifestFile, map[string]interface{}{
-				"Path": hostPath,
-			}); err != nil {
-				return fmt.Errorf("failed to execute manifest template: %w", err)
+			for _, dir := range dirs {
+				if _, err := os.Stat(dir); os.IsNotExist(err) {
+					continue
+				}
+
+				f, err := os.Create(filepath.Join(dir, "com.github.pomdtr.tweety.json"))
+				if err != nil {
+					return fmt.Errorf("failed to get manifest file path: %w", err)
+				}
+				defer f.Close()
+
+				if err := manifestTemplate.Execute(f, map[string]interface{}{
+					"Path": hostPath,
+				}); err != nil {
+					return fmt.Errorf("failed to execute manifest template: %w", err)
+				}
 			}
 
 			return nil
@@ -190,10 +202,35 @@ func NewCmdInstall() *cobra.Command {
 	return cmd
 }
 
+func getManifestDirs() ([]string, error) {
+	switch runtime.GOOS {
+	case "darwin":
+		supportDir := filepath.Join(os.Getenv("HOME"), "Library", "Application Support")
+		return []string{
+			filepath.Join(supportDir, "Google", "Chrome", "NativeMessagingHosts"),
+			filepath.Join(supportDir, "Chromium", "NativeMessagingHosts"),
+			filepath.Join(supportDir, "BraveSoftware", "Brave-Browser", "NativeMessagingHosts"),
+			filepath.Join(supportDir, "Vivaldi", "NativeMessagingHosts"),
+			filepath.Join(supportDir, "Microsoft", "Edge", "NativeMessagingHosts"),
+			filepath.Join(supportDir, "Firefox", "NativeMessagingHosts"),
+			filepath.Join(supportDir, "Zen", "NativeMessagingHosts"),
+		}, nil
+	case "linux":
+		configDir := filepath.Join(os.Getenv("HOME"), ".config")
+		return []string{
+			filepath.Join(os.Getenv("HOME"), ".mozilla", "native-messaging-hosts"),
+			filepath.Join(configDir, "google-chrome", "NativeMessagingHosts"),
+			filepath.Join(configDir, "chromium", "NativeMessagingHosts"),
+			filepath.Join(configDir, "microsoft-edge", "NativeMessagingHosts"),
+		}, nil
+	}
+
+	return nil, fmt.Errorf("unsupported OS: %s", runtime.GOOS)
+}
+
 type HandlerParams struct {
-	Command string
-	Port    int
-	Token   string
+	Port  int
+	Token string
 }
 
 func NewHandler(handlerParams HandlerParams) (http.Handler, error) {
@@ -204,7 +241,6 @@ func NewHandler(handlerParams HandlerParams) (http.Handler, error) {
 		for {
 			msg, err := readNativeMessage()
 			if err != nil {
-				log.Printf("failed to read message: %s", err)
 				continue
 			}
 
@@ -216,19 +252,35 @@ func NewHandler(handlerParams HandlerParams) (http.Handler, error) {
 
 			log.Printf("received request: %s", request.Method)
 			switch request.Method {
-			case "exec":
-				var requestParams RequestParamsExec
+			case "create_tty":
+				var requestParams RequestParamsRunCommand
 				if err := json.Unmarshal(request.Params, &requestParams); err != nil {
 					log.Printf("failed to unmarshal exec params: %s", err)
 					continue
 				}
 
-				entrypoint := k.String("command")
-				if _, err := exec.LookPath(entrypoint); err != nil && !filepath.IsAbs(entrypoint) {
-					entrypoint = filepath.Join(configDir, entrypoint)
+				entrypoint := k.Strings("entrypoint")
+				if len(entrypoint) == 0 {
+					log.Println("no entrypoint defined in config, skipping command execution")
+					continue
 				}
 
-				cmd := exec.Command(entrypoint, requestParams.Args...)
+				name, args := entrypoint[0], entrypoint[1:]
+				if _, err := exec.LookPath(name); err != nil && !filepath.IsAbs(name) {
+					name = filepath.Join(configDir, name)
+				}
+
+				if requestParams.Command != "" {
+					commandArgs, err := shlex.Split(requestParams.Command)
+					if err != nil {
+						log.Printf("failed to split command: %s", err)
+						continue
+					}
+
+					args = append(args, commandArgs...)
+				}
+
+				cmd := exec.Command(name, args...)
 
 				cmd.Env = os.Environ()
 				cmd.Env = append(cmd.Env, "TERM=xterm-256color")
@@ -267,21 +319,66 @@ func NewHandler(handlerParams HandlerParams) (http.Handler, error) {
 						"id":  ttyID,
 					},
 				})
-			case "resize":
-				var requestParams RequestParamsResize
+			case "resize_tty":
+				var requestParams RequestParamsResizeTTY
 				if err := json.Unmarshal(request.Params, &requestParams); err != nil {
 					log.Printf("failed to unmarshal resize params: %s", err)
 					continue
 				}
 
-				tty, ok := ttyMap[requestParams.ID]
+				tty, ok := ttyMap[requestParams.TTY]
 				if !ok {
-					log.Printf("no tty found for ID: %s", requestParams.ID)
+					log.Printf("no tty found for ID: %s", requestParams.TTY)
 					continue
 				}
 
 				if err := pty.Setsize(tty, &pty.Winsize{Rows: requestParams.Rows, Cols: requestParams.Cols}); err != nil {
-					log.Printf("failed to set size for tty %s: %s", requestParams.ID, err)
+					log.Printf("failed to set size for tty %s: %s", requestParams.TTY, err)
+					continue
+				}
+			case "get_xterm_config":
+				xtermConfig := map[string]interface{}{
+					"cursorBlink":                   true,
+					"allowProposedApi":              true,
+					"macOptionIsMeta":               true,
+					"macOptionClickForcesSelection": true,
+					"fontSize":                      13,
+					"fontFamily":                    "Consolas,Liberation Mono,Menlo,Courier,monospace",
+					"theme": map[string]interface{}{
+						"foreground":          "#c5c8c6",
+						"background":          "#1d1f21",
+						"ansiBlack":           "#000000",
+						"ansiBlue":            "#81a2be",
+						"ansiCyan":            "#8abeb7",
+						"ansiGreen":           "#b5bd68",
+						"ansiMagenta":         "#b294bb",
+						"ansiRed":             "#cc6666",
+						"ansiWhite":           "#ffffff",
+						"ansiYellow":          "#f0c674",
+						"ansiBrightBlack":     "#000000",
+						"ansiBrightBlue":      "#81a2be",
+						"ansiBrightCyan":      "#8abeb7",
+						"ansiBrightGreen":     "#b5bd68",
+						"ansiBrightMagenta":   "#b294bb",
+						"ansiBrightRed":       "#cc6666",
+						"ansiBrightWhite":     "#ffffff",
+						"ansiBrightYellow":    "#f0c674",
+						"selectionBackground": "#373b41",
+						"cursor":              "#c5c8c6",
+					},
+				}
+
+				if err := k.Unmarshal("xterm", &xtermConfig); err != nil {
+					log.Printf("failed to unmarshal xterm config: %s", err)
+					continue
+				}
+
+				if err := writeMessage(map[string]interface{}{
+					"id":      request.ID,
+					"jsonrpc": "2.0",
+					"result":  xtermConfig,
+				}); err != nil {
+					log.Printf("failed to write theme message: %s", err)
 					continue
 				}
 			}

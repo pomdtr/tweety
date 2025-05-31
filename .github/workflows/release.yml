@@ -12,6 +12,13 @@ permissions:
   # issues: write
 
 jobs:
+  extension:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - run: git fetch --force --tags
   goreleaser:
     runs-on: ubuntu-latest
     steps:
@@ -19,11 +26,6 @@ jobs:
         with:
           fetch-depth: 0
       - run: git fetch --force --tags
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 21
-      - run: npm ci && npm run build
-        working-directory: ./frontend
       - uses: actions/setup-go@v3
         with:
           go-version: ">=1.19.4"
