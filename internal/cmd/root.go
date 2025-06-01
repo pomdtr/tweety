@@ -385,6 +385,7 @@ func NewHandler(handlerParams HandlerParams) http.Handler {
 		cmd := exec.Command(args[0], args[1:]...)
 		cmd.Env = os.Environ()
 		cmd.Env = append(cmd.Env, "TERM=xterm-256color")
+		cmd.Env = append(cmd.Env, "TERM_PROGRAM=tweety")
 
 		for key, value := range k.StringMap("env") {
 			cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", key, value))
