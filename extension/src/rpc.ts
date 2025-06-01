@@ -18,7 +18,9 @@ export type RequestResizeTTY = JSONRPCRequestBase<"tty.resize", {
     rows: number;
 }>
 
-export type RequestCreateTTY = JSONRPCRequestBase<"tty.create">
+export type RequestCreateTTY = JSONRPCRequestBase<"tty.create", {
+    args?: string
+}>
 
 export type RequestGetXtermConfig = JSONRPCRequestBase<"xterm.getConfig">;
 

@@ -5,11 +5,6 @@ import { WebglAddon } from "@xterm/addon-webgl";
 import { WebLinksAddon } from "@xterm/addon-web-links";
 import { RequestCreateTTY, RequestGetXtermConfig, RequestResizeTTY, ResponseCreateTTY, ResponseGetXtermConfig } from "./rpc";
 
-async function sleep(ms: number) {
-    return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-
 async function main() {
     const { result: config } = await chrome.runtime.sendMessage<RequestGetXtermConfig, ResponseGetXtermConfig>({
         jsonrpc: "2.0",
@@ -18,10 +13,14 @@ async function main() {
     })
 
     const requestId = crypto.randomUUID();
+    const searchParams = new URLSearchParams(window.location.search);
     const resp = await chrome.runtime.sendMessage<RequestCreateTTY, ResponseCreateTTY>({
         jsonrpc: "2.0",
         id: requestId,
         method: "tty.create",
+        params: {
+            args: searchParams.get("args") || undefined,
+        }
     })
 
     const terminal = new Terminal(config);

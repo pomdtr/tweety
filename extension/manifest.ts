@@ -22,9 +22,6 @@ export default {
         openInNewWindow: {
             description: "Open in new window",
         },
-        openinPopupWindow: {
-            description: "Open in popup window",
-        }
     },
     action: {
         default_icon: {

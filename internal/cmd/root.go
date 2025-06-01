@@ -331,9 +331,28 @@ func NewHandler(handlerParams HandlerParams) http.Handler {
 	})
 
 	messagingHost.HandleRequest("tty.create", func(input []byte) (any, error) {
+		var params struct {
+			Args string `json:"args,omitempty"`
+		}
+
+		if len(input) > 0 {
+			if err := json.Unmarshal(input, &params); err != nil {
+				return nil, fmt.Errorf("failed to unmarshal tty.create params: %w", err)
+			}
+		}
+
 		args, err := shlex.Split(k.String("command"))
 		if err != nil {
 			return nil, fmt.Errorf("failed to split command args: %w", err)
+		}
+
+		if k.Bool("allowArgs") && params.Args != "" {
+			additionalArgs, err := shlex.Split(params.Args)
+			if err != nil {
+				return nil, fmt.Errorf("failed to split additional args: %w", err)
+			}
+
+			args = append(args, additionalArgs...)
 		}
 
 		cmd := exec.Command(args[0], args[1:]...)
