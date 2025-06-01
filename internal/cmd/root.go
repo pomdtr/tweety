@@ -178,7 +178,7 @@ func NewCmdInstall() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "install",
-		Short: "Install Tweety native messaging host",
+		Short: "Install native messaging host",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := os.MkdirAll(dataDir, 0755); err != nil {
 				return fmt.Errorf("failed to create data directory: %w", err)
@@ -253,7 +253,7 @@ func NewCmdInstall() *cobra.Command {
 func NewCmdUninstall() *cobra.Command {
 	return &cobra.Command{
 		Use:   "uninstall",
-		Short: "Uninstall Tweety native messaging host",
+		Short: "Uninstall native messaging host",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			dirs, err := getManifestDirs()
 			if err != nil {
