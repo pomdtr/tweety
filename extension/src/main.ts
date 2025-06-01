@@ -9,7 +9,7 @@ async function main() {
     const { result: config } = await chrome.runtime.sendMessage<RequestGetXtermConfig, ResponseGetXtermConfig>({
         jsonrpc: "2.0",
         id: crypto.randomUUID(),
-        method: "config.get",
+        method: "xterm.getConfig",
     })
 
     const terminal = new Terminal(config);

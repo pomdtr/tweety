@@ -42,9 +42,10 @@ func NewCmdTabs() *cobra.Command {
 
 func NewCmdTabQuery() *cobra.Command {
 	var flags struct {
-		Active      bool
-		Pinned      bool
-		Highlighted bool
+		Active            bool
+		Pinned            bool
+		Highlighted       bool
+		LastFocusedWindow bool
 	}
 
 	cmd := &cobra.Command{
@@ -64,6 +65,10 @@ func NewCmdTabQuery() *cobra.Command {
 				options["highlighted"] = flags.Highlighted
 			}
 
+			if cmd.Flags().Changed("last-focused-window") {
+				options["lastFocusedWindow"] = flags.LastFocusedWindow
+			}
+
 			client := jsonrpc.NewClient(tweetyPort, tweetyToken)
 			resp, err := client.SendRequest("tabs.query", []any{
 				options,
@@ -80,6 +85,7 @@ func NewCmdTabQuery() *cobra.Command {
 	cmd.Flags().BoolVar(&flags.Active, "active", false, "Filter active tabs")
 	cmd.Flags().BoolVar(&flags.Pinned, "pinned", false, "Filter pinned tabs")
 	cmd.Flags().BoolVar(&flags.Highlighted, "highlighted", false, "Filter highlighted tabs")
+	cmd.Flags().BoolVar(&flags.LastFocusedWindow, "last-focused-window", false, "Filter tabs in the last focused window")
 
 	return cmd
 }
@@ -147,9 +153,14 @@ func NewCmdTabsRemove() *cobra.Command {
 			}
 
 			client := jsonrpc.NewClient(tweetyPort, tweetyToken)
-			_, err := client.SendRequest("tabs.remove", []any{tabIds})
+			resp, err := client.SendRequest("tabs.remove", []any{tabIds})
 			if err != nil {
 				return fmt.Errorf("failed to close tab: %w", err)
+			}
+
+			if resp.Error != nil {
+				os.Stderr.Write(resp.Error)
+				os.Exit(1)
 			}
 
 			return nil
@@ -224,18 +235,22 @@ func NewCmdTabsUpdate() *cobra.Command {
 
 func NewCmdTabsGet() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:               "get <tabID>",
+		Use:               "get [tabID]",
 		ValidArgsFunction: completeTabID,
 		Short:             "Get information about a specific tab",
-		Args:              cobra.ExactArgs(1),
+		Args:              cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			tabID, err := strconv.Atoi(args[0])
-			if err != nil {
-				return fmt.Errorf("invalid tab ID: %w", err)
+			params := []any{}
+			if len(args) > 0 {
+				tabID, err := strconv.Atoi(args[0])
+				if err != nil {
+					return fmt.Errorf("invalid tab ID: %w", err)
+				}
+				params = append(params, tabID)
 			}
 
 			client := jsonrpc.NewClient(tweetyPort, tweetyToken)
-			resp, err := client.SendRequest("tabs.get", []any{tabID})
+			resp, err := client.SendRequest("tabs.get", params)
 			if err != nil {
 				return fmt.Errorf("failed to get tab: %w", err)
 			}

@@ -75,15 +75,46 @@ var dataDir = filepath.Join(os.Getenv("HOME"), ".local", "share", "tweety")
 
 func NewCmdRoot() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:          "tweety",
-		SilenceUsage: true,
-		Short:        "An integrated terminal for your web browser",
+		Use:               "tweety",
+		SilenceUsage:      true,
+		ValidArgsFunction: completeCommands,
+		Short:             "An integrated terminal for your web browser",
+		Args:              cobra.ExactArgs(1),
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 			if err := k.Load(file.Provider(filepath.Join(configDir, "config.json")), jsonparser.Parser()); err != nil {
 				return fmt.Errorf("failed to load config: %w", err)
 			}
 
 			return nil
+		},
+		RunE: func(cmd *cobra.Command, args []string) error {
+			commandDir := filepath.Join(configDir, "commands")
+			scripts, err := os.ReadDir(commandDir)
+			if err != nil {
+				return fmt.Errorf("failed to read commands directory: %w", err)
+			}
+
+			for _, script := range scripts {
+				if script.IsDir() {
+					continue
+				}
+
+				if strings.TrimSuffix(script.Name(), filepath.Ext(script.Name())) != args[0] {
+					continue
+				}
+
+				cmd.SilenceErrors = true
+
+				c := exec.Command(filepath.Join(commandDir, script.Name()))
+
+				c.Stdin = os.Stdin
+				c.Stdout = os.Stdout
+				c.Stderr = os.Stderr
+
+				return c.Run()
+			}
+
+			return fmt.Errorf("command '%s' not found in %s", args[0], commandDir)
 		},
 	}
 
@@ -95,9 +126,27 @@ func NewCmdRoot() *cobra.Command {
 		NewCmdBookmarks(),
 		NewCmdHistory(),
 		NewCmdWindows(),
+		NewCmdNotifications(),
 	)
 
 	return cmd
+}
+
+func completeCommands(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	files, err := os.ReadDir(filepath.Join(configDir, "commands"))
+	if err != nil {
+		return nil, cobra.ShellCompDirectiveError
+	}
+
+	var completions []string
+	for _, file := range files {
+		if file.IsDir() {
+			continue
+		}
+		completions = append(completions, fmt.Sprintf("%s\tCustom Command", strings.TrimSuffix(file.Name(), filepath.Ext(file.Name()))))
+	}
+
+	return completions, cobra.ShellCompDirectiveNoFileComp
 }
 
 func NewCmdServe() *cobra.Command {
@@ -128,14 +177,11 @@ func NewCmdServe() *cobra.Command {
 
 			token := rand.Text()
 
-			handler, err := NewHandler(HandlerParams{
+			handler := NewHandler(HandlerParams{
 				Logger: logger,
 				Port:   port,
 				Token:  token,
 			})
-			if err != nil {
-				return err
-			}
 
 			logger.Info("Listening", "port", port)
 			return http.ListenAndServe(fmt.Sprintf(":%d", port), handler)
@@ -290,63 +336,24 @@ type HandlerParams struct {
 	Token  string
 }
 
-func NewHandler(handlerParams HandlerParams) (http.Handler, error) {
-	var ttyMap = make(map[string]*os.File)
-	host := jsonrpc.NewHost(handlerParams.Logger)
+type ScriptCommand struct {
+	Name  string `json:"name"`
+	Title string `json:"title"`
+}
 
-	host.HandleRequest("tty.create", func(input []byte) (any, error) {
+func NewHandler(handlerParams HandlerParams) http.Handler {
+	var ttyMap = make(map[string]*os.File)
+	messagingHost := jsonrpc.NewHost(handlerParams.Logger)
+
+	messagingHost.HandleRequest("tty.create", func(input []byte) (any, error) {
 		var requestParams RequestParamsRunCommand
 		if err := json.Unmarshal(input, &requestParams); err != nil {
 			return nil, fmt.Errorf("failed to unmarshal exec params: %w", err)
 		}
 
-		var args []string
-		if command := requestParams.Command; command != "" {
-			var err error
-			args, err = shlex.Split(command)
-			if err != nil {
-				return nil, fmt.Errorf("failed to split command args: %w", err)
-			}
-
-			binDir := filepath.Join(configDir, "bin")
-			entries, err := os.ReadDir(binDir)
-
-			if err != nil {
-				return nil, fmt.Errorf("failed to read commands directory: %w", err)
-			}
-
-			var scriptPath string
-			for _, entry := range entries {
-				if entry.IsDir() {
-					continue
-				}
-
-				if entry.Name() != args[0] {
-					continue
-				}
-
-				scriptPath = filepath.Join(binDir, entry.Name())
-				// make sure the command is executable
-				if entry.Type().IsRegular() {
-					if err := os.Chmod(scriptPath, 0755); err != nil {
-						return nil, fmt.Errorf("failed to make command executable: %w", err)
-					}
-				}
-
-				break
-			}
-
-			if scriptPath == "" {
-				return nil, fmt.Errorf("command not found: %s, entries: %s", args[0], entries)
-			}
-
-			args[0] = scriptPath
-		} else {
-			var err error
-			args, err = shlex.Split(k.String("command"))
-			if err != nil {
-				return nil, fmt.Errorf("failed to split command args: %w", err)
-			}
+		args, err := shlex.Split(k.String("command"))
+		if err != nil {
+			return nil, fmt.Errorf("failed to split command args: %w", err)
 		}
 
 		cmd := exec.Command(args[0], args[1:]...)
@@ -381,7 +388,7 @@ func NewHandler(handlerParams HandlerParams) (http.Handler, error) {
 
 	})
 
-	host.HandleNotification("tty.resize", func(input []byte) error {
+	messagingHost.HandleNotification("tty.resize", func(input []byte) error {
 		var requestParams RequestParamsResizeTTY
 		if err := json.Unmarshal(input, &requestParams); err != nil {
 			return fmt.Errorf("failed to unmarshal resize params: %w", err)
@@ -399,7 +406,7 @@ func NewHandler(handlerParams HandlerParams) (http.Handler, error) {
 		return nil
 	})
 
-	host.HandleRequest("config.get", func(input []byte) (any, error) {
+	messagingHost.HandleRequest("xterm.getConfig", func(input []byte) (any, error) {
 		xtermConfig := map[string]interface{}{
 			"cursorBlink":                   true,
 			"allowProposedApi":              true,
@@ -438,7 +445,73 @@ func NewHandler(handlerParams HandlerParams) (http.Handler, error) {
 		return xtermConfig, nil
 	})
 
-	go host.Listen()
+	messagingHost.HandleRequest("commands.getAll", func(input []byte) (any, error) {
+		commandsDir := filepath.Join(configDir, "commands")
+		if _, err := os.Stat(commandsDir); os.IsNotExist(err) {
+			return []any{}, nil
+		}
+
+		entries, err := os.ReadDir(commandsDir)
+		if err != nil {
+			return nil, fmt.Errorf("failed to read commands directory: %w", err)
+		}
+
+		var commands []ScriptCommand
+		for _, entry := range entries {
+			if entry.IsDir() {
+				continue
+			}
+
+			commands = append(commands, ScriptCommand{
+				Name:  entry.Name(),
+				Title: entry.Name(),
+			})
+
+		}
+
+		return commands, nil
+	})
+
+	messagingHost.HandleRequest("commands.run", func(input []byte) (any, error) {
+		var requestParams struct {
+			Name string `json:"name"`
+		}
+
+		if err := json.Unmarshal(input, &requestParams); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal command params: %w", err)
+		}
+
+		cmd := exec.Command(filepath.Join(configDir, "commands", requestParams.Name))
+		cmd.Env = os.Environ()
+		for key, value := range k.StringMap("env") {
+			cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", key, value))
+		}
+
+		cmd.Env = append(cmd.Env, fmt.Sprintf("TWEETY_PORT=%d", handlerParams.Port))
+		cmd.Env = append(cmd.Env, fmt.Sprintf("TWEETY_TOKEN=%s", handlerParams.Token))
+
+		handlerParams.Logger.Info("Running command", "name", requestParams.Name, "command", cmd.String())
+		if err := cmd.Run(); err != nil {
+			handlerParams.Logger.Error("Command failed", "name", requestParams.Name)
+			if exitError, ok := err.(*exec.ExitError); ok {
+				return map[string]any{
+					"success": "false",
+					"code":    exitError.ExitCode(),
+					"stderr":  string(exitError.Stderr),
+				}, nil
+			}
+
+			return nil, fmt.Errorf("command %s failed with error: %w", requestParams.Name, err)
+		}
+
+		handlerParams.Logger.Info("Command executed successfully", "name", requestParams.Name)
+		// if command was successful, return success
+		return map[string]any{
+			"success": "true",
+		}, nil
+	})
+
+	go messagingHost.Listen()
 
 	r := chi.NewRouter()
 
@@ -462,7 +535,7 @@ func NewHandler(handlerParams HandlerParams) (http.Handler, error) {
 			return
 		}
 
-		resp, err := host.Send(request)
+		resp, err := messagingHost.Send(request)
 		if err != nil {
 			http.Error(w, fmt.Sprintf("failed to send request: %s", err), http.StatusInternalServerError)
 			return
@@ -495,7 +568,7 @@ func NewHandler(handlerParams HandlerParams) (http.Handler, error) {
 		HandleWebsocket(tty)(w, r)
 	})
 
-	return r, nil
+	return r
 }
 
 func HandleWebsocket(tty *os.File) http.HandlerFunc {

@@ -18,6 +18,7 @@ chrome.runtime.onInstalled.addListener(() => {
   })
 })
 
+
 async function handleCommand(commandId: string) {
   if (commandId === 'openInNewTab') {
     await chrome.tabs.create({
@@ -54,11 +55,19 @@ async function handleCommand(commandId: string) {
   }
 }
 
+chrome.action.onClicked.addListener(async () => {
+  await chrome.tabs.create({
+    url: chrome.runtime.getURL("tty.html"),
+    active: true,
+  });
+})
+
 chrome.contextMenus.onClicked.addListener(async (info) => {
   if (typeof info.menuItemId !== 'string') {
     console.warn("Invalid menuItemId:", info.menuItemId);
     return;
   }
+
 
   await handleCommand(info.menuItemId);
 })
@@ -79,6 +88,74 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
     chrome.sidePanel.open({ windowId: tab.windowId });
   }
 });
+
+chrome.omnibox.onInputStarted.addListener(() => {
+  const id = crypto.randomUUID();
+  const listener = async (msg: unknown) => {
+    if (!isJsonRpcResponse(msg)) {
+      return;
+    }
+
+    if (msg.id !== id) {
+      return;
+    }
+
+    console.log("Received commands:", msg.result);
+
+
+    await chrome.storage.session.set({
+      commands: msg.result,
+    })
+    nativePort.onMessage.removeListener(listener);
+  }
+
+  nativePort.onMessage.addListener(listener);
+  nativePort.postMessage({
+    jsonrpc: "2.0",
+    id,
+    method: "commands.getAll",
+    params: {}
+  })
+})
+
+chrome.omnibox.onInputChanged.addListener(async (_text, suggest) => {
+  const { commands } = await chrome.storage.session.get<{ commands?: { name: string, title: string }[] }>("commands")
+  if (!commands || !Array.isArray(commands)) {
+    console.warn("No commands found or commands is not an array.");
+    return;
+  }
+  // Here you can implement suggestions based on the input text
+  suggest(commands.map(command => ({
+    content: command.name,
+    description: command.title,
+  })))
+})
+
+chrome.omnibox.onInputEntered.addListener((text) => {
+  const id = crypto.randomUUID();
+  const listener = async (msg: unknown) => {
+    if (!isJsonRpcResponse(msg)) {
+      return;
+    }
+
+    if (msg.id !== id) {
+      return;
+    }
+
+    console.log("Command executed:", msg);
+
+    nativePort.onMessage.removeListener(listener);
+  }
+
+  nativePort.onMessage.addListener(listener);
+  nativePort.postMessage({
+    jsonrpc: "2.0",
+    id,
+    method: "commands.run",
+    params: { name: text }
+  })
+})
+
 
 const nativePort = chrome.runtime.connectNative("com.github.pomdtr.tweety");
 
@@ -117,6 +194,17 @@ nativePort.onMessage.addListener(async (message) => {
         sendResponse(tabs);
         break;
       case "tabs.get":
+        if (params.length == 0) {
+          const currentTab = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
+          if (currentTab.length === 0 || !currentTab[0].id) {
+            sendError({ code: -32602, message: "No active tab found" });
+            return;
+          }
+
+          const tab = await chrome.tabs.get(currentTab[0].id);
+          sendResponse(tab);
+          break
+        }
         const tab = await chrome.tabs.get(params[0]);
         sendResponse(tab);
         break;
@@ -207,6 +295,21 @@ nativePort.onMessage.addListener(async (message) => {
       case "bookmarks.remove":
         await chrome.bookmarks.remove(params[0]);
         sendResponse(null);
+        break;
+      case "notifications.create":
+        if (params.length == 2) {
+          const res = await chrome.notifications.create(params[0], params[1]);
+          await sendResponse(res);
+          break;
+        }
+
+        if (params.length == 1) {
+          const res = await chrome.notifications.create(params[0]);
+          await sendResponse(res);
+          break;
+        }
+        console.error("Invalid params for notifications.create:", params);
+        sendError({ code: -32602, message: "Invalid params for notifications.create" });
         break;
       default:
         console.error("Method not found:", method);

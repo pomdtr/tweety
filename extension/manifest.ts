@@ -5,6 +5,7 @@ export default {
     name: "tweety",
     version: "0.1.0",
     manifest_version: 3,
+    omnibox: { keyword: "tty" },
     commands: {
         openInNewTab: {
             description: "Open in new tab",
@@ -23,17 +24,18 @@ export default {
             48: "icons/icon48.png",
         },
         default_title: "Create Terminal",
-        default_popup: "src/popup.html",
     },
     background: {
-        service_worker: "src/worker.ts",
+        service_worker: "src/service_worker.ts",
     },
     permissions: [
         "nativeMessaging",
         "tabs",
+        "notifications",
         "history",
         "contextMenus",
         "bookmarks",
+        "storage"
     ],
     host_permissions: ["<all_urls>"],
     icons: {

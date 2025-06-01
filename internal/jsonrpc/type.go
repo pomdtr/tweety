@@ -13,5 +13,5 @@ type JSONRPCResponse struct {
 	JSONRPC string          `json:"jsonrpc"`
 	ID      string          `json:"id"`
 	Result  json.RawMessage `json:"result,omitempty"`
-	Error   interface{}     `json:"error,omitempty"`
+	Error   json.RawMessage `json:"error,omitempty"`
 }

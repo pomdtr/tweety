@@ -40,7 +40,6 @@ func NewHost(logger *slog.Logger) *Host {
 }
 
 func (h *Host) Listen() {
-	h.logger.Info("Starting JSON-RPC host")
 	for {
 		lengthBytes := make([]byte, 4)
 		if _, err := io.ReadFull(os.Stdin, lengthBytes); err != nil {
@@ -103,57 +102,75 @@ func (h *Host) Listen() {
 				continue
 			}
 
-			if err := handler(request.Params); err != nil {
-				h.logger.Error("failed to handle notification", "method", request.Method, "error", err)
-			}
+			go func() {
+				if err := handler(request.Params); err != nil {
+					h.logger.Error("failed to handle notification", "method", request.Method, "error", err)
+				}
+			}()
+
 			continue
 		}
 
 		handler, ok := h.requestsHandler[request.Method]
 		if !ok {
 			h.logger.Error("no handler found for request", "method", request.Method)
+
+			errorBytes, err := json.Marshal(map[string]any{
+				"code":    -32601,
+				"message": fmt.Sprintf("Method not found: %s", request.Method),
+			})
+			if err != nil {
+				h.logger.Error("failed to marshal error response", "error", err)
+				continue
+			}
+
 			writeMessage(JSONRPCResponse{
 				JSONRPC: "2.0",
 				ID:      request.ID,
-				Error: map[string]any{
-					"code":    -32601,
-					"message": fmt.Sprintf("Method not found: %s", request.Method),
-				},
+				Error:   errorBytes,
 			})
 			continue
 		}
 
-		res, err := handler(request.Params)
-		if err != nil {
-			h.logger.Error("failed to handle request", "method", request.Method, "err", err)
-			writeMessage(JSONRPCResponse{
-				JSONRPC: "2.0",
-				ID:      request.ID,
-				Error: map[string]any{
+		go func() {
+			res, err := handler(request.Params)
+			if err != nil {
+				h.logger.Error("failed to handle request", "method", request.Method, "err", err)
+				errorBytes, err := json.Marshal(map[string]any{
 					"code":    -32603,
 					"message": fmt.Sprintf("Internal error: %s", err),
-				},
-			})
-			continue
-		}
+				})
+				if err != nil {
+					h.logger.Error("failed to marshal error response", "error", err)
+					return
+				}
 
-		resBytes, err := json.Marshal(res)
-		if err != nil {
-			h.logger.Error("failed to marshal result", "error", err)
-			continue
-		}
+				writeMessage(JSONRPCResponse{
+					JSONRPC: "2.0",
+					ID:      request.ID,
+					Error:   errorBytes,
+				})
+				return
+			}
 
-		response := JSONRPCResponse{
-			JSONRPC: "2.0",
-			ID:      request.ID,
-			Result:  resBytes,
-			Error:   nil,
-		}
+			resBytes, err := json.Marshal(res)
+			if err != nil {
+				h.logger.Error("failed to marshal result", "error", err)
+				return
+			}
 
-		if err := writeMessage(response); err != nil {
-			h.logger.Error("failed to write response", "error", err)
-			continue
-		}
+			response := JSONRPCResponse{
+				JSONRPC: "2.0",
+				ID:      request.ID,
+				Result:  resBytes,
+				Error:   nil,
+			}
+
+			if err := writeMessage(response); err != nil {
+				h.logger.Error("failed to write response", "error", err)
+				return
+			}
+		}()
 	}
 }
 
@@ -170,7 +187,7 @@ func (h *Host) Send(request JSONRPCRequest) (JSONRPCResponse, error) {
 	select {
 	case response := <-responseChan:
 		return response, nil
-	case <-time.After(10 * time.Second):
+	case <-time.After(5 * time.Second):
 		return JSONRPCResponse{}, fmt.Errorf("timeout waiting for response")
 	}
 }
