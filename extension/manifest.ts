@@ -3,8 +3,19 @@ export default {
         email: "contact@pomdtr.me",
     },
     name: "tweety",
-    version: "1.0.0",
+    version: "0.1.0",
     manifest_version: 3,
+    commands: {
+        openInNewTab: {
+            description: "Open in new tab",
+        },
+        openInNewWindow: {
+            description: "Open in new window",
+        },
+        openinPopupWindow: {
+            description: "Open in popup window",
+        }
+    },
     action: {
         default_icon: {
             16: "icons/16.png",
@@ -13,7 +24,7 @@ export default {
             38: "icons/38.png",
         },
         default_title: "Create Terminal",
-        default_popup: "popup.html",
+        default_popup: "src/popup.html",
     },
     background: {
         service_worker: "src/worker.ts",

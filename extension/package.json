@@ -1,6 +1,4 @@
 {
-  "name": "vite-web-extension",
-  "displayName": "Vite Web Extension",
   "type": "module",
   "scripts": {
     "build": "tsc && vite build",
@@ -9,11 +7,9 @@
     "serve:firefox": "web-ext run --start-url \"about:debugging#/runtime/this-firefox\"  --source-dir ./dist/",
     "serve:chrome": "web-ext run -t chromium --start-url \"https://example.com\" --source-dir ./dist/"
   },
-  "license": "MIT",
   "devDependencies": {
-    "@samrum/vite-plugin-web-extension": "^5.0.0",
-    "@types/chrome": "^0.0.325",
-    "@types/webextension-polyfill": "^0.12.3",
+    "@samrum/vite-plugin-web-extension": "^5.1.1",
+    "@types/chrome": "^0.0.326",
     "typescript": "^5.2.2",
     "vite": "^5.0.0",
     "web-ext": "^7.8.0"

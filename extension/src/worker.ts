@@ -18,44 +18,55 @@ chrome.runtime.onInstalled.addListener(() => {
   })
 })
 
-
-chrome.contextMenus.onClicked.addListener(async (info, tab) => {
-  if (info.menuItemId === 'openInNewTab') {
-    chrome.tabs.create({
+async function handleCommand(commandId: string) {
+  if (commandId === 'openInNewTab') {
+    await chrome.tabs.create({
       url: chrome.runtime.getURL("tty.html"),
       active: true,
-      windowId: tab?.windowId,
     });
-  } else if (info.menuItemId === 'openInNewWindow') {
+  } else if (commandId === 'openInNewWindow') {
     chrome.windows.create({
       url: chrome.runtime.getURL("tty.html"),
       focused: true,
     });
-  } else if (info.menuItemId === 'openinPopupWindow') {
+  } else if (commandId === 'openinPopupWindow') {
+    // Get the current window to calculate the center position
+    const currentWindow = await chrome.windows.getCurrent();
+    const screenWidth = currentWindow.width ?? 1200;
+    const screenHeight = currentWindow.height ?? 800;
+    const screenLeft = currentWindow.left ?? 0;
+    const screenTop = currentWindow.top ?? 0;
+
+    const popupWidth = 800;
+    const popupHeight = 600;
+    const left = Math.round(screenLeft + (screenWidth - popupWidth) / 2);
+    const top = Math.round(screenTop + (screenHeight - popupHeight) / 2);
+
     chrome.windows.create({
       url: chrome.runtime.getURL("tty.html"),
       type: "popup",
-      height: 600,
-      width: 800,
+      height: popupHeight,
+      width: popupWidth,
+      left,
+      top,
       focused: true,
-    })
-  } else if (info.menuItemId === 'copyTabID') {
-    if (!tab || !tab.id) {
-      console.warn("No active tab found to copy ID.");
-      return;
-    }
+    });
+  }
+}
 
-    await addToClipboard(tab.id.toString());
+chrome.contextMenus.onClicked.addListener(async (info) => {
+  if (typeof info.menuItemId !== 'string') {
+    console.warn("Invalid menuItemId:", info.menuItemId);
+    return;
   }
 
+  await handleCommand(info.menuItemId);
 })
 
-// chrome.action.onClicked.addListener(async () => {
-//   await chrome.tabs.create({
-//     url: chrome.runtime.getURL("tty.html"),
-//     active: true
-//   })
-// });
+chrome.commands.onCommand.addListener(async (command) => {
+  await handleCommand(command);
+});
+
 
 chrome.contextMenus.onClicked.addListener((info, tab) => {
   if (!tab) {
@@ -284,21 +295,4 @@ const isJsonRpcResponse = (message: unknown): message is JSONRPCResponse => {
   }
 
   return true;
-}
-
-async function addToClipboard(value: string) {
-  await chrome.offscreen.createDocument({
-    url: 'offscreen.html',
-    reasons: [chrome.offscreen.Reason.CLIPBOARD],
-    justification: 'Write text to the clipboard.'
-  });
-
-
-  // Now that we have an offscreen document, we can dispatch the
-  // message.
-  chrome.runtime.sendMessage({
-    type: 'copy-data-to-clipboard',
-    target: 'offscreen-doc',
-    data: value
-  });
 }
