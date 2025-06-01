@@ -56,10 +56,9 @@ var (
 )
 
 type RequestParamsRunCommand struct {
-	Command string   `json:"command"`
-	Args    []string `json:"args"`
-	Rows    uint16   `json:"rows"`
-	Cols    uint16   `json:"cols"`
+	Command string `json:"command"`
+	Rows    uint16 `json:"rows"`
+	Cols    uint16 `json:"cols"`
 }
 
 type RequestParamsResizeTTY struct {
@@ -321,16 +320,14 @@ func NewHandler(handlerParams HandlerParams) (http.Handler, error) {
 					continue
 				}
 
-				entryPath := filepath.Join(commandsDir, entry.Name())
+				command = filepath.Join(commandsDir, entry.Name())
 				// make sure the command is executable
 				if entry.Type().IsRegular() {
-					if err := os.Chmod(entryPath, 0755); err != nil {
+					if err := os.Chmod(command, 0755); err != nil {
 						return nil, fmt.Errorf("failed to make command executable: %w", err)
 					}
 				}
 
-				command = filepath.Join(entryPath)
-				args = requestParams.Args
 				break
 			}
 
