@@ -148,6 +148,10 @@ func NewCmdServe() *cobra.Command {
 var embedFs embed.FS
 
 func NewCmdInstall() *cobra.Command {
+	var flags struct {
+		extensionID string
+	}
+
 	cmd := &cobra.Command{
 		Use:   "install",
 		Short: "Install Tweety native messaging host",
@@ -205,7 +209,8 @@ func NewCmdInstall() *cobra.Command {
 				defer f.Close()
 
 				if err := manifestTemplate.Execute(f, map[string]interface{}{
-					"Path": hostPath,
+					"Path":        hostPath,
+					"ExtensionID": flags.extensionID,
 				}); err != nil {
 					return fmt.Errorf("failed to execute manifest template: %w", err)
 				}
@@ -214,6 +219,9 @@ func NewCmdInstall() *cobra.Command {
 			return nil
 		},
 	}
+
+	cmd.Flags().StringVar(&flags.extensionID, "extension-id", "", "Extension ID for the native messaging host")
+	cmd.MarkFlagRequired("extension-id")
 
 	return cmd
 }
