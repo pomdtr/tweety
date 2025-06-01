@@ -129,16 +129,14 @@ async function main() {
         ws.close();
     };
 
-    ws.onclose = () => {
-        terminal.writeln(
-            "Connection closed. Hit Enter to refresh the page.",
-        );
+    ws.onclose = async () => {
+        const tab = await chrome.tabs.getCurrent()
+        if (!tab || !tab.id) {
+            console.error("No current tab found to close.");
+            return;
+        }
 
-        terminal.onKey((event) => {
-            if (event.key === "\r" || event.key === "\n") {
-                globalThis.location.reload();
-            }
-        });
+        await chrome.tabs.remove(tab.id);
     }
 
     globalThis.onresize = () => {

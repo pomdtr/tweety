@@ -5,9 +5,6 @@ export default {
     name: "tweety",
     version: "1.0.0",
     manifest_version: 3,
-    side_panel: {
-        default_path: "tty.html",
-    },
     action: {
         default_icon: {
             16: "icons/16.png",
@@ -25,10 +22,7 @@ export default {
         "tabs",
         "history",
         "contextMenus",
-        "activeTab",
-        "sidePanel",
         "bookmarks",
-        "downloads",
     ],
     host_permissions: ["<all_urls>"],
     icons: {

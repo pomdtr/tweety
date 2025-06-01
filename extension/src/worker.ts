@@ -2,14 +2,45 @@ import { JSONRPCRequest, JSONRPCResponse } from "./rpc";
 
 chrome.runtime.onInstalled.addListener(() => {
   chrome.contextMenus.create({
-    id: 'openSidePanel',
-    title: 'Open side panel',
-    contexts: ['all']
-  });
-  chrome.sidePanel.setPanelBehavior({
-    openPanelOnActionClick: false,
+    id: 'openInNewTab',
+    title: 'Open in new tab',
+    contexts: ['action'],
   })
-});
+  chrome.contextMenus.create({
+    id: 'openInNewWindow',
+    title: 'Open in new window',
+    contexts: ['action'],
+  });
+  chrome.contextMenus.create({
+    id: 'openinPopupWindow',
+    title: 'Open in popup window',
+    contexts: ['action'],
+  })
+})
+
+chrome.contextMenus.onClicked.addListener((info, tab) => {
+  if (info.menuItemId === 'openInNewTab') {
+    chrome.tabs.create({
+      url: chrome.runtime.getURL("tty.html"),
+      active: true,
+      windowId: tab?.windowId,
+    });
+  } else if (info.menuItemId === 'openInNewWindow') {
+    chrome.windows.create({
+      url: chrome.runtime.getURL("tty.html"),
+      focused: true,
+    });
+  } else if (info.menuItemId === 'openinPopupWindow') {
+    chrome.windows.create({
+      url: chrome.runtime.getURL("tty.html"),
+      type: "popup",
+      height: 600,
+      width: 800,
+      focused: true,
+    });
+  }
+
+})
 
 chrome.action.onClicked.addListener(async () => {
   await chrome.tabs.create({
@@ -106,6 +137,30 @@ nativePort.onMessage.addListener(async (message) => {
         await chrome.tabs.goBack(params[0]);
         sendResponse(null);
         break;
+      case "windows.getAll":
+        const windows = await chrome.windows.getAll();
+        sendResponse(windows);
+        break;
+      case "windows.get":
+        const window = await chrome.windows.get(params[0]);
+        sendResponse(window);
+        break;
+      case "windows.getCurrent":
+        const currentWindow = await chrome.windows.getCurrent();
+        sendResponse(currentWindow);
+        break;
+      case "windows.getLastFocused":
+        const lastFocusedWindow = await chrome.windows.getLastFocused();
+        sendResponse(lastFocusedWindow);
+        break;
+      case "windows.create":
+        const newWindow = await chrome.windows.create(params[0]);
+        sendResponse(newWindow);
+        break;
+      case "windows.remove":
+        await chrome.windows.remove(params[0]);
+        sendResponse(null);
+        break;
       case "history.search":
         const historyItems = await chrome.history.search(params[0]);
         sendResponse(historyItems);
@@ -135,7 +190,7 @@ nativePort.onMessage.addListener(async (message) => {
         sendResponse(null);
         break;
       default:
-        console.warn("Method not found:", method);
+        console.error("Method not found:", method);
         sendError({ code: -32601, message: `Method not found: ${method}` });
         break;
     }

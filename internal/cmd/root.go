@@ -109,6 +109,7 @@ func NewCmdRoot() *cobra.Command {
 		NewCmdTabs(),
 		NewCmdBookmarks(),
 		NewCmdHistory(),
+		NewCmdWindows(),
 	)
 
 	return cmd

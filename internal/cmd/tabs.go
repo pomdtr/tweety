@@ -112,7 +112,7 @@ func NewCmdTabsCreate() *cobra.Command {
 			}
 
 			client := jsonrpc.NewClient(tweetyPort, tweetyToken)
-			resp, err := client.SendRequest("tabs.create", []any{flags})
+			resp, err := client.SendRequest("tabs.create", []any{options})
 			if err != nil {
 				return fmt.Errorf("failed to create tab: %w", err)
 			}
