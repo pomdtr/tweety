@@ -55,13 +55,11 @@ func NewCmdNotificationsCreate() *cobra.Command {
 	}
 
 	cmd.Flags().StringVar(&options.Type, "type", "basic", "Type of notification (basic, image, list, progress)")
-	cmd.MarkFlagRequired("type")
 	cmd.Flags().StringVar(&options.Title, "title", "", "Title of the notification")
 	cmd.MarkFlagRequired("title")
 	cmd.Flags().StringVar(&options.Message, "message", "", "Message of the notification")
 	cmd.MarkFlagRequired("message")
-	cmd.Flags().StringVar(&options.IconURL, "icon-url", "", "URL of the icon for the notification")
-	cmd.MarkFlagRequired("icon-url")
+	cmd.Flags().StringVar(&options.IconURL, "icon-url", "/icons/icon128.png", "URL of the icon for the notification")
 
 	return cmd
 }
