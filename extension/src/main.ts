@@ -127,13 +127,7 @@ async function main() {
     };
 
     ws.onclose = async () => {
-        const tab = await chrome.tabs.getCurrent()
-        if (!tab || !tab.id) {
-            console.error("No current tab found to close.");
-            return;
-        }
-
-        await chrome.tabs.remove(tab.id);
+        globalThis.close();
     }
 
     globalThis.onresize = () => {

@@ -18,7 +18,8 @@ chrome.runtime.onInstalled.addListener(() => {
   })
 })
 
-chrome.contextMenus.onClicked.addListener((info, tab) => {
+
+chrome.contextMenus.onClicked.addListener(async (info, tab) => {
   if (info.menuItemId === 'openInNewTab') {
     chrome.tabs.create({
       url: chrome.runtime.getURL("tty.html"),
@@ -37,17 +38,24 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
       height: 600,
       width: 800,
       focused: true,
-    });
+    })
+  } else if (info.menuItemId === 'copyTabID') {
+    if (!tab || !tab.id) {
+      console.warn("No active tab found to copy ID.");
+      return;
+    }
+
+    await addToClipboard(tab.id.toString());
   }
 
 })
 
-chrome.action.onClicked.addListener(async () => {
-  await chrome.tabs.create({
-    url: chrome.runtime.getURL("tty.html"),
-    active: true
-  })
-});
+// chrome.action.onClicked.addListener(async () => {
+//   await chrome.tabs.create({
+//     url: chrome.runtime.getURL("tty.html"),
+//     active: true
+//   })
+// });
 
 chrome.contextMenus.onClicked.addListener((info, tab) => {
   if (!tab) {
@@ -276,4 +284,21 @@ const isJsonRpcResponse = (message: unknown): message is JSONRPCResponse => {
   }
 
   return true;
+}
+
+async function addToClipboard(value: string) {
+  await chrome.offscreen.createDocument({
+    url: 'offscreen.html',
+    reasons: [chrome.offscreen.Reason.CLIPBOARD],
+    justification: 'Write text to the clipboard.'
+  });
+
+
+  // Now that we have an offscreen document, we can dispatch the
+  // message.
+  chrome.runtime.sendMessage({
+    type: 'copy-data-to-clipboard',
+    target: 'offscreen-doc',
+    data: value
+  });
 }
