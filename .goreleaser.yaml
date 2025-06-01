@@ -22,6 +22,8 @@ archives:
       - LICENSE-MIT
 release:
   prerelease: auto
+  extra_files:
+    - glob: "extension/dist/chrome-extension.zip"
 checksum:
   name_template: "checksums.txt"
 snapshot:

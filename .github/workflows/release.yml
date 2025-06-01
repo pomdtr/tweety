@@ -12,13 +12,6 @@ permissions:
   # issues: write
 
 jobs:
-  extension:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
-      - run: git fetch --force --tags
   goreleaser:
     runs-on: ubuntu-latest
     steps:
@@ -26,6 +19,17 @@ jobs:
         with:
           fetch-depth: 0
       - run: git fetch --force --tags
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "18"
+          cache: "npm"
+          cache-dependency-path: "extension/package-lock.json"
+      - name: Build extension
+        run: npm ci && npm run build
+        working-directory: extension
+      - name: Create extension zip
+        working-directory: extension/dist
+        run: npx web-ext build --filename chrome-extension.zip
       - uses: actions/setup-go@v3
         with:
           go-version: ">=1.19.4"
