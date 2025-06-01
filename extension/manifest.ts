@@ -18,10 +18,9 @@ export default {
     },
     action: {
         default_icon: {
-            16: "icons/16.png",
-            19: "icons/19.png",
-            32: "icons/32.png",
-            38: "icons/38.png",
+            16: "icons/icon16.png",
+            32: "icons/icon32.png",
+            48: "icons/icon48.png",
         },
         default_title: "Create Terminal",
         default_popup: "src/popup.html",
@@ -38,15 +37,9 @@ export default {
     ],
     host_permissions: ["<all_urls>"],
     icons: {
-        16: "icons/16.png",
-        19: "icons/19.png",
-        32: "icons/32.png",
-        38: "icons/38.png",
-        48: "icons/48.png",
-        64: "icons/64.png",
-        96: "icons/96.png",
-        128: "icons/128.png",
-        256: "icons/256.png",
-        512: "icons/512.png",
+        16: "icons/icon16.png",
+        32: "icons/icon32.png",
+        48: "icons/icon48.png",
+        128: "icons/icon128.png",
     },
 } satisfies chrome.runtime.ManifestV3
