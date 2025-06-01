@@ -1,11 +1,20 @@
 import { JSONRPCRequest, JSONRPCResponse } from "./rpc";
 
 chrome.runtime.onInstalled.addListener(() => {
+  chrome.sidePanel.setPanelBehavior({
+    openPanelOnActionClick: false
+  })
+
   chrome.contextMenus.create({
     id: 'openInNewTab',
     title: 'Open in new tab',
     contexts: ['action'],
   })
+  chrome.contextMenus.create({
+    id: 'openSidePanel',
+    title: 'Open in side panel',
+    contexts: ['action'],
+  });
   chrome.contextMenus.create({
     id: 'openInNewWindow',
     title: 'Open in new window',
@@ -18,13 +27,24 @@ chrome.runtime.onInstalled.addListener(() => {
   })
 })
 
-
 async function handleCommand(commandId: string) {
   if (commandId === 'openInNewTab') {
     await chrome.tabs.create({
       url: chrome.runtime.getURL("tty.html"),
       active: true,
     });
+  } else if (commandId === 'openInSidePanel') {
+    chrome.windows.getLastFocused().then((currentWindow) => {
+      if (!currentWindow.id) {
+        console.warn("Current window ID is not available.");
+        return;
+      }
+
+      chrome.sidePanel.open({
+        windowId: currentWindow.id,
+      })
+    })
+
   } else if (commandId === 'openInNewWindow') {
     chrome.windows.create({
       url: chrome.runtime.getURL("tty.html"),

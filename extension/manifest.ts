@@ -5,6 +5,9 @@ export default {
     name: "tweety",
     version: "0.1.0",
     manifest_version: 3,
+    side_panel: {
+        default_path: "tty.html",
+    },
     commands: {
         openInNewTab: {
             description: "Open in new tab",
@@ -12,6 +15,9 @@ export default {
                 linux: "Ctrl+Shift+T",
                 mac: "Command+Shift+T",
             }
+        },
+        openInSidePanel: {
+            description: "Open in side panel"
         },
         openInNewWindow: {
             description: "Open in new window",
@@ -38,7 +44,8 @@ export default {
         "history",
         "contextMenus",
         "bookmarks",
-        "storage"
+        "storage",
+        "sidePanel"
     ],
     host_permissions: ["<all_urls>"],
     icons: {
