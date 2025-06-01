@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
 	"strconv"
@@ -135,10 +134,9 @@ func NewCmdTabsCreate() *cobra.Command {
 
 func NewCmdTabsRemove() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:               "remove <tabID> [<tabID>...]",
-		Short:             "Close a tab",
-		ValidArgsFunction: completeTabID,
-		Args:              cobra.MinimumNArgs(1),
+		Use:   "remove <tabID> [<tabID>...]",
+		Short: "Close a tab",
+		Args:  cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var tabIds []int
 			for _, arg := range args {
@@ -231,10 +229,9 @@ func NewCmdTabsUpdate() *cobra.Command {
 
 func NewCmdTabsGet() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:               "get [tabID]",
-		ValidArgsFunction: completeTabID,
-		Short:             "Get information about a specific tab",
-		Args:              cobra.MaximumNArgs(1),
+		Use:   "get [tabID]",
+		Short: "Get information about a specific tab",
+		Args:  cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			params := []any{}
 			if len(args) > 0 {
@@ -260,10 +257,9 @@ func NewCmdTabsGet() *cobra.Command {
 
 func NewCmdTabsDuplicate() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:               "duplicate <tabID>",
-		Short:             "Duplicate a tab",
-		ValidArgsFunction: completeTabID,
-		Args:              cobra.ExactArgs(1),
+		Use:   "duplicate <tabID>",
+		Short: "Duplicate a tab",
+		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			tabID, err := strconv.Atoi(args[0])
 			if err != nil {
@@ -285,10 +281,9 @@ func NewCmdTabsDuplicate() *cobra.Command {
 
 func NewCmdTabsDiscard() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:               "discard <tabID> [<tabID>...]",
-		Short:             "Discard (unload) tabs to free memory",
-		ValidArgsFunction: completeTabID,
-		Args:              cobra.MinimumNArgs(1),
+		Use:   "discard <tabID> [<tabID>...]",
+		Short: "Discard (unload) tabs to free memory",
+		Args:  cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var tabIds []int
 			for _, arg := range args {
@@ -310,30 +305,6 @@ func NewCmdTabsDiscard() *cobra.Command {
 	}
 
 	return cmd
-}
-
-func completeTabID(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
-	resp, err := jsonrpc.SendRequest(os.Getenv("TWEETY_SOCKET"), "tabs.query", []any{map[string]any{}})
-	if err != nil {
-		return nil, cobra.ShellCompDirectiveError
-	}
-
-	var tabs []map[string]any
-	if err := json.Unmarshal(resp.Result, &tabs); err != nil {
-		return nil, cobra.ShellCompDirectiveError
-	}
-
-	var completions []string
-	for _, tab := range tabs {
-		tabID, ok := tab["id"].(int)
-		if !ok {
-			continue
-		}
-
-		completions = append(completions, strconv.Itoa(tabID))
-	}
-
-	return completions, cobra.ShellCompDirectiveNoFileComp
 }
 
 func NewCmdTabsCaptureVisibleTab() *cobra.Command {
@@ -360,10 +331,9 @@ func NewCmdTabsReload() *cobra.Command {
 	}
 
 	cmd := &cobra.Command{
-		Use:               "reload <tabID>",
-		Short:             "Reload a tab",
-		ValidArgsFunction: completeTabID,
-		Args:              cobra.ExactArgs(1),
+		Use:   "reload <tabID>",
+		Short: "Reload a tab",
+		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			tabID, err := strconv.Atoi(args[0])
 			if err != nil {
@@ -393,10 +363,9 @@ func NewCmdTabsReload() *cobra.Command {
 
 func NewCmdTabsGoForward() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:               "go-forward <tabID>",
-		Short:             "Navigate tab forward in history",
-		ValidArgsFunction: completeTabID,
-		Args:              cobra.ExactArgs(1),
+		Use:   "go-forward <tabID>",
+		Short: "Navigate tab forward in history",
+		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			tabID, err := strconv.Atoi(args[0])
 			if err != nil {
@@ -417,10 +386,9 @@ func NewCmdTabsGoForward() *cobra.Command {
 
 func NewCmdTabsGoBack() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:               "go-back <tabID>",
-		Short:             "Navigate tab backward in history",
-		ValidArgsFunction: completeTabID,
-		Args:              cobra.ExactArgs(1),
+		Use:   "go-back <tabID>",
+		Short: "Navigate tab backward in history",
+		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			tabID, err := strconv.Atoi(args[0])
 			if err != nil {

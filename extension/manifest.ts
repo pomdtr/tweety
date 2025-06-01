@@ -5,7 +5,6 @@ export default {
     name: "tweety",
     version: "0.1.0",
     manifest_version: 3,
-    omnibox: { keyword: "tty" },
     commands: {
         openInNewTab: {
             description: "Open in new tab",

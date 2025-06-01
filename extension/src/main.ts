@@ -24,14 +24,11 @@ async function main() {
 
     const requestId = crypto.randomUUID();
 
-    const url = new URL(globalThis.location.href);
-    const command = url.searchParams.get("command") || url.searchParams.get("cmd") || undefined;
     const resp = await chrome.runtime.sendMessage<RequestCreateTTY, ResponseCreateTTY>({
         jsonrpc: "2.0",
         id: requestId,
         method: "tty.create",
         params: {
-            command,
             cols: terminal.cols,
             rows: terminal.rows,
         }

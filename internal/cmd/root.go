@@ -67,35 +67,6 @@ func NewCmdRoot() *cobra.Command {
 
 			return nil
 		},
-		RunE: func(cmd *cobra.Command, args []string) error {
-			commandDir := filepath.Join(configDir, "commands")
-			scripts, err := os.ReadDir(commandDir)
-			if err != nil {
-				return fmt.Errorf("failed to read commands directory: %w", err)
-			}
-
-			for _, script := range scripts {
-				if script.IsDir() {
-					continue
-				}
-
-				if strings.TrimSuffix(script.Name(), filepath.Ext(script.Name())) != args[0] {
-					continue
-				}
-
-				cmd.SilenceErrors = true
-
-				c := exec.Command(filepath.Join(commandDir, script.Name()))
-
-				c.Stdin = os.Stdin
-				c.Stdout = os.Stdout
-				c.Stderr = os.Stderr
-
-				return c.Run()
-			}
-
-			return fmt.Errorf("command '%s' not found in %s", args[0], commandDir)
-		},
 	}
 
 	cmd.AddCommand(
@@ -469,69 +440,6 @@ func NewHandler(handlerParams HandlerParams) http.Handler {
 		}
 
 		return xtermConfig, nil
-	})
-
-	messagingHost.HandleRequest("commands.getAll", func(input []byte) (any, error) {
-		commandsDir := filepath.Join(configDir, "commands")
-		if _, err := os.Stat(commandsDir); os.IsNotExist(err) {
-			return []any{}, nil
-		}
-
-		entries, err := os.ReadDir(commandsDir)
-		if err != nil {
-			return nil, fmt.Errorf("failed to read commands directory: %w", err)
-		}
-
-		var commands []ScriptCommand
-		for _, entry := range entries {
-			if entry.IsDir() {
-				continue
-			}
-
-			commands = append(commands, ScriptCommand{
-				Name:  entry.Name(),
-				Title: entry.Name(),
-			})
-
-		}
-
-		return commands, nil
-	})
-
-	messagingHost.HandleRequest("commands.run", func(input []byte) (any, error) {
-		var requestParams struct {
-			Name string `json:"name"`
-		}
-
-		if err := json.Unmarshal(input, &requestParams); err != nil {
-			return nil, fmt.Errorf("failed to unmarshal command params: %w", err)
-		}
-
-		cmd := exec.Command(filepath.Join(configDir, "commands", requestParams.Name))
-		cmd.Env = os.Environ()
-		for key, value := range k.StringMap("env") {
-			cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", key, value))
-		}
-
-		handlerParams.Logger.Info("Running command", "name", requestParams.Name, "command", cmd.String())
-		if err := cmd.Run(); err != nil {
-			handlerParams.Logger.Error("Command failed", "name", requestParams.Name)
-			if exitError, ok := err.(*exec.ExitError); ok {
-				return map[string]any{
-					"success": "false",
-					"code":    exitError.ExitCode(),
-					"stderr":  string(exitError.Stderr),
-				}, nil
-			}
-
-			return nil, fmt.Errorf("command %s failed with error: %w", requestParams.Name, err)
-		}
-
-		handlerParams.Logger.Info("Command executed successfully", "name", requestParams.Name)
-		// if command was successful, return success
-		return map[string]any{
-			"success": "true",
-		}, nil
 	})
 
 	go messagingHost.Listen()
