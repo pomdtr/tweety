@@ -9,6 +9,10 @@ export default {
     commands: {
         openInNewTab: {
             description: "Open in new tab",
+            suggested_key: {
+                linux: "Ctrl+Shift+T",
+                mac: "Command+Shift+T",
+            }
         },
         openInNewWindow: {
             description: "Open in new window",
