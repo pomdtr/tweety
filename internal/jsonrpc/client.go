@@ -2,33 +2,30 @@ package jsonrpc
 
 import (
 	"bytes"
+	"context"
 	"crypto/rand"
 	"encoding/json"
 	"fmt"
+	"net"
 	"net/http"
+	"time"
 )
 
-type JSONRPCClient struct {
-	Port  int
-	Token string
-}
-
-func NewClient(port int, token string) *JSONRPCClient {
-	return &JSONRPCClient{
-		Port:  port,
-		Token: token,
-	}
-}
-
-func (c *JSONRPCClient) SendRequest(method string, params interface{}) (*JSONRPCResponse, error) {
+func SendRequest(socketPath string, method string, params interface{}) (*JSONRPCResponse, error) {
 	paramsBytes, err := json.Marshal(params)
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal params: %w", err)
 	}
 
+	// Generate a random ID for the request
+	id := make([]byte, 8)
+	if _, err := rand.Read(id); err != nil {
+		return nil, fmt.Errorf("failed to generate request ID: %w", err)
+	}
+
 	body, err := json.Marshal(JSONRPCRequest{
 		JSONRPCVersion: "2.0",
-		ID:             rand.Text(),
+		ID:             fmt.Sprintf("%x", id),
 		Method:         method,
 		Params:         paramsBytes,
 	})
@@ -36,15 +33,23 @@ func (c *JSONRPCClient) SendRequest(method string, params interface{}) (*JSONRPC
 		return nil, fmt.Errorf("failed to marshal request body: %w", err)
 	}
 
-	req, err := http.NewRequest("POST", fmt.Sprintf("http://127.0.0.1:%d/jsonrpc", c.Port), bytes.NewReader(body))
+	// Use a custom HTTP client with a Unix socket dialer
+	client := &http.Client{
+		Transport: &http.Transport{
+			DialContext: func(_ context.Context, _, _ string) (net.Conn, error) {
+				return net.Dial("unix", socketPath)
+			},
+		},
+		Timeout: 10 * time.Second,
+	}
+
+	req, err := http.NewRequest("POST", "http://unix/jsonrpc", bytes.NewReader(body))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
-
-	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", c.Token))
 	req.Header.Set("Content-Type", "application/json")
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := client.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("failed to send request: %w", err)
 	}

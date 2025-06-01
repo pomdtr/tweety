@@ -13,8 +13,8 @@ func NewCmdNotifications() *cobra.Command {
 		Use:   "notifications",
 		Short: "Manage browser notifications",
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
-			if tweetyPort == 0 || tweetyToken == "" {
-				return fmt.Errorf("TWEETY_PORT and TWEETY_TOKEN environment variables must be set")
+			if env := os.Getenv("TWEETY_SOCKET"); env == "" {
+				return fmt.Errorf("TWEETY_SOCKET environment variable must be set")
 			}
 			return nil
 		},
@@ -39,14 +39,13 @@ func NewCmdNotificationsCreate() *cobra.Command {
 		Short: "Create a new browser notification",
 		Args:  cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			client := jsonrpc.NewClient(tweetyPort, tweetyToken)
 			var requestArgs []any
 			if len(args) > 0 {
 				requestArgs = append(requestArgs, args[0])
 			}
 
 			requestArgs = append(requestArgs, options)
-			resp, err := client.SendRequest("notifications.create", requestArgs)
+			resp, err := jsonrpc.SendRequest(os.Getenv("TWEETY_SOCKET"), "notifications.create", requestArgs)
 			if err != nil {
 				return fmt.Errorf("failed to create notification: %w", err)
 			}

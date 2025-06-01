@@ -15,8 +15,8 @@ func NewCmdTabs() *cobra.Command {
 		Use:   "tabs",
 		Short: "Manage tabs",
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
-			if tweetyPort == 0 || tweetyToken == "" {
-				return fmt.Errorf("TWEETY_PORT and TWEETY_TOKEN environment variables must be set")
+			if env := os.Getenv("TWEETY_SOCKET"); env == "" {
+				return fmt.Errorf("TWEETY_SOCKET environment variable must be set")
 			}
 
 			return nil
@@ -69,8 +69,7 @@ func NewCmdTabQuery() *cobra.Command {
 				options["lastFocusedWindow"] = flags.LastFocusedWindow
 			}
 
-			client := jsonrpc.NewClient(tweetyPort, tweetyToken)
-			resp, err := client.SendRequest("tabs.query", []any{
+			resp, err := jsonrpc.SendRequest(os.Getenv("TWEETY_SOCKET"), "tabs.query", []any{
 				options,
 			})
 			if err != nil {
@@ -117,8 +116,7 @@ func NewCmdTabsCreate() *cobra.Command {
 				options["active"] = flags.Active
 			}
 
-			client := jsonrpc.NewClient(tweetyPort, tweetyToken)
-			resp, err := client.SendRequest("tabs.create", []any{options})
+			resp, err := jsonrpc.SendRequest(os.Getenv("TWEETY_SOCKET"), "tabs.create", []any{options})
 			if err != nil {
 				return fmt.Errorf("failed to create tab: %w", err)
 			}
@@ -152,8 +150,7 @@ func NewCmdTabsRemove() *cobra.Command {
 				tabIds = append(tabIds, tabID)
 			}
 
-			client := jsonrpc.NewClient(tweetyPort, tweetyToken)
-			resp, err := client.SendRequest("tabs.remove", []any{tabIds})
+			resp, err := jsonrpc.SendRequest(os.Getenv("TWEETY_SOCKET"), "tabs.remove", []any{tabIds})
 			if err != nil {
 				return fmt.Errorf("failed to close tab: %w", err)
 			}
@@ -210,8 +207,7 @@ func NewCmdTabsUpdate() *cobra.Command {
 				options["muted"] = flags.Muted
 			}
 
-			client := jsonrpc.NewClient(tweetyPort, tweetyToken)
-			resp, err := client.SendRequest("tabs.update", []any{
+			resp, err := jsonrpc.SendRequest(os.Getenv("TWEETY_SOCKET"), "tabs.update", []any{
 				tabID,
 				options,
 			})
@@ -249,8 +245,7 @@ func NewCmdTabsGet() *cobra.Command {
 				params = append(params, tabID)
 			}
 
-			client := jsonrpc.NewClient(tweetyPort, tweetyToken)
-			resp, err := client.SendRequest("tabs.get", params)
+			resp, err := jsonrpc.SendRequest(os.Getenv("TWEETY_SOCKET"), "tabs.get", params)
 			if err != nil {
 				return fmt.Errorf("failed to get tab: %w", err)
 			}
@@ -275,8 +270,7 @@ func NewCmdTabsDuplicate() *cobra.Command {
 				return fmt.Errorf("invalid tab ID: %w", err)
 			}
 
-			client := jsonrpc.NewClient(tweetyPort, tweetyToken)
-			resp, err := client.SendRequest("tabs.duplicate", []any{tabID})
+			resp, err := jsonrpc.SendRequest(os.Getenv("TWEETY_SOCKET"), "tabs.duplicate", []any{tabID})
 			if err != nil {
 				return fmt.Errorf("failed to duplicate tab: %w", err)
 			}
@@ -306,8 +300,7 @@ func NewCmdTabsDiscard() *cobra.Command {
 				tabIds = append(tabIds, tabID)
 			}
 
-			client := jsonrpc.NewClient(tweetyPort, tweetyToken)
-			_, err := client.SendRequest("tabs.discard", []any{tabIds})
+			_, err := jsonrpc.SendRequest(os.Getenv("TWEETY_SOCKET"), "tabs.discard", []any{tabIds})
 			if err != nil {
 				return fmt.Errorf("failed to discard tabs: %w", err)
 			}
@@ -320,8 +313,7 @@ func NewCmdTabsDiscard() *cobra.Command {
 }
 
 func completeTabID(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
-	client := jsonrpc.NewClient(tweetyPort, tweetyToken)
-	resp, err := client.SendRequest("tabs.query", []any{map[string]any{}})
+	resp, err := jsonrpc.SendRequest(os.Getenv("TWEETY_SOCKET"), "tabs.query", []any{map[string]any{}})
 	if err != nil {
 		return nil, cobra.ShellCompDirectiveError
 	}
@@ -349,8 +341,7 @@ func NewCmdTabsCaptureVisibleTab() *cobra.Command {
 		Use:   "capture-visible-tab",
 		Short: "Capture the visible area of a tab",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			client := jsonrpc.NewClient(tweetyPort, tweetyToken)
-			resp, err := client.SendRequest("tabs.captureVisibleTab", []any{})
+			resp, err := jsonrpc.SendRequest(os.Getenv("TWEETY_SOCKET"), "tabs.captureVisibleTab", []any{})
 			if err != nil {
 				return fmt.Errorf("failed to capture visible tab: %w", err)
 			}
@@ -386,8 +377,7 @@ func NewCmdTabsReload() *cobra.Command {
 				}
 			}
 
-			client := jsonrpc.NewClient(tweetyPort, tweetyToken)
-			_, err = client.SendRequest("tabs.reload", []any{tabID, reloadProperties})
+			_, err = jsonrpc.SendRequest(os.Getenv("TWEETY_SOCKET"), "tabs.reload", []any{tabID, reloadProperties})
 			if err != nil {
 				return fmt.Errorf("failed to reload tab: %w", err)
 			}
@@ -413,8 +403,7 @@ func NewCmdTabsGoForward() *cobra.Command {
 				return fmt.Errorf("invalid tab ID: %w", err)
 			}
 
-			client := jsonrpc.NewClient(tweetyPort, tweetyToken)
-			_, err = client.SendRequest("tabs.goForward", []any{tabID})
+			_, err = jsonrpc.SendRequest(os.Getenv("TWEETY_SOCKET"), "tabs.goForward", []any{tabID})
 			if err != nil {
 				return fmt.Errorf("failed to navigate tab forward: %w", err)
 			}
@@ -438,8 +427,7 @@ func NewCmdTabsGoBack() *cobra.Command {
 				return fmt.Errorf("invalid tab ID: %w", err)
 			}
 
-			client := jsonrpc.NewClient(tweetyPort, tweetyToken)
-			_, err = client.SendRequest("tabs.goBackward", []any{tabID})
+			_, err = jsonrpc.SendRequest(os.Getenv("TWEETY_SOCKET"), "tabs.goBackward", []any{tabID})
 			if err != nil {
 				return fmt.Errorf("failed to navigate tab backward: %w", err)
 			}

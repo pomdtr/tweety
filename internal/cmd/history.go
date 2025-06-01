@@ -13,8 +13,8 @@ func NewCmdHistory() *cobra.Command {
 		Use:   "history",
 		Short: "Manage browser history",
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
-			if tweetyPort == 0 || tweetyToken == "" {
-				return fmt.Errorf("TWEETY_PORT and TWEETY_TOKEN environment variables must be set")
+			if env := os.Getenv("TWEETY_SOCKET"); env == "" {
+				return fmt.Errorf("TWEETY_SOCKET environment variable must be set")
 			}
 
 			return nil
@@ -44,8 +44,7 @@ func NewCmdHistorySearch() *cobra.Command {
 				"text": flags.Text,
 			}
 
-			client := jsonrpc.NewClient(tweetyPort, tweetyToken)
-			resp, err := client.SendRequest("history.search", []any{
+			resp, err := jsonrpc.SendRequest(os.Getenv("TWEETY_SOCKET"), "history.search", []any{
 				query,
 			})
 			if err != nil {
@@ -71,9 +70,8 @@ func NewCmdHistoryAdd() *cobra.Command {
 			url, _ := cmd.Flags().GetString("url")
 			title, _ := cmd.Flags().GetString("title")
 
-			client := jsonrpc.NewClient(tweetyPort, tweetyToken)
 			params := map[string]interface{}{"url": url, "title": title}
-			resp, err := client.SendRequest("history.add", params)
+			resp, err := jsonrpc.SendRequest(os.Getenv("TWEETY_SOCKET"), "history.add", params)
 			if err != nil {
 				return fmt.Errorf("failed to add history entry: %w", err)
 			}
@@ -97,9 +95,8 @@ func NewCmdHistoryRemove() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			url, _ := cmd.Flags().GetString("url")
 
-			client := jsonrpc.NewClient(tweetyPort, tweetyToken)
 			params := map[string]interface{}{"url": url}
-			resp, err := client.SendRequest("history.remove", params)
+			resp, err := jsonrpc.SendRequest(os.Getenv("TWEETY_SOCKET"), "history.remove", params)
 			if err != nil {
 				return fmt.Errorf("failed to remove history entry: %w", err)
 			}

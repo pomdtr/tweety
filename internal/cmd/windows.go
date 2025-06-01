@@ -14,8 +14,8 @@ func NewCmdWindows() *cobra.Command {
 		Use:   "windows",
 		Short: "Manage browser windows",
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
-			if tweetyPort == 0 || tweetyToken == "" {
-				return fmt.Errorf("TWEETY_PORT and TWEETY_TOKEN environment variables must be set")
+			if env := os.Getenv("TWEETY_SOCKET"); env == "" {
+				return fmt.Errorf("TWEETY_SOCKET environment variable must be set")
 			}
 			return nil
 
@@ -39,8 +39,7 @@ func NewCmdWindowsGetAll() *cobra.Command {
 		Use:   "get-all",
 		Short: "Get all browser windows",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			client := jsonrpc.NewClient(tweetyPort, tweetyToken)
-			resp, err := client.SendRequest("windows.getAll", []any{})
+			resp, err := jsonrpc.SendRequest(os.Getenv("TWEETY_SOCKET"), "windows.getAll", []any{})
 			if err != nil {
 				return err
 			}
@@ -61,8 +60,7 @@ func NewCmdWindowsGet() *cobra.Command {
 				return fmt.Errorf("invalid window ID: %w", err)
 			}
 
-			client := jsonrpc.NewClient(tweetyPort, tweetyToken)
-			resp, err := client.SendRequest("windows.get", []any{windowID})
+			resp, err := jsonrpc.SendRequest(os.Getenv("TWEETY_SOCKET"), "windows.get", []any{windowID})
 			if err != nil {
 				return err
 			}
@@ -77,8 +75,7 @@ func NewCmdWindowsGetCurrent() *cobra.Command {
 		Use:   "get-current",
 		Short: "Get the current window",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			client := jsonrpc.NewClient(tweetyPort, tweetyToken)
-			resp, err := client.SendRequest("windows.getCurrent", []any{})
+			resp, err := jsonrpc.SendRequest(os.Getenv("TWEETY_SOCKET"), "windows.getCurrent", []any{})
 			if err != nil {
 				return err
 			}
@@ -93,8 +90,7 @@ func NewCmdWindowsGetLastFocused() *cobra.Command {
 		Use:   "get-last-focused",
 		Short: "Get the last focused window",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			client := jsonrpc.NewClient(tweetyPort, tweetyToken)
-			resp, err := client.SendRequest("windows.getLastFocused", []any{})
+			resp, err := jsonrpc.SendRequest(os.Getenv("TWEETY_SOCKET"), "windows.getLastFocused", []any{})
 			if err != nil {
 				return err
 			}
@@ -144,8 +140,7 @@ func NewCmdWindowsCreate() *cobra.Command {
 				options["height"] = flags.height
 			}
 
-			client := jsonrpc.NewClient(tweetyPort, tweetyToken)
-			resp, err := client.SendRequest("windows.create", []any{options})
+			resp, err := jsonrpc.SendRequest(os.Getenv("TWEETY_SOCKET"), "windows.create", []any{options})
 			if err != nil {
 				return err
 			}
@@ -175,8 +170,7 @@ func NewCmdWindowsRemove() *cobra.Command {
 				return fmt.Errorf("invalid window ID: %w", err)
 			}
 
-			client := jsonrpc.NewClient(tweetyPort, tweetyToken)
-			_, err = client.SendRequest("windows.remove", []any{windowID})
+			_, err = jsonrpc.SendRequest(os.Getenv("TWEETY_SOCKET"), "windows.remove", []any{windowID})
 			if err != nil {
 				return err
 			}

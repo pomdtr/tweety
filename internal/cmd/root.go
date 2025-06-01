@@ -14,14 +14,12 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
-	"strconv"
 	"strings"
 	"sync"
 	"text/template"
 	"time"
 
 	"github.com/creack/pty"
-	"github.com/go-chi/chi/v5"
 	"github.com/google/shlex"
 	"github.com/gorilla/websocket"
 	jsonparser "github.com/knadh/koanf/parsers/json"
@@ -33,24 +31,6 @@ import (
 )
 
 var k = koanf.New(".")
-
-var (
-	tweetyPort  int
-	tweetyToken string
-)
-
-func init() {
-	tweetyToken = os.Getenv("TWEETY_TOKEN")
-
-	if tweetyPortStr := os.Getenv("TWEETY_PORT"); tweetyPortStr != "" {
-		var err error
-		tweetyPort, err = strconv.Atoi(tweetyPortStr)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Invalid TWEETY_PORT environment variable: %v\n", err)
-			os.Exit(1)
-		}
-	}
-}
 
 var (
 	maxBufferSizeBytes   = 512
@@ -175,12 +155,9 @@ func NewCmdServe() *cobra.Command {
 				return fmt.Errorf("failed to get free port: %w", err)
 			}
 
-			token := rand.Text()
-
 			handler := NewHandler(HandlerParams{
 				Logger: logger,
 				Port:   port,
-				Token:  token,
 			})
 
 			logger.Info("Listening", "port", port)
@@ -333,7 +310,6 @@ func getManifestDirs() ([]string, error) {
 type HandlerParams struct {
 	Logger *slog.Logger
 	Port   int
-	Token  string
 }
 
 type ScriptCommand struct {
@@ -344,6 +320,56 @@ type ScriptCommand struct {
 func NewHandler(handlerParams HandlerParams) http.Handler {
 	var ttyMap = make(map[string]*os.File)
 	messagingHost := jsonrpc.NewHost(handlerParams.Logger)
+
+	messagingHost.HandleNotification("initialize", func(input []byte) error {
+		var params struct {
+			Version   string `json:"version"`
+			BrowserID string `json:"browserId"`
+		}
+
+		if err := json.Unmarshal(input, &params); err != nil {
+			return fmt.Errorf("failed to unmarshal initialize params: %w", err)
+		}
+
+		handlerParams.Logger.Info("Received initialize notification", "version", params.Version, "browserId", params.BrowserID)
+		socketPath := filepath.Join(cacheDir, "sockets", fmt.Sprintf("%s.sock", params.BrowserID))
+		if err := os.MkdirAll(filepath.Dir(socketPath), 0755); err != nil {
+			return fmt.Errorf("failed to create socket directory: %w", err)
+		}
+
+		os.Setenv("TWEETY_SOCKET", socketPath)
+		if _, err := os.Stat(socketPath); err == nil {
+			if err := os.Remove(socketPath); err != nil {
+				return fmt.Errorf("failed to remove existing socket file: %w", err)
+			}
+		}
+
+		// create a listener
+		listener, err := net.Listen("unix", socketPath)
+		if err != nil {
+			return fmt.Errorf("failed to create unix socket listener: %w", err)
+		}
+
+		return http.Serve(listener, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			var request jsonrpc.JSONRPCRequest
+			if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+				http.Error(w, fmt.Sprintf("failed to decode request: %s", err), http.StatusBadRequest)
+				return
+			}
+
+			resp, err := messagingHost.Send(request)
+			if err != nil {
+				http.Error(w, fmt.Sprintf("failed to send request: %s", err), http.StatusInternalServerError)
+				return
+			}
+
+			w.Header().Set("Content-Type", "application/json")
+			if err := json.NewEncoder(w).Encode(resp); err != nil {
+				http.Error(w, fmt.Sprintf("failed to encode response: %s", err), http.StatusInternalServerError)
+				return
+			}
+		}))
+	})
 
 	messagingHost.HandleRequest("tty.create", func(input []byte) (any, error) {
 		var requestParams RequestParamsRunCommand
@@ -359,8 +385,7 @@ func NewHandler(handlerParams HandlerParams) http.Handler {
 		cmd := exec.Command(args[0], args[1:]...)
 		cmd.Env = os.Environ()
 		cmd.Env = append(cmd.Env, "TERM=xterm-256color")
-		cmd.Env = append(cmd.Env, fmt.Sprintf("TWEETY_PORT=%d", handlerParams.Port))
-		cmd.Env = append(cmd.Env, fmt.Sprintf("TWEETY_TOKEN=%s", handlerParams.Token))
+
 		for key, value := range k.StringMap("env") {
 			cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", key, value))
 		}
@@ -487,9 +512,6 @@ func NewHandler(handlerParams HandlerParams) http.Handler {
 			cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", key, value))
 		}
 
-		cmd.Env = append(cmd.Env, fmt.Sprintf("TWEETY_PORT=%d", handlerParams.Port))
-		cmd.Env = append(cmd.Env, fmt.Sprintf("TWEETY_TOKEN=%s", handlerParams.Token))
-
 		handlerParams.Logger.Info("Running command", "name", requestParams.Name, "command", cmd.String())
 		if err := cmd.Run(); err != nil {
 			handlerParams.Logger.Error("Command failed", "name", requestParams.Name)
@@ -513,62 +535,21 @@ func NewHandler(handlerParams HandlerParams) http.Handler {
 
 	go messagingHost.Listen()
 
-	r := chi.NewRouter()
-
-	r.Post("/jsonrpc", func(w http.ResponseWriter, r *http.Request) {
-		// check bearer token
-		authHeader := r.Header.Get("Authorization")
-		if !strings.HasPrefix(authHeader, "Bearer ") {
-			http.Error(w, "unauthorized", http.StatusUnauthorized)
-			return
-		}
-
-		token := strings.TrimPrefix(authHeader, "Bearer ")
-		if token != handlerParams.Token {
-			http.Error(w, "unauthorized", http.StatusUnauthorized)
-			return
-		}
-
-		var request jsonrpc.JSONRPCRequest
-		if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
-			http.Error(w, fmt.Sprintf("failed to decode request: %s", err), http.StatusBadRequest)
-			return
-		}
-
-		resp, err := messagingHost.Send(request)
-		if err != nil {
-			http.Error(w, fmt.Sprintf("failed to send request: %s", err), http.StatusInternalServerError)
-			return
-		}
-
-		w.Header().Set("Content-Type", "application/json")
-		if err := json.NewEncoder(w).Encode(resp); err != nil {
-			http.Error(w, fmt.Sprintf("failed to encode response: %s", err), http.StatusInternalServerError)
-			return
-		}
-	})
-
-	r.Get("/tty/{id}", func(w http.ResponseWriter, r *http.Request) {
-		ttyID := chi.URLParam(r, "id")
-
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ttyID := strings.TrimPrefix(r.URL.Path, "/tty/")
 		tty, ok := ttyMap[ttyID]
 		if !ok {
-			w.WriteHeader(http.StatusBadRequest)
-			w.Write([]byte(fmt.Sprintf("invalid terminal ID: %s", ttyID)))
+			http.Error(w, fmt.Sprintf("invalid terminal ID: %s", ttyID), http.StatusBadRequest)
 			return
 		}
 
 		defer func() {
-			// cleanup
 			delete(ttyMap, ttyID)
-			// send the signal to the process
 			tty.Close()
 		}()
 
 		HandleWebsocket(tty)(w, r)
 	})
-
-	return r
 }
 
 func HandleWebsocket(tty *os.File) http.HandlerFunc {

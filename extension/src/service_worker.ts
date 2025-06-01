@@ -156,8 +156,24 @@ chrome.omnibox.onInputEntered.addListener((text) => {
   })
 })
 
-
 const nativePort = chrome.runtime.connectNative("com.github.pomdtr.tweety");
+
+chrome.storage.local.get<{ browserId?: string; }>("browserId", async ({ browserId }) => {
+  if (!browserId) {
+    browserId = generateSecureId(12);
+    await chrome.storage.local.set({ browserId });
+  }
+
+  nativePort.postMessage({
+    jsonrpc: "2.0",
+    method: "initialize",
+    params: {
+      browserId,
+      version: chrome.runtime.getManifest().version,
+    }
+  })
+})
+
 
 nativePort.onMessage.addListener(async (message) => {
   if (!isJsonRpcRequest(message)) {
@@ -398,4 +414,11 @@ const isJsonRpcResponse = (message: unknown): message is JSONRPCResponse => {
   }
 
   return true;
+}
+
+function generateSecureId(length = 12) {
+  const charset = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
+  const array = new Uint8Array(length);
+  crypto.getRandomValues(array);
+  return Array.from(array, (byte) => charset[byte % charset.length]).join('');
 }

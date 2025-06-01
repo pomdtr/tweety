@@ -13,9 +13,10 @@ func NewCmdBookmarks() *cobra.Command {
 	cmd := &cobra.Command{
 		Use: "bookmarks",
 		PreRunE: func(cmd *cobra.Command, args []string) error {
-			if tweetyPort == 0 || tweetyToken == "" {
-				return fmt.Errorf("TWEETY_PORT and TWEETY_TOKEN environment variables must be set")
+			if env := os.Getenv("TWEETY_SOCKET"); env == "" {
+				return fmt.Errorf("TWEETY_SOCKET environment variable must be set")
 			}
+
 			return nil
 		},
 		Short: "Manage bookmarks",
@@ -38,8 +39,7 @@ func NewCmdBookmarksGetTree() *cobra.Command {
 		Use:   "get-tree",
 		Short: "Get bookmarks tree",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			client := jsonrpc.NewClient(tweetyPort, tweetyToken)
-			resp, err := client.SendRequest("bookmarks.getTree", []any{})
+			resp, err := jsonrpc.SendRequest(os.Getenv("TWEETY_SOCKET"), "bookmarks.getTree", []any{})
 			if err != nil {
 				return err
 			}
@@ -60,10 +60,7 @@ func NewCmdBookmarksGetRecent() *cobra.Command {
 				return fmt.Errorf("invalid number of items: %w", err)
 			}
 
-			client := jsonrpc.NewClient(tweetyPort, tweetyToken)
-			resp, err := client.SendRequest("bookmarks.getRecent", []any{
-				numItems,
-			})
+			resp, err := jsonrpc.SendRequest(os.Getenv("TWEETY_SOCKET"), "bookmarks.getRecent", []any{numItems})
 			if err != nil {
 				return err
 			}
@@ -79,8 +76,7 @@ func NewCmdBookmarksSearch() *cobra.Command {
 		Short: "Search bookmarks",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			client := jsonrpc.NewClient(tweetyPort, tweetyToken)
-			resp, err := client.SendRequest("bookmarks.search", []any{args[0]})
+			resp, err := jsonrpc.SendRequest(os.Getenv("TWEETY_SOCKET"), "bookmarks.search", []any{args[0]})
 			if err != nil {
 				return err
 			}
@@ -117,8 +113,7 @@ func NewCmdBookmarksCreate() *cobra.Command {
 				bookmark["url"] = flags.url
 			}
 
-			client := jsonrpc.NewClient(tweetyPort, tweetyToken)
-			resp, err := client.SendRequest("bookmarks.create", []any{bookmark})
+			resp, err := jsonrpc.SendRequest(os.Getenv("TWEETY_SOCKET"), "bookmarks.create", []any{bookmark})
 			if err != nil {
 				return err
 			}
@@ -160,8 +155,7 @@ func NewCmdBookmarksUpdate() *cobra.Command {
 				return fmt.Errorf("at least one field must be provided to update")
 			}
 
-			client := jsonrpc.NewClient(tweetyPort, tweetyToken)
-			resp, err := client.SendRequest("bookmarks.update", []any{args[0], changes})
+			resp, err := jsonrpc.SendRequest(os.Getenv("TWEETY_SOCKET"), "bookmarks.update", []any{args[0], changes})
 			if err != nil {
 				return err
 			}
@@ -182,8 +176,7 @@ func NewCmdBookmarksRemove() *cobra.Command {
 		Short: "Remove a bookmark",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			client := jsonrpc.NewClient(tweetyPort, tweetyToken)
-			resp, err := client.SendRequest("bookmarks.remove", []any{args[0]})
+			resp, err := jsonrpc.SendRequest(os.Getenv("TWEETY_SOCKET"), "bookmarks.remove", []any{args[0]})
 			if err != nil {
 				return err
 			}
