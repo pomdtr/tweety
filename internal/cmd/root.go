@@ -37,18 +37,6 @@ var (
 	keepalivePingTimeout = 20 * time.Second
 )
 
-type RequestParamsRunCommand struct {
-	Command string `json:"command"`
-	Rows    uint16 `json:"rows"`
-	Cols    uint16 `json:"cols"`
-}
-
-type RequestParamsResizeTTY struct {
-	TTY  string `json:"tty"`
-	Rows uint16 `json:"rows"`
-	Cols uint16 `json:"cols"`
-}
-
 var configDir = filepath.Join(os.Getenv("HOME"), ".config", "tweety")
 var cacheDir = filepath.Join(os.Getenv("HOME"), ".cache", "tweety")
 var dataDir = filepath.Join(os.Getenv("HOME"), ".local", "share", "tweety")
@@ -343,11 +331,6 @@ func NewHandler(handlerParams HandlerParams) http.Handler {
 	})
 
 	messagingHost.HandleRequest("tty.create", func(input []byte) (any, error) {
-		var requestParams RequestParamsRunCommand
-		if err := json.Unmarshal(input, &requestParams); err != nil {
-			return nil, fmt.Errorf("failed to unmarshal exec params: %w", err)
-		}
-
 		args, err := shlex.Split(k.String("command"))
 		if err != nil {
 			return nil, fmt.Errorf("failed to split command args: %w", err)
@@ -370,11 +353,6 @@ func NewHandler(handlerParams HandlerParams) http.Handler {
 			return nil, fmt.Errorf("failed to start pty: %w", err)
 		}
 
-		if err := pty.Setsize(tty, &pty.Winsize{Rows: requestParams.Rows, Cols: requestParams.Cols}); err != nil {
-			log.Printf("failed to set size for tty: %s", err)
-			return nil, fmt.Errorf("failed to set size for tty: %w", err)
-		}
-
 		ttyID := strings.ToLower(rand.Text())
 		ttyMap[ttyID] = tty
 
@@ -386,7 +364,11 @@ func NewHandler(handlerParams HandlerParams) http.Handler {
 	})
 
 	messagingHost.HandleNotification("tty.resize", func(input []byte) error {
-		var requestParams RequestParamsResizeTTY
+		var requestParams struct {
+			TTY  string `json:"tty"`
+			Rows uint16 `json:"rows"`
+			Cols uint16 `json:"cols"`
+		}
 		if err := json.Unmarshal(input, &requestParams); err != nil {
 			return fmt.Errorf("failed to unmarshal resize params: %w", err)
 		}

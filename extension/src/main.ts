@@ -5,11 +5,23 @@ import { WebglAddon } from "@xterm/addon-webgl";
 import { WebLinksAddon } from "@xterm/addon-web-links";
 import { RequestCreateTTY, RequestGetXtermConfig, RequestResizeTTY, ResponseCreateTTY, ResponseGetXtermConfig } from "./rpc";
 
+async function sleep(ms: number) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+
 async function main() {
     const { result: config } = await chrome.runtime.sendMessage<RequestGetXtermConfig, ResponseGetXtermConfig>({
         jsonrpc: "2.0",
         id: crypto.randomUUID(),
         method: "xterm.getConfig",
+    })
+
+    const requestId = crypto.randomUUID();
+    const resp = await chrome.runtime.sendMessage<RequestCreateTTY, ResponseCreateTTY>({
+        jsonrpc: "2.0",
+        id: requestId,
+        method: "tty.create",
     })
 
     const terminal = new Terminal(config);
@@ -19,25 +31,17 @@ async function main() {
     terminal.loadAddon(new WebglAddon());
     terminal.loadAddon(new WebLinksAddon());
 
-    terminal.open(document.getElementById("terminal")!);
-    fitAddon.fit();
-
-    const requestId = crypto.randomUUID();
-
-    const resp = await chrome.runtime.sendMessage<RequestCreateTTY, ResponseCreateTTY>({
-        jsonrpc: "2.0",
-        id: requestId,
-        method: "tty.create",
-        params: {
-            cols: terminal.cols,
-            rows: terminal.rows,
-        }
-    })
-
     const ws = new WebSocket(resp.result.url);
     const attachAddon = new AttachAddon(ws);
     terminal.loadAddon(attachAddon);
 
+    const elem = document.getElementById("terminal");
+    if (!elem) {
+        console.error("Terminal element not found");
+        return;
+    }
+
+    terminal.open(elem);
     terminal.onResize(async (size) => {
         const { cols, rows } = size;
         await chrome.runtime.sendMessage<RequestResizeTTY>({
@@ -50,6 +54,7 @@ async function main() {
             },
         })
     });
+    fitAddon.fit();
 
     globalThis.onbeforeunload = () => {
         ws.onclose = () => { }

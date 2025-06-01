@@ -27,23 +27,17 @@ chrome.runtime.onInstalled.addListener(() => {
   })
 })
 
-async function handleCommand(commandId: string) {
+// should not be async, else side panel will not open when invoked from the keyboard shortcut
+function handleCommand(commandId: string) {
   if (commandId === 'openInNewTab') {
-    await chrome.tabs.create({
+    chrome.tabs.create({
       url: chrome.runtime.getURL("tty.html"),
       active: true,
     });
   } else if (commandId === 'openInSidePanel') {
-    chrome.windows.getLastFocused().then((currentWindow) => {
-      if (!currentWindow.id) {
-        console.warn("Current window ID is not available.");
-        return;
-      }
-
-      chrome.sidePanel.open({
-        windowId: currentWindow.id,
-      })
-    })
+    chrome.tabs.query({ active: true, currentWindow: true }, ([tab]) => {
+      chrome.sidePanel.open({ tabId: tab.id! });
+    });
 
   } else if (commandId === 'openInNewWindow') {
     chrome.windows.create({
@@ -52,26 +46,27 @@ async function handleCommand(commandId: string) {
     });
   } else if (commandId === 'openinPopupWindow') {
     // Get the current window to calculate the center position
-    const currentWindow = await chrome.windows.getCurrent();
-    const screenWidth = currentWindow.width ?? 1200;
-    const screenHeight = currentWindow.height ?? 800;
-    const screenLeft = currentWindow.left ?? 0;
-    const screenTop = currentWindow.top ?? 0;
+    chrome.windows.getCurrent().then((window) => {
+      const screenWidth = window.width ?? 1200;
+      const screenHeight = window.height ?? 800;
+      const screenLeft = window.left ?? 0;
+      const screenTop = window.top ?? 0;
 
-    const popupWidth = 800;
-    const popupHeight = 600;
-    const left = Math.round(screenLeft + (screenWidth - popupWidth) / 2);
-    const top = Math.round(screenTop + (screenHeight - popupHeight) / 2);
+      const popupWidth = 800;
+      const popupHeight = 600;
+      const left = Math.round(screenLeft + (screenWidth - popupWidth) / 2);
+      const top = Math.round(screenTop + (screenHeight - popupHeight) / 2);
 
-    chrome.windows.create({
-      url: chrome.runtime.getURL("tty.html"),
-      type: "popup",
-      height: popupHeight,
-      width: popupWidth,
-      left,
-      top,
-      focused: true,
-    });
+      chrome.windows.create({
+        url: chrome.runtime.getURL("tty.html"),
+        type: "popup",
+        height: popupHeight,
+        width: popupWidth,
+        left,
+        top,
+        focused: true,
+      });
+    })
   }
 }
 
@@ -82,18 +77,18 @@ chrome.action.onClicked.addListener(async () => {
   });
 })
 
-chrome.contextMenus.onClicked.addListener(async (info) => {
+chrome.contextMenus.onClicked.addListener((info) => {
   if (typeof info.menuItemId !== 'string') {
     console.warn("Invalid menuItemId:", info.menuItemId);
     return;
   }
 
 
-  await handleCommand(info.menuItemId);
+  handleCommand(info.menuItemId);
 })
 
 chrome.commands.onCommand.addListener(async (command) => {
-  await handleCommand(command);
+  handleCommand(command);
 });
 
 
