@@ -23,7 +23,7 @@ archives:
 release:
   prerelease: auto
   extra_files:
-    - glob: "extension/dist/chrome-extension.zip"
+    - glob: "extension/dist/web-ext-artifacts/chrome-extension.zip"
 checksum:
   name_template: "checksums.txt"
 snapshot:
