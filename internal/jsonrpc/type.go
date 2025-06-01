@@ -4,9 +4,9 @@ import "encoding/json"
 
 type JSONRPCRequest struct {
 	JSONRPCVersion string          `json:"jsonrpc"`
-	ID             string          `json:"id"`
+	ID             string          `json:"id,omitempty"`
 	Method         string          `json:"method"`
-	Params         json.RawMessage `json:"params"`
+	Params         json.RawMessage `json:"params,omitempty"`
 }
 
 type JSONRPCResponse struct {

@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"log/slog"
 	"net"
 	"net/http"
 	"os"
@@ -21,6 +22,7 @@ import (
 
 	"github.com/creack/pty"
 	"github.com/go-chi/chi/v5"
+	"github.com/google/shlex"
 	"github.com/gorilla/websocket"
 	jsonparser "github.com/knadh/koanf/parsers/json"
 	"github.com/knadh/koanf/providers/file"
@@ -72,21 +74,6 @@ var cacheDir = filepath.Join(os.Getenv("HOME"), ".cache", "tweety")
 var dataDir = filepath.Join(os.Getenv("HOME"), ".local", "share", "tweety")
 
 func NewCmdRoot() *cobra.Command {
-	if err := os.MkdirAll(cacheDir, 0755); err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to create log directory: %v\n", err)
-		os.Exit(1)
-	}
-
-	logFile, err := os.OpenFile(filepath.Join(cacheDir, "log.txt"), os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to open log file: %v\n", err)
-		os.Exit(1)
-	}
-	defer logFile.Close()
-
-	log.SetOutput(logFile)
-	log.SetFlags(log.LstdFlags | log.Lshortfile)
-
 	cmd := &cobra.Command{
 		Use:          "tweety",
 		SilenceUsage: true,
@@ -104,7 +91,6 @@ func NewCmdRoot() *cobra.Command {
 		NewCmdServe(),
 		NewCmdInstall(),
 		NewCmdUninstall(),
-		NewCmdConfig(),
 		NewCmdTabs(),
 		NewCmdBookmarks(),
 		NewCmdHistory(),
@@ -121,6 +107,20 @@ func NewCmdServe() *cobra.Command {
 		SilenceUsage: true,
 		Args:         cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if err := os.MkdirAll(cacheDir, 0755); err != nil {
+				fmt.Fprintf(os.Stderr, "Failed to create log directory: %v\n", err)
+				os.Exit(1)
+			}
+
+			logFile, err := os.OpenFile(filepath.Join(cacheDir, "log.txt"), os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Failed to open log file: %v\n", err)
+				os.Exit(1)
+			}
+			defer logFile.Close()
+			// create new slog logger
+			logger := slog.New(slog.NewTextHandler(logFile, &slog.HandlerOptions{}))
+
 			port, err := getFreePort()
 			if err != nil {
 				return fmt.Errorf("failed to get free port: %w", err)
@@ -129,14 +129,15 @@ func NewCmdServe() *cobra.Command {
 			token := rand.Text()
 
 			handler, err := NewHandler(HandlerParams{
-				Port:  port,
-				Token: token,
+				Logger: logger,
+				Port:   port,
+				Token:  token,
 			})
 			if err != nil {
 				return err
 			}
 
-			log.Printf("Listening on http://localhost:%d\n", port)
+			logger.Info("Listening", "port", port)
 			return http.ListenAndServe(fmt.Sprintf(":%d", port), handler)
 		},
 	}
@@ -257,16 +258,6 @@ func NewCmdUninstall() *cobra.Command {
 	}
 }
 
-func NewCmdConfig() *cobra.Command {
-	return &cobra.Command{
-		Use:   "config",
-		Short: "Open Tweety configuration file in your editor",
-		RunE: func(cmd *cobra.Command, args []string) error {
-			return nil
-		},
-	}
-}
-
 func getManifestDirs() ([]string, error) {
 	switch runtime.GOOS {
 	case "darwin":
@@ -294,13 +285,14 @@ func getManifestDirs() ([]string, error) {
 }
 
 type HandlerParams struct {
-	Port  int
-	Token string
+	Logger *slog.Logger
+	Port   int
+	Token  string
 }
 
 func NewHandler(handlerParams HandlerParams) (http.Handler, error) {
 	var ttyMap = make(map[string]*os.File)
-	host := jsonrpc.NewHost()
+	host := jsonrpc.NewHost(handlerParams.Logger)
 
 	host.HandleRequest("tty.create", func(input []byte) (any, error) {
 		var requestParams RequestParamsRunCommand
@@ -308,30 +300,35 @@ func NewHandler(handlerParams HandlerParams) (http.Handler, error) {
 			return nil, fmt.Errorf("failed to unmarshal exec params: %w", err)
 		}
 
-		var command string
 		var args []string
-		if name := requestParams.Command; name != "" {
-			commandsDir := filepath.Join(configDir, "commands")
-			entries, err := os.ReadDir(commandsDir)
+		if command := requestParams.Command; command != "" {
+			var err error
+			args, err = shlex.Split(command)
+			if err != nil {
+				return nil, fmt.Errorf("failed to split command args: %w", err)
+			}
+
+			binDir := filepath.Join(configDir, "bin")
+			entries, err := os.ReadDir(binDir)
 
 			if err != nil {
 				return nil, fmt.Errorf("failed to read commands directory: %w", err)
 			}
 
+			var scriptPath string
 			for _, entry := range entries {
 				if entry.IsDir() {
 					continue
 				}
 
-				entryName := strings.TrimSuffix(entry.Name(), filepath.Ext(entry.Name()))
-				if entryName != name {
+				if entry.Name() != args[0] {
 					continue
 				}
 
-				command = filepath.Join(commandsDir, entry.Name())
+				scriptPath = filepath.Join(binDir, entry.Name())
 				// make sure the command is executable
 				if entry.Type().IsRegular() {
-					if err := os.Chmod(command, 0755); err != nil {
+					if err := os.Chmod(scriptPath, 0755); err != nil {
 						return nil, fmt.Errorf("failed to make command executable: %w", err)
 					}
 				}
@@ -339,16 +336,20 @@ func NewHandler(handlerParams HandlerParams) (http.Handler, error) {
 				break
 			}
 
-			if command == "" {
-				return nil, fmt.Errorf("command not found: %s", name)
+			if scriptPath == "" {
+				return nil, fmt.Errorf("command not found: %s, entries: %s", args[0], entries)
 			}
 
+			args[0] = scriptPath
 		} else {
-			command = k.String("command")
-			args = k.Strings("args")
+			var err error
+			args, err = shlex.Split(k.String("command"))
+			if err != nil {
+				return nil, fmt.Errorf("failed to split command args: %w", err)
+			}
 		}
 
-		cmd := exec.Command(command, args...)
+		cmd := exec.Command(args[0], args[1:]...)
 		cmd.Env = os.Environ()
 		cmd.Env = append(cmd.Env, "TERM=xterm-256color")
 		cmd.Env = append(cmd.Env, fmt.Sprintf("TWEETY_PORT=%d", handlerParams.Port))

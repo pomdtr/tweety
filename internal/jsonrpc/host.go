@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
+	"log/slog"
 	"os"
 	"sync"
 	"time"
@@ -15,6 +15,7 @@ type RequestHandlerFunc = func(params []byte) (result any, err error)
 type NotificationHandlerFunc = func(params []byte) error
 
 type Host struct {
+	logger               *slog.Logger
 	mu                   sync.Mutex
 	requestsHandler      map[string]RequestHandlerFunc
 	notificationsHandler map[string]NotificationHandlerFunc
@@ -29,8 +30,9 @@ func (h *Host) HandleNotification(method string, handler NotificationHandlerFunc
 	h.notificationsHandler[method] = handler
 }
 
-func NewHost() *Host {
+func NewHost(logger *slog.Logger) *Host {
 	return &Host{
+		logger:               logger,
 		requestsHandler:      make(map[string]RequestHandlerFunc),
 		notificationsHandler: make(map[string]NotificationHandlerFunc),
 		clientChannels:       make(map[string]chan JSONRPCResponse),
@@ -38,6 +40,7 @@ func NewHost() *Host {
 }
 
 func (h *Host) Listen() {
+	h.logger.Info("Starting JSON-RPC host")
 	for {
 		lengthBytes := make([]byte, 4)
 		if _, err := io.ReadFull(os.Stdin, lengthBytes); err != nil {
@@ -48,32 +51,35 @@ func (h *Host) Listen() {
 
 		msgBytes := make([]byte, length)
 		if _, err := io.ReadFull(os.Stdin, msgBytes); err != nil {
-			log.Printf("failed to read message: %s", err)
+			h.logger.Error("failed to read message", "error", err)
 			continue
 		}
 
 		var msg map[string]any
 		if err := json.Unmarshal(msgBytes, &msg); err != nil {
-			log.Printf("failed to unmarshal message: %s", err)
+			h.logger.Error("failed to unmarshal message", "error", err)
 			continue
 		}
 
 		if _, ok := msg["jsonrpc"]; !ok {
-			log.Printf("invalid message format, missing jsonrpc field")
+			h.logger.Error("invalid message format, missing jsonrpc field")
 			continue
 		}
 
-		if _, ok := msg["result"]; ok {
+		_, containsResult := msg["result"]
+		_, containsError := msg["error"]
+
+		if containsResult || containsError {
 			var response JSONRPCResponse
 			if err := json.Unmarshal(msgBytes, &response); err != nil {
-				log.Printf("failed to unmarshal response: %s", err)
+				h.logger.Error("failed to unmarshal response", "error", err)
 				return
 			}
 
 			h.mu.Lock()
 			responseChan, ok := h.clientChannels[response.ID]
 			if !ok {
-				log.Printf("no client found for ID: %s", response.ID)
+				h.logger.Error("no client found")
 				h.mu.Unlock()
 				continue
 			}
@@ -86,37 +92,54 @@ func (h *Host) Listen() {
 
 		var request JSONRPCRequest
 		if err := json.Unmarshal(msgBytes, &request); err != nil {
-			log.Printf("failed to unmarshal request: %s", err)
+			h.logger.Error("failed to unmarshal request", "error", err)
 			return
 		}
 
 		if request.ID == "" {
 			handler, ok := h.notificationsHandler[request.Method]
 			if !ok {
-				log.Printf("no handler found for notification method: %s", request.Method)
+				h.logger.Error("no handler found for notification", "method", request.Method)
 				continue
 			}
 
 			if err := handler(request.Params); err != nil {
-				log.Printf("failed to handle notification %s: %s", request.Method, err)
+				h.logger.Error("failed to handle notification", "method", request.Method, "error", err)
 			}
 			continue
 		}
 
 		handler, ok := h.requestsHandler[request.Method]
 		if !ok {
-			log.Printf("no handler found for request method: %s", request.Method)
+			h.logger.Error("no handler found for request", "method", request.Method)
+			writeMessage(JSONRPCResponse{
+				JSONRPC: "2.0",
+				ID:      request.ID,
+				Error: map[string]any{
+					"code":    -32601,
+					"message": fmt.Sprintf("Method not found: %s", request.Method),
+				},
+			})
 			continue
 		}
 
 		res, err := handler(request.Params)
 		if err != nil {
-			log.Printf("failed to handle request %s: %s", request.Method, err)
+			h.logger.Error("failed to handle request", "method", request.Method, "err", err)
+			writeMessage(JSONRPCResponse{
+				JSONRPC: "2.0",
+				ID:      request.ID,
+				Error: map[string]any{
+					"code":    -32603,
+					"message": fmt.Sprintf("Internal error: %s", err),
+				},
+			})
+			continue
 		}
 
 		resBytes, err := json.Marshal(res)
 		if err != nil {
-			log.Printf("failed to marshal result: %s", err)
+			h.logger.Error("failed to marshal result", "error", err)
 			continue
 		}
 
@@ -128,7 +151,7 @@ func (h *Host) Listen() {
 		}
 
 		if err := writeMessage(response); err != nil {
-			log.Printf("failed to write response: %s", err)
+			h.logger.Error("failed to write response", "error", err)
 			continue
 		}
 	}
