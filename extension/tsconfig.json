@@ -3,12 +3,17 @@
     "allowSyntheticDefaultImports": true,
     "baseUrl": ".",
     "paths": {
-      "~/*": ["src/*"]
+      "~/*": [
+        "src/*"
+      ]
     },
     "target": "ESNext",
     "useDefineForClassFields": true,
     "module": "ESNext",
-    "lib": ["ESNext", "DOM"],
+    "lib": [
+      "ESNext",
+      "DOM"
+    ],
     "moduleResolution": "Node",
     "strict": true,
     "sourceMap": true,
@@ -19,5 +24,8 @@
     "noUnusedParameters": true,
     "noImplicitReturns": true
   },
-  "include": ["src"]
+  "include": [
+    "src",
+    "manifest.ts"
+  ]
 }

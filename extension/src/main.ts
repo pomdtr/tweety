@@ -10,7 +10,7 @@ async function main() {
     const { result: config } = await chrome.runtime.sendMessage<RequestGetXtermConfig, ResponseGetXtermConfig>({
         jsonrpc: "2.0",
         id: crypto.randomUUID(),
-        method: "get_xterm_config",
+        method: "config.get",
     })
 
     const terminal = new Terminal(config);
@@ -98,7 +98,7 @@ async function main() {
     const resp = await chrome.runtime.sendMessage<RequestCreateTTY, ResponseCreateTTY>({
         jsonrpc: "2.0",
         id: requestId,
-        method: "create_tty",
+        method: "tty.create",
         params: {
             command,
             args,
@@ -115,7 +115,7 @@ async function main() {
         const { cols, rows } = size;
         await chrome.runtime.sendMessage<RequestResizeTTY>({
             jsonrpc: "2.0",
-            method: "resize_tty",
+            method: "tty.resize",
             params: {
                 tty: resp.result.id,
                 cols,

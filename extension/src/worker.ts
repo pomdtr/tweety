@@ -1,86 +1,159 @@
-import browser from "webextension-polyfill";
+import { JSONRPCRequest, JSONRPCResponse } from "./rpc";
 
-browser.action.onClicked.addListener(() => {
-  browser.tabs.create({ url: browser.runtime.getURL("tty.html") });
+chrome.runtime.onInstalled.addListener(() => {
+  chrome.contextMenus.create({
+    id: 'openSidePanel',
+    title: 'Open side panel',
+    contexts: ['all']
+  });
+  chrome.sidePanel.setPanelBehavior({
+    openPanelOnActionClick: false,
+  })
 });
 
-const nativePort = browser.runtime.connectNative("com.github.pomdtr.tweety");
+chrome.action.onClicked.addListener(async () => {
+  await chrome.tabs.create({
+    url: chrome.runtime.getURL("tty.html"),
+    active: true
+  })
+});
+
+chrome.contextMenus.onClicked.addListener((info, tab) => {
+  if (!tab) {
+    console.warn("No active tab found for context menu action.");
+    return;
+  }
+
+  if (info.menuItemId === 'openSidePanel') {
+    // This will open the panel in all the pages on the current window.
+    chrome.sidePanel.open({ windowId: tab.windowId });
+  }
+});
+
+const nativePort = chrome.runtime.connectNative("com.github.pomdtr.tweety");
 
 nativePort.onMessage.addListener(async (message) => {
-  if (typeof message !== "object" || message === null) {
-    console.error("Received non-object message from native messaging host:", message);
+  if (!isJsonRpcRequest(message)) {
     return;
   }
 
-  // Check if the message is a valid JSON-RPC request
-  if (!("method" in message) || typeof message.method !== "string") {
-    return;
+  const { id, method, params } = message;
+
+  // Helper to send JSON-RPC response
+  const sendResponse = (result: unknown) => nativePort.postMessage({
+    jsonrpc: "2.0",
+    id,
+    result
+  });
+
+  // Helper to send JSON-RPC error
+  const sendError = (error: unknown) => nativePort.postMessage({
+    jsonrpc: "2.0",
+    id,
+    error
+  });
+  if (!Array.isArray(params)) {
+    console.error("Invalid params: expected an array", params);
+    sendError({ code: -32602, message: "Invalid params: expected an array" });
+    return
   }
 
-  console.log("Message received from native messaging host:", message);
-
-
-  if (message.method === "get_tabs") {
-    if (!("id" in message) || typeof message.id !== "string") {
-      console.error("Received get_tabs request without id:", message);
-      return;
+  console.log("Received message:", message);
+  try {
+    switch (method) {
+      // Tabs methods
+      case "tabs.query":
+        const tabs = await chrome.tabs.query(params[0]);
+        sendResponse(tabs);
+        break;
+      case "tabs.get":
+        const tab = await chrome.tabs.get(params[0]);
+        sendResponse(tab);
+        break;
+      case "tabs.create":
+        const newTab = await chrome.tabs.create(params[0]);
+        sendResponse(newTab);
+        break;
+      case "tabs.duplicate":
+        const duplicatedTab = await chrome.tabs.duplicate(params[0]);
+        sendResponse(duplicatedTab);
+        break;
+      case "tabs.discard":
+        await chrome.tabs.discard(params[0]);
+        sendResponse(null);
+        break;
+      case "tabs.remove":
+        await chrome.tabs.remove(params[0]);
+        sendResponse(null);
+        break;
+      case "tabs.captureVisibleTab":
+        const capturedTab = await chrome.tabs.captureVisibleTab();
+        sendResponse(capturedTab);
+        break;
+      case "tabs.update":
+        const resp = await chrome.tabs.update(params[0], params[1]);
+        sendResponse(resp);
+        break;
+      case "tabs.reload":
+        await chrome.tabs.reload(params[0], params[1]);
+        sendResponse(null);
+        break;
+      case "tabs.goForward":
+        await chrome.tabs.goForward(params[0]);
+        sendResponse(null);
+        break;
+      case "tabs.goBack":
+        await chrome.tabs.goBack(params[0]);
+        sendResponse(null);
+        break;
+      case "history.search":
+        const historyItems = await chrome.history.search(params[0]);
+        sendResponse(historyItems);
+        break;
+      case "bookmarks.getTree":
+        const bookmarksTree = await chrome.bookmarks.getTree();
+        sendResponse(bookmarksTree);
+        break;
+      case "bookmarks.getRecent":
+        const recentBookmarks = await chrome.bookmarks.getRecent(params[0]);
+        sendResponse(recentBookmarks);
+        break;
+      case "bookmarks.search":
+        const searchResults = await chrome.bookmarks.search(params[0]);
+        sendResponse(searchResults);
+        break;
+      case "bookmarks.create":
+        const createdBookmark = await chrome.bookmarks.create(params[0]);
+        sendResponse(createdBookmark);
+        break;
+      case "bookmarks.update":
+        const updatedBookmark = await chrome.bookmarks.update(params[0], params[1]);
+        sendResponse(updatedBookmark);
+        break;
+      case "bookmarks.remove":
+        await chrome.bookmarks.remove(params[0]);
+        sendResponse(null);
+        break;
+      default:
+        console.warn("Method not found:", method);
+        sendError({ code: -32601, message: `Method not found: ${method}` });
+        break;
     }
-
-    const tabs = await browser.tabs.query({});
-    return nativePort.postMessage({
-      jsonrpc: "2.0",
-      id: message.id,
-      result: {
-        tabs
-      }
-    });
-  } else if (message.method === "create_tab") {
-    if (!("id" in message) || typeof message.id !== "string") {
-      console.error("Received create_tab request without id:", message);
-      return;
-    }
-
-    if (!("params" in message) || typeof message.params !== "object" || message.params === null) {
-      console.error("Received create_tab request without params:", message);
-      return;
-    }
-
-    if (!("url" in message.params) || typeof message.params.url !== "string") {
-      console.error("Received create_tab request without url:", message);
-      return;
-    }
-
-    const tab = await browser.tabs.create({ url: message.params.url });
-    return nativePort.postMessage({
-      jsonrpc: "2.0",
-      id: message.id,
-      result: {
-        tab
-      }
-    });
+  } catch (err) {
+    console.error("Error handling message:", err);
+    sendError({ code: -32000, message: (err as Error).message });
   }
+});
 
-  await browser.runtime.sendMessage(message)
-})
-
-// @ts-ignore
-browser.runtime.onMessage.addListener((msg, sender, sendResponse) => {
-  if (sender.id !== browser.runtime.id) {
+chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+  if (sender.id !== chrome.runtime.id) {
     console.warn("Received message from unknown sender:", sender.id);
     return false; // Ignore messages from unknown senders
   }
 
   console.log("Message received from content script or popup", msg);
-
-  if (typeof msg !== "object" || msg === null) {
-    console.error("Received non-object message:", msg);
-    return false
-  }
-
-  // if the jsonrpc request does not have an id, it is a notification
-  if (!("id" in msg)) {
-    nativePort.postMessage(msg)
-    return false
+  if (!isJsonRpcRequest(msg)) {
+    return false; // Ignore invalid messages
   }
 
   const listener = (res: unknown) => {
@@ -88,7 +161,8 @@ browser.runtime.onMessage.addListener((msg, sender, sendResponse) => {
       return;
     }
 
-    if (!("id" in res) || typeof res.id !== "string" || res.id !== msg.id) {
+    if (!isJsonRpcResponse(res)) {
+      console.error("Received invalid JSON-RPC response:", res);
       return;
     }
 
@@ -100,3 +174,51 @@ browser.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   nativePort.postMessage(msg);
   return true
 })
+
+function isJsonRpcRequest(message: unknown): message is JSONRPCRequest {
+  if (typeof message !== "object" || message === null) {
+    return false;
+  }
+
+  if (!("jsonrpc" in message) || message.jsonrpc !== "2.0") {
+    return false;
+  }
+
+  if (!("method" in message) || typeof message.method !== "string") {
+    return false;
+  }
+
+  if ("id" in message && typeof message.id !== "string") {
+    return false;
+  }
+
+  if ("params" in message && (typeof message.params !== "object" || message.params === null)) {
+    return false;
+  }
+
+  return true;
+}
+
+const isJsonRpcResponse = (message: unknown): message is JSONRPCResponse => {
+  if (typeof message !== "object" || message === null) {
+    return false;
+  }
+
+  if (!("jsonrpc" in message) || message.jsonrpc !== "2.0") {
+    return false;
+  }
+
+  if (!("id" in message) || typeof message.id !== "string") {
+    return false;
+  }
+
+  if ("result" in message && (typeof message.result !== "object" || message.result === null)) {
+    return false;
+  }
+
+  if ("error" in message && (typeof message.error !== "object" || message.error === null)) {
+    return false;
+  }
+
+  return true;
+}

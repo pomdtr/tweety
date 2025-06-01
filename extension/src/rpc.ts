@@ -2,7 +2,7 @@ export type JSONRPCRequest = {
     jsonrpc: string;
     id?: string;
     method: string;
-    params: Record<string, any> | undefined;
+    params: Record<string, any> | any[] | undefined;
 }
 
 type JSONRPCRequestBase<M extends string, P extends Record<string, any> | undefined = undefined> = {
@@ -12,20 +12,20 @@ type JSONRPCRequestBase<M extends string, P extends Record<string, any> | undefi
     params?: P
 }
 
-export type RequestResizeTTY = JSONRPCRequestBase<"resize_tty", {
+export type RequestResizeTTY = JSONRPCRequestBase<"tty.resize", {
     tty: string;
     cols: number;
     rows: number;
 }>
 
-export type RequestCreateTTY = JSONRPCRequestBase<"create_tty", {
+export type RequestCreateTTY = JSONRPCRequestBase<"tty.create", {
     command?: string;
     args?: string[];
     cols?: number;
     rows?: number;
 }>
 
-export type RequestGetXtermConfig = JSONRPCRequestBase<"get_xterm_config">
+export type RequestGetXtermConfig = JSONRPCRequestBase<"config.get">
 
 
 type JSONRPCResponseBase<T extends Record<string, any> = Record<string, any>> = {
@@ -34,10 +34,11 @@ type JSONRPCResponseBase<T extends Record<string, any> = Record<string, any>> = 
     result: T;
 }
 
-export type JSONRPCError = {
+export type JSONRPCResponse = {
     jsonrpc: "2.0";
     id: string;
-    error: {
+    result?: Record<string, any>;
+    error?: {
         code: number;
         message: string;
         data?: Record<string, any>;

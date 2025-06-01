@@ -1,0 +1,17 @@
+package jsonrpc
+
+import "encoding/json"
+
+type JSONRPCRequest struct {
+	JSONRPCVersion string          `json:"jsonrpc"`
+	ID             string          `json:"id"`
+	Method         string          `json:"method"`
+	Params         json.RawMessage `json:"params"`
+}
+
+type JSONRPCResponse struct {
+	JSONRPC string          `json:"jsonrpc"`
+	ID      string          `json:"id"`
+	Result  json.RawMessage `json:"result,omitempty"`
+	Error   interface{}     `json:"error,omitempty"`
+}
