@@ -49,9 +49,20 @@ func NewCmdRoot() *cobra.Command {
 		Short:             "An integrated terminal for your web browser",
 		Args:              cobra.ExactArgs(1),
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
-			if err := k.Load(file.Provider(filepath.Join(configDir, "config.json")), jsonparser.Parser()); err != nil {
+			f := file.Provider(filepath.Join(configDir, "config.json"))
+			if err := k.Load(f, jsonparser.Parser()); err != nil {
 				return fmt.Errorf("failed to load config: %w", err)
 			}
+
+			f.Watch(func(event interface{}, err error) {
+				if err != nil {
+					log.Printf("watch error: %v", err)
+					return
+				}
+
+				k = koanf.New(".")
+				k.Load(f, jsonparser.Parser())
+			})
 
 			return nil
 		},
