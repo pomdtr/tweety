@@ -14,77 +14,10 @@ async function main() {
 
     const terminal = new Terminal(config);
     const fitAddon = new FitAddon();
-    const webLinksAddon = new WebLinksAddon(
-        (event, uri) => {
-            // check if cmd key is pressed
-            if (event.metaKey || event.ctrlKey) {
-                globalThis.open(uri, "_blank");
-            }
-        },
-        {
-            hover: (_, text) => {
-                let tooltip = document.getElementById("tooltip");
-                if (tooltip) {
-                    if (tooltip.id === `${text}-tooltip`) {
-                        return;
-                    }
-
-                    if (tooltip.matches(":hover")) {
-                        return;
-                    }
-                    tooltip.remove();
-                }
-
-                const tooltipId = `${text}-tooltip`;
-                tooltip = document.createElement("div");
-                tooltip.id = tooltipId;
-                tooltip.className = "tooltip";
-                tooltip.style.position = "fixed";
-                tooltip.innerHTML = `<a href="${text}" target="_blank">Follow link</a>`;
-                tooltip.style.visibility = "hidden";
-                document.body.appendChild(tooltip);
-
-                const tootlipSize = tooltip.getBoundingClientRect();
-                tooltip.style.zIndex = "1000";
-
-                // Add a delay of 1 second before showing the tooltip
-                setTimeout(() => {
-                    // check if the tooltip still exists
-                    const tooltip = document.getElementById(tooltipId);
-                    if (tooltip) {
-                        if (mouseX - tootlipSize.height > 0) {
-                            tooltip.style.top = `${mouseY - tootlipSize.height}px`;
-                        } else {
-                            tooltip.style.top = `${mouseY}px`;
-                        }
-
-                        tooltip.style.left = `${mouseX - tootlipSize.width / 2}px`;
-                        tooltip.style.visibility = "visible";
-                    }
-                }, 1000);
-            },
-            leave: (_, text) => {
-                const tooltip = document.getElementById(`${text}-tooltip`);
-                if (tooltip && !tooltip.matches(":hover")) {
-                    tooltip.remove();
-                    return;
-                }
-
-                tooltip!.addEventListener("mouseleave", () => {
-                    tooltip!.remove();
-                });
-            },
-        },
-    );
-    let [mouseX, mouseY] = [0, 0];
-    document.addEventListener("mousemove", (e) => {
-        mouseX = e.clientX;
-        mouseY = e.clientY;
-    });
 
     terminal.loadAddon(fitAddon);
     terminal.loadAddon(new WebglAddon());
-    terminal.loadAddon(webLinksAddon);
+    terminal.loadAddon(new WebLinksAddon());
 
     terminal.open(document.getElementById("terminal")!);
     fitAddon.fit();
