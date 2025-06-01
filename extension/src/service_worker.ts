@@ -20,11 +20,6 @@ chrome.runtime.onInstalled.addListener(() => {
     title: 'Open in new window',
     contexts: ['action'],
   });
-  chrome.contextMenus.create({
-    id: 'openinPopupWindow',
-    title: 'Open in popup window',
-    contexts: ['action'],
-  })
 })
 
 // should not be async, else side panel will not open when invoked from the keyboard shortcut
@@ -44,29 +39,6 @@ function handleCommand(commandId: string) {
       url: chrome.runtime.getURL("tty.html"),
       focused: true,
     });
-  } else if (commandId === 'openinPopupWindow') {
-    // Get the current window to calculate the center position
-    chrome.windows.getCurrent().then((window) => {
-      const screenWidth = window.width ?? 1200;
-      const screenHeight = window.height ?? 800;
-      const screenLeft = window.left ?? 0;
-      const screenTop = window.top ?? 0;
-
-      const popupWidth = 800;
-      const popupHeight = 600;
-      const left = Math.round(screenLeft + (screenWidth - popupWidth) / 2);
-      const top = Math.round(screenTop + (screenHeight - popupHeight) / 2);
-
-      chrome.windows.create({
-        url: chrome.runtime.getURL("tty.html"),
-        type: "popup",
-        height: popupHeight,
-        width: popupWidth,
-        left,
-        top,
-        focused: true,
-      });
-    })
   }
 }
 
