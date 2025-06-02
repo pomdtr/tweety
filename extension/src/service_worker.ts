@@ -3,13 +3,13 @@ import { JSONRPCRequest, JSONRPCResponse } from "./rpc";
 chrome.runtime.onInstalled.addListener(() => {
   chrome.sidePanel.setPanelBehavior({
     openPanelOnActionClick: false
-  })
+  });
 
   chrome.contextMenus.create({
     id: 'openInNewTab',
     title: 'Open in new tab',
     contexts: ['action'],
-  })
+  });
   chrome.contextMenus.create({
     id: 'openSidePanel',
     title: 'Open in side panel',
@@ -19,6 +19,60 @@ chrome.runtime.onInstalled.addListener(() => {
     id: 'openInNewWindow',
     title: 'Open in new window',
     contexts: ['action'],
+  });
+
+  // Separator between action commands and default behavior group
+  chrome.contextMenus.create({
+    type: 'separator',
+    id: 'actionSeparator',
+    contexts: ['action'],
+  });
+
+  // Radio group for default action behavior
+  chrome.contextMenus.create({
+    id: 'defaultBehavior',
+    title: 'Action button behavior',
+    type: 'normal',
+    contexts: ['action'],
+  });
+  chrome.contextMenus.create({
+    id: 'defaultBehavior_newTab',
+    parentId: 'defaultBehavior',
+    title: 'Open in new tab',
+    type: 'radio',
+    contexts: ['action'],
+    checked: true,
+  });
+  chrome.contextMenus.create({
+    id: 'defaultBehavior_sidePanel',
+    parentId: 'defaultBehavior',
+    title: 'Open in side panel',
+    type: 'radio',
+    contexts: ['action'],
+    checked: false,
+  });
+});
+
+// Store and use the selected default behavior
+chrome.contextMenus.onClicked.addListener((info) => {
+  if (typeof info.menuItemId !== 'string') {
+    return
+  }
+
+  if (!info.menuItemId.startsWith('defaultBehavior_')) {
+    return; // Ignore clicks on other menu items
+  }
+
+  chrome.sidePanel.setPanelBehavior({
+    openPanelOnActionClick: info.menuItemId === 'defaultBehavior_sidePanel',
+  })
+});
+
+// Override the action button click to use the selected default behavior
+chrome.action.onClicked.addListener(() => {
+  chrome.tabs.create({
+    url: chrome.runtime.getURL("tty.html"),
+    active: true,
   });
 })
 
@@ -42,13 +96,6 @@ function handleCommand(commandId: string) {
   }
 }
 
-chrome.action.onClicked.addListener(async () => {
-  await chrome.tabs.create({
-    url: chrome.runtime.getURL("tty.html"),
-    active: true,
-  });
-})
-
 chrome.contextMenus.onClicked.addListener((info) => {
   if (typeof info.menuItemId !== 'string') {
     console.warn("Invalid menuItemId:", info.menuItemId);
@@ -61,19 +108,6 @@ chrome.contextMenus.onClicked.addListener((info) => {
 
 chrome.commands.onCommand.addListener(async (command) => {
   handleCommand(command);
-});
-
-
-chrome.contextMenus.onClicked.addListener((info, tab) => {
-  if (!tab) {
-    console.warn("No active tab found for context menu action.");
-    return;
-  }
-
-  if (info.menuItemId === 'openSidePanel') {
-    // This will open the panel in all the pages on the current window.
-    chrome.sidePanel.open({ windowId: tab.windowId });
-  }
 });
 
 const nativePort = chrome.runtime.connectNative("com.github.pomdtr.tweety");

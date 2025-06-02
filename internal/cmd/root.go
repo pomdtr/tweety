@@ -23,7 +23,9 @@ import (
 	"github.com/google/shlex"
 	"github.com/gorilla/websocket"
 	jsonparser "github.com/knadh/koanf/parsers/json"
+	"github.com/knadh/koanf/providers/confmap"
 	"github.com/knadh/koanf/providers/file"
+
 	"github.com/knadh/koanf/v2"
 	"github.com/pomdtr/tweety/internal/jsonrpc"
 
@@ -49,6 +51,13 @@ func NewCmdRoot() *cobra.Command {
 		Short:             "An integrated terminal for your web browser",
 		Args:              cobra.ExactArgs(1),
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+			confmapProvider := confmap.Provider(map[string]interface{}{
+				"command": getDefaultShell(),
+			})
+			if err := k.Load(confmapProvider, nil); err != nil {
+				return fmt.Errorf("failed to load default config: %w", err)
+			}
+
 			f := file.Provider(filepath.Join(configDir, "config.json"))
 			if err := k.Load(f, jsonparser.Parser()); err != nil {
 				return fmt.Errorf("failed to load config: %w", err)
@@ -591,4 +600,19 @@ func getFreePort() (int, error) {
 	}
 	defer l.Close()
 	return l.Addr().(*net.TCPAddr).Port, nil
+}
+
+func getDefaultShell() string {
+	shell := os.Getenv("SHELL")
+	if shell == "" {
+		switch runtime.GOOS {
+		case "darwin":
+			return "/bin/zsh"
+		case "linux":
+			return "/bin/bash"
+		default:
+			return "/bin/sh"
+		}
+	}
+	return shell
 }
