@@ -66,7 +66,7 @@ chrome.contextMenus.onClicked.addListener((info) => {
 // Override the action button click to use the selected default behavior
 chrome.action.onClicked.addListener(() => {
   chrome.tabs.create({
-    url: chrome.runtime.getURL("tty.html"),
+    url: chrome.runtime.getURL("term.html"),
     active: true,
   });
 })
@@ -75,12 +75,12 @@ chrome.action.onClicked.addListener(() => {
 async function handleCommand(commandId: string) {
   if (commandId === 'openInNewTab') {
     await chrome.tabs.create({
-      url: chrome.runtime.getURL("tty.html"),
+      url: chrome.runtime.getURL("term.html"),
       active: true,
     });
   } else if (commandId === 'openInNewWindow') {
     await chrome.windows.create({
-      url: chrome.runtime.getURL("tty.html"),
+      url: chrome.runtime.getURL("term.html"),
       focused: true,
     });
   }

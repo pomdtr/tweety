@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"net/url"
 	"os"
 
 	"github.com/pomdtr/tweety/internal/jsonrpc"
@@ -15,8 +16,12 @@ func NewCmdOpen() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var options map[string]string
 			if _, err := os.Stat(args[0]); err == nil {
+				url := url.URL{
+					Scheme: "file",
+					Path:   args[0],
+				}
 				options = map[string]string{
-					"url": fmt.Sprintf("file://%s", args[0]),
+					"url": url.String(),
 				}
 			} else {
 				options = map[string]string{

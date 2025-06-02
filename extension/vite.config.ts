@@ -8,9 +8,6 @@ export default defineConfig(() => {
   return {
     plugins: [
       webExtension({
-        additionalInputs: {
-          html: ["tty.html"],
-        },
         manifest
       }),
     ],

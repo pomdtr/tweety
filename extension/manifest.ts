@@ -7,7 +7,7 @@ export default {
     version: "0.1.0",
     manifest_version: 3,
     side_panel: {
-        default_path: "tty.html",
+        default_path: "term.html",
     },
     commands: {
         openInNewTab: {

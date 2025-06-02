@@ -14,7 +14,7 @@ func NewCmdEdit() *cobra.Command {
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			options := map[string]string{
-				"url": fmt.Sprintf("/tty.html?mode=editor&file=%s", args[0]),
+				"url": fmt.Sprintf("/term.html?mode=editor&file=%s", args[0]),
 			}
 
 			_, err := jsonrpc.SendRequest(os.Getenv("TWEETY_SOCKET"), "tabs.create", []any{options})
