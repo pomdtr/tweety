@@ -38,7 +38,8 @@ export default {
         "contextMenus",
         "bookmarks",
         "storage",
-        "sidePanel"
+        "sidePanel",
+        "scripting"
     ],
     host_permissions: ["<all_urls>"],
     icons: {

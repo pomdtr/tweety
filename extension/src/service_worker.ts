@@ -209,6 +209,31 @@ nativePort.onMessage.addListener(async (message) => {
         await chrome.tabs.goBack(params[0]);
         sendResponse(null);
         break;
+      case "tabs.print":
+        try {
+          let targetTabId: number;
+
+          if (params.length === 0) {
+            const currentTab = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
+            if (currentTab.length === 0 || !currentTab[0].id) {
+              sendError({ code: -32602, message: "No active tab found" });
+              return;
+            }
+            targetTabId = currentTab[0].id;
+          } else {
+            targetTabId = params[0];
+          }
+
+          const results = await chrome.scripting.executeScript({
+            target: { tabId: targetTabId },
+            func: () => document.documentElement.outerHTML,
+          });
+          console.log("Tab content retrieved for printing:", results[0].result);
+          sendResponse(results[0].result);
+        } catch (error) {
+          sendError({ code: -32000, message: `Failed to get tab content: ${(error as Error).message}` });
+        }
+        break;
       case "windows.getAll":
         const windows = await chrome.windows.getAll();
         sendResponse(windows);

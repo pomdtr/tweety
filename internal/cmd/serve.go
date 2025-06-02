@@ -95,9 +95,9 @@ type ScriptCommand struct {
 	Title string `json:"title"`
 }
 
-func NewHandler(handlerParams HandlerParams) http.Handler {
+func NewHandler(p HandlerParams) http.Handler {
 	var ttyMap = make(map[string]*os.File)
-	messagingHost := jsonrpc.NewHost(handlerParams.Logger)
+	messagingHost := jsonrpc.NewHost(p.Logger)
 
 	messagingHost.HandleNotification("initialize", func(input []byte) error {
 		var params struct {
@@ -109,7 +109,7 @@ func NewHandler(handlerParams HandlerParams) http.Handler {
 			return fmt.Errorf("failed to unmarshal initialize params: %w", err)
 		}
 
-		handlerParams.Logger.Info("Received initialize notification", "version", params.Version, "browserId", params.BrowserID)
+		p.Logger.Info("Received initialize notification", "version", params.Version, "browserId", params.BrowserID)
 		socketPath := filepath.Join(cacheDir, "sockets", fmt.Sprintf("%s.sock", params.BrowserID))
 		if err := os.MkdirAll(filepath.Dir(socketPath), 0755); err != nil {
 			return fmt.Errorf("failed to create socket directory: %w", err)
@@ -118,6 +118,7 @@ func NewHandler(handlerParams HandlerParams) http.Handler {
 		os.Setenv("TWEETY_SOCKET", socketPath)
 		if _, err := os.Stat(socketPath); err == nil {
 			if err := os.Remove(socketPath); err != nil {
+				log.Printf("Failed to remove existing socket file: %s", err)
 				return fmt.Errorf("failed to remove existing socket file: %w", err)
 			}
 		}
@@ -125,6 +126,7 @@ func NewHandler(handlerParams HandlerParams) http.Handler {
 		// create a listener
 		listener, err := net.Listen("unix", socketPath)
 		if err != nil {
+			p.Logger.Error("Failed to create unix socket listener", "error", err)
 			return fmt.Errorf("failed to create unix socket listener: %w", err)
 		}
 
@@ -234,7 +236,7 @@ func NewHandler(handlerParams HandlerParams) http.Handler {
 		ttyMap[ttyID] = tty
 
 		return map[string]string{
-			"url": fmt.Sprintf("ws://127.0.0.1:%d/tty/%s", handlerParams.Port, ttyID),
+			"url": fmt.Sprintf("ws://127.0.0.1:%d/tty/%s", p.Port, ttyID),
 			"id":  ttyID,
 		}, nil
 

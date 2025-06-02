@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"strconv"
@@ -35,6 +36,7 @@ func NewCmdTabs() *cobra.Command {
 		NewCmdTabsGoForward(),
 		NewCmdTabsGoBack(),
 		NewCmdTabsCaptureVisibleTab(),
+		NewCmdTabsPrint(),
 	)
 
 	return cmd
@@ -401,6 +403,39 @@ func NewCmdTabsGoBack() *cobra.Command {
 				return fmt.Errorf("failed to navigate tab backward: %w", err)
 			}
 
+			return nil
+		},
+	}
+
+	return cmd
+}
+
+func NewCmdTabsPrint() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "print [tabID]",
+		Short: "Print the HTML content of a tab",
+		Args:  cobra.MaximumNArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			params := []any{}
+			if len(args) > 0 {
+				tabID, err := strconv.Atoi(args[0])
+				if err != nil {
+					return fmt.Errorf("invalid tab ID: %w", err)
+				}
+				params = append(params, tabID)
+			}
+
+			resp, err := jsonrpc.SendRequest(os.Getenv("TWEETY_SOCKET"), "tabs.print", params)
+			if err != nil {
+				return fmt.Errorf("failed to print tab content: %w", err)
+			}
+
+			var res string
+			if err := json.Unmarshal(resp.Result, &res); err != nil {
+				return fmt.Errorf("failed to parse print result: %w", err)
+			}
+
+			os.Stdout.WriteString(res)
 			return nil
 		},
 	}
