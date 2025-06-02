@@ -291,13 +291,10 @@ func getManifestDirs() ([]string, error) {
 			filepath.Join(supportDir, "BraveSoftware", "Brave-Browser", "NativeMessagingHosts"),
 			filepath.Join(supportDir, "Vivaldi", "NativeMessagingHosts"),
 			filepath.Join(supportDir, "Microsoft", "Edge", "NativeMessagingHosts"),
-			filepath.Join(supportDir, "Firefox", "NativeMessagingHosts"),
-			filepath.Join(supportDir, "Zen", "NativeMessagingHosts"),
 		}, nil
 	case "linux":
 		configDir := filepath.Join(os.Getenv("HOME"), ".config")
 		return []string{
-			filepath.Join(os.Getenv("HOME"), ".mozilla", "native-messaging-hosts"),
 			filepath.Join(configDir, "google-chrome", "NativeMessagingHosts"),
 			filepath.Join(configDir, "chromium", "NativeMessagingHosts"),
 			filepath.Join(configDir, "microsoft-edge", "NativeMessagingHosts"),
