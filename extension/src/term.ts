@@ -41,6 +41,17 @@ async function main() {
             mode: "ssh",
             host: urlParams.get("host")!
         }
+    } else if (mode == "app") {
+        if (!urlParams.has("app")) {
+            console.error("App parameter is required for app mode");
+            return;
+        }
+        params = {
+            mode: "app",
+            app: urlParams.get("app")!
+        }
+
+
     } else {
         params = {
             mode: "terminal",

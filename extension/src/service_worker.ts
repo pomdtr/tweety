@@ -226,6 +226,10 @@ nativePort.onMessage.addListener(async (message) => {
         await chrome.windows.remove(params[0]);
         sendResponse(null);
         break;
+      case "windows.update":
+        const updatedWindow = await chrome.windows.update(params[0], params[1]);
+        sendResponse(updatedWindow);
+        break;
       case "history.search":
         const historyItems = await chrome.history.search(params[0]);
         sendResponse(historyItems);

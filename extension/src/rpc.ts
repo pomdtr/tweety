@@ -24,6 +24,9 @@ export type RequestCreateTTY = JSONRPCRequestBase<"tty.create", ({
     mode: "editor",
     file: string;
 } | {
+    mode: "app",
+    app: string;
+} | {
     mode: "ssh",
     host: string;
 })>

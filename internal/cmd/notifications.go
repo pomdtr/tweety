@@ -10,8 +10,9 @@ import (
 
 func NewCmdNotifications() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "notifications",
-		Short: "Manage notifications",
+		Use:     "notifications",
+		Short:   "Manage notifications",
+		Aliases: []string{"notification"},
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 			if env := os.Getenv("TWEETY_SOCKET"); env == "" {
 				return fmt.Errorf("TWEETY_SOCKET environment variable must be set")

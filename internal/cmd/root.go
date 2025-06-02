@@ -87,6 +87,8 @@ func NewCmdRoot() *cobra.Command {
 		NewCmdEdit(),
 		NewCmdSSH(),
 		NewCmdOpen(),
+		NewCmdConfig(),
+		NewCmdApps(),
 	)
 
 	return cmd
@@ -339,6 +341,7 @@ func NewHandler(handlerParams HandlerParams) http.Handler {
 			Mode string `json:"mode"`
 			File string `json:"file"`
 			Host string `json:"host"`
+			App  string `json:"app"`
 		}
 
 		if err := json.Unmarshal(input, &createParams); err != nil {
@@ -379,6 +382,25 @@ func NewHandler(handlerParams HandlerParams) http.Handler {
 			}
 
 			cmd = exec.Command("sh", "-c", fmt.Sprintf("%s %s", editor, createParams.File))
+		} else if createParams.Mode == "app" {
+			entrypoint := filepath.Join(appDir, createParams.App)
+			stat, err := os.Stat(entrypoint)
+			if err != nil {
+				return nil, fmt.Errorf("failed to stat app entrypoint: %w", err)
+			}
+
+			if stat.IsDir() {
+				return nil, fmt.Errorf("app entrypoint is a directory, expected a file: %s", entrypoint)
+			}
+
+			// check if the entrypoint is executable
+			if stat.Mode()&0111 == 0 {
+				if err := os.Chmod(entrypoint, 0755); err != nil {
+					return nil, fmt.Errorf("failed to make app entrypoint executable: %w", err)
+				}
+			}
+
+			cmd = exec.Command(entrypoint)
 		} else {
 			return nil, fmt.Errorf("invalid mode: %s", createParams.Mode)
 		}

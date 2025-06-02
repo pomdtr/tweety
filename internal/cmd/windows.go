@@ -11,8 +11,9 @@ import (
 
 func NewCmdWindows() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "windows",
-		Short: "Manage browser windows",
+		Use:     "windows",
+		Aliases: []string{"window"},
+		Short:   "Manage browser windows",
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 			if env := os.Getenv("TWEETY_SOCKET"); env == "" {
 				return fmt.Errorf("TWEETY_SOCKET environment variable must be set")
@@ -28,6 +29,7 @@ func NewCmdWindows() *cobra.Command {
 		NewCmdWindowsGetCurrent(),
 		NewCmdWindowsGetLastFocused(),
 		NewCmdWindowsCreate(),
+		NewCmdWindowsUpdate(),
 		NewCmdWindowsRemove(),
 	)
 
@@ -155,6 +157,77 @@ func NewCmdWindowsCreate() *cobra.Command {
 	cmd.Flags().StringVar(&flags.windowType, "type", "", "Window type (normal, popup, panel)")
 	cmd.Flags().IntVar(&flags.width, "width", 0, "Window width")
 	cmd.Flags().IntVar(&flags.height, "height", 0, "Window height")
+
+	return cmd
+}
+
+func NewCmdWindowsUpdate() *cobra.Command {
+	var flags struct {
+		focused       bool
+		state         string
+		width         int
+		height        int
+		left          int
+		top           int
+		drawAttention bool
+	}
+
+	cmd := &cobra.Command{
+		Use:   "update <windowID>",
+		Short: "Update properties of a browser window",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			windowID, err := strconv.Atoi(args[0])
+			if err != nil {
+				return fmt.Errorf("invalid window ID: %w", err)
+			}
+
+			options := make(map[string]interface{})
+
+			if cmd.Flags().Changed("focused") {
+				options["focused"] = flags.focused
+			}
+
+			if flags.state != "" {
+				options["state"] = flags.state
+			}
+
+			if flags.width > 0 {
+				options["width"] = flags.width
+			}
+
+			if flags.height > 0 {
+				options["height"] = flags.height
+			}
+
+			if cmd.Flags().Changed("left") {
+				options["left"] = flags.left
+			}
+
+			if cmd.Flags().Changed("top") {
+				options["top"] = flags.top
+			}
+
+			if cmd.Flags().Changed("draw-attention") {
+				options["drawAttention"] = flags.drawAttention
+			}
+
+			resp, err := jsonrpc.SendRequest(os.Getenv("TWEETY_SOCKET"), "windows.update", []any{windowID, options})
+			if err != nil {
+				return err
+			}
+			os.Stdout.Write(resp.Result)
+			return nil
+		},
+	}
+
+	cmd.Flags().BoolVar(&flags.focused, "focused", false, "Focus the window")
+	cmd.Flags().StringVar(&flags.state, "state", "", "Window state (normal, minimized, maximized, fullscreen)")
+	cmd.Flags().IntVar(&flags.width, "width", 0, "Window width")
+	cmd.Flags().IntVar(&flags.height, "height", 0, "Window height")
+	cmd.Flags().IntVar(&flags.left, "left", 0, "Window left position")
+	cmd.Flags().IntVar(&flags.top, "top", 0, "Window top position")
+	cmd.Flags().BoolVar(&flags.drawAttention, "draw-attention", false, "Draw attention to the window")
 
 	return cmd
 }
