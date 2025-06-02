@@ -11,7 +11,7 @@ export default {
         openInNewTab: {
             description: "Open in new tab",
             suggested_key: {
-                linux: "Ctrl+Shift+T",
+                default: "Ctrl+Shift+T",
                 mac: "Command+Shift+T",
             }
         },
