@@ -44,11 +44,10 @@ var dataDir = filepath.Join(os.Getenv("HOME"), ".local", "share", "tweety")
 
 func NewCmdRoot() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:               "tweety",
-		SilenceUsage:      true,
-		ValidArgsFunction: completeCommands,
-		Short:             "An integrated terminal for your web browser",
-		Args:              cobra.ExactArgs(1),
+		Use:          "tweety",
+		SilenceUsage: true,
+		Short:        "An integrated terminal for your web browser",
+		Args:         cobra.ExactArgs(1),
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 			confmapProvider := confmap.Provider(map[string]interface{}{
 				"command": getDefaultShell(),
@@ -88,23 +87,6 @@ func NewCmdRoot() *cobra.Command {
 	)
 
 	return cmd
-}
-
-func completeCommands(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
-	files, err := os.ReadDir(filepath.Join(configDir, "commands"))
-	if err != nil {
-		return nil, cobra.ShellCompDirectiveError
-	}
-
-	var completions []string
-	for _, file := range files {
-		if file.IsDir() {
-			continue
-		}
-		completions = append(completions, fmt.Sprintf("%s\tCustom Command", strings.TrimSuffix(file.Name(), filepath.Ext(file.Name()))))
-	}
-
-	return completions, cobra.ShellCompDirectiveNoFileComp
 }
 
 func NewCmdServe() *cobra.Command {
