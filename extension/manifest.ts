@@ -3,6 +3,7 @@ export default {
         email: "contact@pomdtr.me",
     },
     name: "tweety",
+    description: "An integrated terminal for your browser",
     version: "0.1.0",
     manifest_version: 3,
     side_panel: {
