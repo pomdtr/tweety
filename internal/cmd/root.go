@@ -84,6 +84,9 @@ func NewCmdRoot() *cobra.Command {
 		NewCmdHistory(),
 		NewCmdWindows(),
 		NewCmdNotifications(),
+		NewCmdEdit(),
+		NewCmdSSH(),
+		NewCmdOpen(),
 	)
 
 	return cmd
@@ -332,14 +335,54 @@ func NewHandler(handlerParams HandlerParams) http.Handler {
 	})
 
 	messagingHost.HandleRequest("tty.create", func(input []byte) (any, error) {
-		var args []string
-		if command := k.String("command"); strings.Contains(command, " ") {
-			args = []string{"/bin/sh", "-c", command}
-		} else {
-			args = []string{command}
+		var createParams struct {
+			Mode string `json:"mode"`
+			File string `json:"file"`
+			Host string `json:"host"`
 		}
 
-		cmd := exec.Command(args[0], args[1:]...)
+		if err := json.Unmarshal(input, &createParams); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal create params: %w", err)
+		}
+
+		var cmd *exec.Cmd
+		if createParams.Mode == "terminal" {
+			var args []string
+			if command := k.String("command"); strings.Contains(command, " ") {
+				args = []string{"/bin/sh", "-c", command}
+			} else {
+				args = []string{command}
+			}
+			cmd = exec.Command(args[0], args[1:]...)
+		} else if createParams.Mode == "ssh" {
+			if createParams.Host == "" {
+				return nil, fmt.Errorf("host is required for ssh mode")
+			}
+
+			cmd = exec.Command("ssh", createParams.Host)
+		} else if createParams.Mode == "editor" {
+			if createParams.File == "" {
+				return nil, fmt.Errorf("file is required for editor mode")
+			}
+
+			if _, err := os.Stat(createParams.File); os.IsNotExist(err) {
+				return nil, fmt.Errorf("file does not exist: %s", createParams.File)
+			}
+
+			editor := k.String("editor")
+			if editor == "" {
+				if editorEnv := os.Getenv("EDITOR"); editorEnv != "" {
+					editor = editorEnv
+				} else {
+					editor = "vi" // default editor
+				}
+			}
+
+			cmd = exec.Command("sh", "-c", fmt.Sprintf("%s %s", editor, createParams.File))
+		} else {
+			return nil, fmt.Errorf("invalid mode: %s", createParams.Mode)
+		}
+
 		cmd.Env = os.Environ()
 		cmd.Env = append(cmd.Env, "TERM=xterm-256color")
 		cmd.Env = append(cmd.Env, "TERM_PROGRAM=tweety")

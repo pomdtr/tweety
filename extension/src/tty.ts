@@ -6,6 +6,12 @@ import { WebLinksAddon } from "@xterm/addon-web-links";
 import { RequestCreateTTY, RequestGetXtermConfig, RequestResizeTTY, ResponseCreateTTY, ResponseGetXtermConfig } from "./rpc";
 
 async function main() {
+    const anchor = document.getElementById("terminal");
+    if (!anchor) {
+        console.error("terminal element not found");
+        return;
+    }
+
     const { result: config } = await chrome.runtime.sendMessage<RequestGetXtermConfig, ResponseGetXtermConfig>({
         jsonrpc: "2.0",
         id: crypto.randomUUID(),
@@ -13,10 +19,39 @@ async function main() {
     })
 
     const requestId = crypto.randomUUID();
+    const urlParams = new URLSearchParams(window.location.search);
+    const mode = urlParams.get("mode")
+    let params: RequestCreateTTY["params"];
+    if (mode == "editor") {
+        if (!urlParams.has("file")) {
+            console.error("File parameter is required for editor mode");
+            return;
+        }
+
+        params = {
+            mode: "editor",
+            file: urlParams.get("file")!
+        }
+    } else if (mode == "ssh") {
+        if (!urlParams.has("host")) {
+            console.error("Host parameter is required for SSH mode");
+            return;
+        }
+        params = {
+            mode: "ssh",
+            host: urlParams.get("host")!
+        }
+    } else {
+        params = {
+            mode: "terminal",
+        }
+    }
+
     const resp = await chrome.runtime.sendMessage<RequestCreateTTY, ResponseCreateTTY>({
         jsonrpc: "2.0",
         id: requestId,
-        method: "tty.create"
+        method: "tty.create",
+        params: params
     })
 
     const terminal = new Terminal(config);
@@ -30,13 +65,7 @@ async function main() {
     const attachAddon = new AttachAddon(ws);
     terminal.loadAddon(attachAddon);
 
-    const elem = document.getElementById("terminal");
-    if (!elem) {
-        console.error("Terminal element not found");
-        return;
-    }
-
-    terminal.open(elem);
+    terminal.open(anchor);
     terminal.onResize(async (size) => {
         const { cols, rows } = size;
         await chrome.runtime.sendMessage<RequestResizeTTY>({
