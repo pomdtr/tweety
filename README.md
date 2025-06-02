@@ -2,8 +2,6 @@
 
 Minimize your context switching by interacting with your terminal directly from your browser.
 
-![tweety running from the browser](./media/terminal-tab.png)
-
 ## Features
 
 ### Terminal Tabs
