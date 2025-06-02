@@ -29,6 +29,8 @@ export default {
     },
     background: {
         service_worker: "src/service_worker.ts",
+        // @ts-ignore
+        scripts: ["src/service_worker.ts"],
     },
     permissions: [
         "nativeMessaging",

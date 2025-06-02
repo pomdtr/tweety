@@ -1,3 +1,4 @@
+import browser from "webextension-polyfill";
 import { Terminal } from "@xterm/xterm";
 import { FitAddon } from "@xterm/addon-fit";
 import { AttachAddon } from "@xterm/addon-attach";
@@ -12,7 +13,7 @@ async function main() {
         return;
     }
 
-    const { result: config } = await chrome.runtime.sendMessage<RequestGetXtermConfig, ResponseGetXtermConfig>({
+    const { result: config } = await browser.runtime.sendMessage<RequestGetXtermConfig, ResponseGetXtermConfig>({
         jsonrpc: "2.0",
         id: crypto.randomUUID(),
         method: "xterm.getConfig",
@@ -58,7 +59,7 @@ async function main() {
         }
     }
 
-    const resp = await chrome.runtime.sendMessage<RequestCreateTTY, ResponseCreateTTY>({
+    const resp = await browser.runtime.sendMessage<RequestCreateTTY, ResponseCreateTTY>({
         jsonrpc: "2.0",
         id: requestId,
         method: "tty.create",
@@ -79,7 +80,7 @@ async function main() {
     terminal.open(anchor);
     terminal.onResize(async (size) => {
         const { cols, rows } = size;
-        await chrome.runtime.sendMessage<RequestResizeTTY>({
+        await browser.runtime.sendMessage<RequestResizeTTY>({
             jsonrpc: "2.0",
             method: "tty.resize",
             params: {

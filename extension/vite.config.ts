@@ -6,6 +6,9 @@ import manifest from "./manifest"
 // https://vitejs.dev/config/
 export default defineConfig(() => {
   return {
+    build: {
+      outDir: "dist/chrome",
+    },
     plugins: [
       webExtension({
         manifest

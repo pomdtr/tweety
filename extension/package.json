@@ -2,6 +2,9 @@
   "type": "module",
   "scripts": {
     "build": "tsc && vite build",
+    "compile": "npx web-ext build --source-dir ./dist/chrome --artifacts-dir dist --overwrite-dest --filename chrome.zip",
+    "build:firefox": "npm run build && node ./build-firefox.ts",
+    "compile:firefox": "npm run build:firefox && npx web-ext build --source-dir ./dist/firefox --artifacts-dir dist --overwrite-dest --filename firefox.zip",
     "watch": "vite build --watch --mode development --minify false",
     "dev": "vite",
     "serve:firefox": "web-ext run --start-url \"about:debugging#/runtime/this-firefox\"  --source-dir ./dist/",
@@ -10,6 +13,7 @@
   "devDependencies": {
     "@samrum/vite-plugin-web-extension": "^5.1.1",
     "@types/chrome": "^0.0.326",
+    "@types/webextension-polyfill": "^0.12.3",
     "typescript": "^5.2.2",
     "vite": "^5.0.0",
     "web-ext": "^7.8.0"
@@ -20,6 +24,6 @@
     "@xterm/addon-web-links": "^0.11.0",
     "@xterm/addon-webgl": "^0.18.0",
     "@xterm/xterm": "^5.5.0",
-    "webextension-polyfill": "^0.10.0"
+    "webextension-polyfill": "^0.12.0"
   }
 }

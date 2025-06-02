@@ -1,36 +1,40 @@
 import { JSONRPCRequest, JSONRPCResponse } from "./rpc";
+import browser from "webextension-polyfill";
 
-chrome.runtime.onInstalled.addListener(() => {
-  chrome.sidePanel.setPanelBehavior({
-    openPanelOnActionClick: false
-  });
+browser.runtime.onInstalled.addListener(() => {
+  if (chrome.sidePanel) {
+    chrome.sidePanel.setPanelBehavior({
+      openPanelOnActionClick: false
+    });
+  }
+  // Set the default side panel path
 
-  chrome.contextMenus.create({
+  browser.contextMenus.create({
     id: 'openInNewTab',
     title: 'Open in new tab',
     contexts: ['action'],
   });
-  chrome.contextMenus.create({
+  browser.contextMenus.create({
     id: 'openInNewWindow',
     title: 'Open in new window',
     contexts: ['action'],
   });
 
   // Separator between action commands and default behavior group
-  chrome.contextMenus.create({
+  browser.contextMenus.create({
     type: 'separator',
     id: 'actionSeparator',
     contexts: ['action'],
   });
 
   // Radio group for default action behavior
-  chrome.contextMenus.create({
+  browser.contextMenus.create({
     id: 'defaultBehavior',
     title: 'Action button behavior',
     type: 'normal',
     contexts: ['action'],
   });
-  chrome.contextMenus.create({
+  browser.contextMenus.create({
     id: 'defaultBehavior_newTab',
     parentId: 'defaultBehavior',
     title: 'Open in new tab',
@@ -38,7 +42,7 @@ chrome.runtime.onInstalled.addListener(() => {
     contexts: ['action'],
     checked: true,
   });
-  chrome.contextMenus.create({
+  browser.contextMenus.create({
     id: 'defaultBehavior_sidePanel',
     parentId: 'defaultBehavior',
     title: 'Open in side panel',
@@ -48,8 +52,27 @@ chrome.runtime.onInstalled.addListener(() => {
   });
 });
 
+browser.runtime.onStartup.addListener(async () => {
+  let { browserId } = browser.storage.local.get("browserId") as { browserId?: string };
+
+  if (!browserId) {
+    browserId = generateSecureId(12);
+    await browser.storage.local.set({ browserId });
+  }
+
+  nativePort.postMessage({
+    jsonrpc: "2.0",
+    method: "initialize",
+    params: {
+      browserId,
+      version: browser.runtime.getManifest().version,
+    }
+  })
+
+})
+
 // Store and use the selected default behavior
-chrome.contextMenus.onClicked.addListener((info) => {
+browser.contextMenus.onClicked.addListener((info) => {
   if (typeof info.menuItemId !== 'string') {
     return
   }
@@ -58,15 +81,17 @@ chrome.contextMenus.onClicked.addListener((info) => {
     return; // Ignore clicks on other menu items
   }
 
-  chrome.sidePanel.setPanelBehavior({
-    openPanelOnActionClick: info.menuItemId === 'defaultBehavior_sidePanel',
-  })
+  if (chrome.sidePanel) {
+    chrome.sidePanel.setPanelBehavior({
+      openPanelOnActionClick: info.menuItemId === 'defaultBehavior_sidePanel',
+    })
+  }
 });
 
 // Override the action button click to use the selected default behavior
-chrome.action.onClicked.addListener(() => {
-  chrome.tabs.create({
-    url: chrome.runtime.getURL("term.html"),
+browser.action.onClicked.addListener(() => {
+  browser.tabs.create({
+    url: browser.runtime.getURL("term.html"),
     active: true,
   });
 })
@@ -74,19 +99,19 @@ chrome.action.onClicked.addListener(() => {
 // should not be async, else side panel will not open when invoked from the keyboard shortcut
 async function handleCommand(commandId: string) {
   if (commandId === 'openInNewTab') {
-    await chrome.tabs.create({
-      url: chrome.runtime.getURL("term.html"),
+    await browser.tabs.create({
+      url: browser.runtime.getURL("term.html"),
       active: true,
     });
   } else if (commandId === 'openInNewWindow') {
-    await chrome.windows.create({
-      url: chrome.runtime.getURL("term.html"),
+    await browser.windows.create({
+      url: browser.runtime.getURL("term.html"),
       focused: true,
     });
   }
 }
 
-chrome.contextMenus.onClicked.addListener(async (info) => {
+browser.contextMenus.onClicked.addListener(async (info) => {
   if (typeof info.menuItemId !== 'string') {
     console.warn("Invalid menuItemId:", info.menuItemId);
     return;
@@ -95,27 +120,12 @@ chrome.contextMenus.onClicked.addListener(async (info) => {
   await handleCommand(info.menuItemId);
 })
 
-chrome.commands.onCommand.addListener(async (command) => {
+browser.commands.onCommand.addListener(async (command) => {
   await handleCommand(command);
 });
 
-const nativePort = chrome.runtime.connectNative("com.github.pomdtr.tweety");
+const nativePort = browser.runtime.connectNative("com.github.pomdtr.tweety");
 
-chrome.storage.local.get<{ browserId?: string; }>("browserId", async ({ browserId }) => {
-  if (!browserId) {
-    browserId = generateSecureId(12);
-    await chrome.storage.local.set({ browserId });
-  }
-
-  nativePort.postMessage({
-    jsonrpc: "2.0",
-    method: "initialize",
-    params: {
-      browserId,
-      version: chrome.runtime.getManifest().version,
-    }
-  })
-})
 
 nativePort.onMessage.addListener(async (message) => {
   if (!isJsonRpcRequest(message)) {
@@ -148,125 +158,125 @@ nativePort.onMessage.addListener(async (message) => {
     switch (method) {
       // Tabs methods
       case "tabs.query":
-        const tabs = await chrome.tabs.query(params[0]);
+        const tabs = await browser.tabs.query(params[0]);
         sendResponse(tabs);
         break;
       case "tabs.get":
         if (params.length == 0) {
-          const currentTab = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
+          const currentTab = await browser.tabs.query({ active: true, lastFocusedWindow: true });
           if (currentTab.length === 0 || !currentTab[0].id) {
             sendError({ code: -32602, message: "No active tab found" });
             return;
           }
 
-          const tab = await chrome.tabs.get(currentTab[0].id);
+          const tab = await browser.tabs.get(currentTab[0].id);
           sendResponse(tab);
           break
         }
-        const tab = await chrome.tabs.get(params[0]);
+        const tab = await browser.tabs.get(params[0]);
         sendResponse(tab);
         break;
       case "tabs.create":
-        const newTab = await chrome.tabs.create(params[0]);
+        const newTab = await browser.tabs.create(params[0]);
         sendResponse(newTab);
         break;
       case "tabs.duplicate":
-        const duplicatedTab = await chrome.tabs.duplicate(params[0]);
+        const duplicatedTab = await browser.tabs.duplicate(params[0]);
         sendResponse(duplicatedTab);
         break;
       case "tabs.discard":
-        await chrome.tabs.discard(params[0]);
+        await browser.tabs.discard(params[0]);
         sendResponse(null);
         break;
       case "tabs.remove":
-        await chrome.tabs.remove(params[0]);
+        await browser.tabs.remove(params[0]);
         sendResponse(null);
         break;
       case "tabs.captureVisibleTab":
-        const capturedTab = await chrome.tabs.captureVisibleTab();
+        const capturedTab = await browser.tabs.captureVisibleTab();
         sendResponse(capturedTab);
         break;
       case "tabs.update":
-        const resp = await chrome.tabs.update(params[0], params[1]);
+        const resp = await browser.tabs.update(params[0], params[1]);
         sendResponse(resp);
         break;
       case "tabs.reload":
-        await chrome.tabs.reload(params[0], params[1]);
+        await browser.tabs.reload(params[0], params[1]);
         sendResponse(null);
         break;
       case "tabs.goForward":
-        await chrome.tabs.goForward(params[0]);
+        await browser.tabs.goForward(params[0]);
         sendResponse(null);
         break;
       case "tabs.goBack":
-        await chrome.tabs.goBack(params[0]);
+        await browser.tabs.goBack(params[0]);
         sendResponse(null);
         break;
       case "windows.getAll":
-        const windows = await chrome.windows.getAll();
+        const windows = await browser.windows.getAll();
         sendResponse(windows);
         break;
       case "windows.get":
-        const window = await chrome.windows.get(params[0]);
+        const window = await browser.windows.get(params[0]);
         sendResponse(window);
         break;
       case "windows.getCurrent":
-        const currentWindow = await chrome.windows.getCurrent();
+        const currentWindow = await browser.windows.getCurrent();
         sendResponse(currentWindow);
         break;
       case "windows.getLastFocused":
-        const lastFocusedWindow = await chrome.windows.getLastFocused();
+        const lastFocusedWindow = await browser.windows.getLastFocused();
         sendResponse(lastFocusedWindow);
         break;
       case "windows.create":
-        const newWindow = await chrome.windows.create(params[0]);
+        const newWindow = await browser.windows.create(params[0]);
         sendResponse(newWindow);
         break;
       case "windows.remove":
-        await chrome.windows.remove(params[0]);
+        await browser.windows.remove(params[0]);
         sendResponse(null);
         break;
       case "windows.update":
-        const updatedWindow = await chrome.windows.update(params[0], params[1]);
+        const updatedWindow = await browser.windows.update(params[0], params[1]);
         sendResponse(updatedWindow);
         break;
       case "history.search":
-        const historyItems = await chrome.history.search(params[0]);
+        const historyItems = await browser.history.search(params[0]);
         sendResponse(historyItems);
         break;
       case "bookmarks.getTree":
-        const bookmarksTree = await chrome.bookmarks.getTree();
+        const bookmarksTree = await browser.bookmarks.getTree();
         sendResponse(bookmarksTree);
         break;
       case "bookmarks.getRecent":
-        const recentBookmarks = await chrome.bookmarks.getRecent(params[0]);
+        const recentBookmarks = await browser.bookmarks.getRecent(params[0]);
         sendResponse(recentBookmarks);
         break;
       case "bookmarks.search":
-        const searchResults = await chrome.bookmarks.search(params[0]);
+        const searchResults = await browser.bookmarks.search(params[0]);
         sendResponse(searchResults);
         break;
       case "bookmarks.create":
-        const createdBookmark = await chrome.bookmarks.create(params[0]);
+        const createdBookmark = await browser.bookmarks.create(params[0]);
         sendResponse(createdBookmark);
         break;
       case "bookmarks.update":
-        const updatedBookmark = await chrome.bookmarks.update(params[0], params[1]);
+        const updatedBookmark = await browser.bookmarks.update(params[0], params[1]);
         sendResponse(updatedBookmark);
         break;
       case "bookmarks.remove":
-        await chrome.bookmarks.remove(params[0]);
+        await browser.bookmarks.remove(params[0]);
         sendResponse(null);
         break;
       case "notifications.create":
         if (params.length == 2) {
-          const res = await chrome.notifications.create(params[0], params[1]);
+          const res = await browser.notifications.create(params[0], params[1]);
           await sendResponse(res);
           break;
         }
 
         if (params.length == 1) {
-          const res = await chrome.notifications.create(params[0]);
+          const res = await browser.notifications.create(params[0]);
           await sendResponse(res);
           break;
         }
@@ -284,8 +294,9 @@ nativePort.onMessage.addListener(async (message) => {
   }
 });
 
-chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
-  if (sender.id !== chrome.runtime.id) {
+// @ts-ignore
+browser.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+  if (sender.id !== browser.runtime.id) {
     console.warn("Received message from unknown sender:", sender.id);
     return false; // Ignore messages from unknown senders
   }
