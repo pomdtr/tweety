@@ -48,6 +48,23 @@ chrome.runtime.onInstalled.addListener(() => {
   });
 });
 
+chrome.runtime.onStartup.addListener(async () => {
+  let { browserId } = await chrome.storage.local.get<{ browserId?: string; }>("browserId");
+  if (!browserId) {
+    browserId = generateSecureId(12);
+    await chrome.storage.local.set({ browserId });
+  }
+
+  nativePort.postMessage({
+    jsonrpc: "2.0",
+    method: "initialize",
+    params: {
+      browserId,
+      version: chrome.runtime.getManifest().version,
+    }
+  })
+})
+
 // Store and use the selected default behavior
 chrome.contextMenus.onClicked.addListener((info) => {
   if (typeof info.menuItemId !== 'string') {
@@ -100,22 +117,6 @@ chrome.commands.onCommand.addListener(async (command) => {
 });
 
 const nativePort = chrome.runtime.connectNative("com.github.pomdtr.tweety");
-
-chrome.storage.local.get<{ browserId?: string; }>("browserId", async ({ browserId }) => {
-  if (!browserId) {
-    browserId = generateSecureId(12);
-    await chrome.storage.local.set({ browserId });
-  }
-
-  nativePort.postMessage({
-    jsonrpc: "2.0",
-    method: "initialize",
-    params: {
-      browserId,
-      version: chrome.runtime.getManifest().version,
-    }
-  })
-})
 
 nativePort.onMessage.addListener(async (message) => {
   if (!isJsonRpcRequest(message)) {
