@@ -31,9 +31,10 @@ func NewCmdApps() *cobra.Command {
 
 func NewCmdAppsOpen() *cobra.Command {
 	return &cobra.Command{
-		Use:   "open <app>",
-		Short: "Open a Tweety app",
-		Args:  cobra.ExactArgs(1),
+		Use:               "open <app>",
+		Short:             "Open a Tweety app",
+		ValidArgsFunction: completeApp,
+		Args:              cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			appName := args[0]
 			_, err := jsonrpc.SendRequest(os.Getenv("TWEETY_SOCKET"), "tabs.create", []any{
@@ -71,4 +72,21 @@ func NewCmdAppsList() *cobra.Command {
 			return nil
 		},
 	}
+}
+
+func completeApp(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	entries, err := os.ReadDir(appDir)
+	if err != nil {
+		return nil, cobra.ShellCompDirectiveError
+	}
+
+	var completions []string
+	for _, entry := range entries {
+		if entry.IsDir() {
+			continue
+		}
+		completions = append(completions, entry.Name())
+	}
+
+	return completions, cobra.ShellCompDirectiveNoFileComp
 }
