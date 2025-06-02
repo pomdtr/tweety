@@ -52,7 +52,7 @@ tweety edit <file>
 tweety open <file-or-url>
 ```
 
-In addition to those commands
+Make sure to setup the completions using the `tweety completion` command.
 
 ### apps
 
@@ -60,23 +60,12 @@ You can create new apps by adding executables to the `~/.config/tweety/apps` dir
 
 Each app is accessible at `chrome-extensions://<extension-id>/term.html?mode=app&app=<app-name>`, where `<app-name>` is the name of the executable file.
 
-### `tw
+You can also use `tweety app open <app-name>` to open an app in a new terminal tab.
 
-Start by creating a new config file at `~/.config/tweety/config.json` with the following content:
-
-```json
-{
-    "command": "/bin/zsh"
-}
-```
-
-Click on the Tweety icon in your browser toolbar, and it will open a new tab with the terminal running in it.
-
-You can access the chrome extension api from the shell using the `tweety` command. For example, to list the opened tabs, you can run `tweety tabs query` (which maps to the `chrome.tabs.query` method).
-
-### Config Properties
+### Configuration
 
 ```jsonc
+// ~/.config/tweety/config.json
 {
     "command": "/opt/homebrew/bin/fish", // The command to run in the terminal
     "editor": "/opt/homebrew/bin/kak", // The editor to use for opening files
