@@ -20,7 +20,6 @@ import (
 	"time"
 
 	"github.com/creack/pty"
-	"github.com/google/shlex"
 	"github.com/gorilla/websocket"
 	jsonparser "github.com/knadh/koanf/parsers/json"
 	"github.com/knadh/koanf/providers/confmap"
@@ -53,7 +52,7 @@ func NewCmdRoot() *cobra.Command {
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 			confmapProvider := confmap.Provider(map[string]interface{}{
 				"command": getDefaultShell(),
-			})
+			}, ".")
 			if err := k.Load(confmapProvider, nil); err != nil {
 				return fmt.Errorf("failed to load default config: %w", err)
 			}
@@ -351,28 +350,11 @@ func NewHandler(handlerParams HandlerParams) http.Handler {
 	})
 
 	messagingHost.HandleRequest("tty.create", func(input []byte) (any, error) {
-		var params struct {
-			Args string `json:"args,omitempty"`
-		}
-
-		if len(input) > 0 {
-			if err := json.Unmarshal(input, &params); err != nil {
-				return nil, fmt.Errorf("failed to unmarshal tty.create params: %w", err)
-			}
-		}
-
-		args, err := shlex.Split(k.String("command"))
-		if err != nil {
-			return nil, fmt.Errorf("failed to split command args: %w", err)
-		}
-
-		if k.Bool("allowArgs") && params.Args != "" {
-			additionalArgs, err := shlex.Split(params.Args)
-			if err != nil {
-				return nil, fmt.Errorf("failed to split additional args: %w", err)
-			}
-
-			args = append(args, additionalArgs...)
+		var args []string
+		if command := k.String("command"); strings.Contains(command, " ") {
+			args = []string{"/bin/sh", "-c", command}
+		} else {
+			args = []string{command}
 		}
 
 		cmd := exec.Command(args[0], args[1:]...)

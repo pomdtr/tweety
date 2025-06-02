@@ -4,9 +4,17 @@ Minimize your context switching by interacting with your terminal directly from 
 
 ![tweety running from the browser](./static/tabs.png)
 
-## Features
-
 ## Installation
+
+### Chrome Extension
+
+Download the extension zip from the [releases](https://github.com/pomdtr/tweety/release).
+
+Unzip the file and open Chrome. Go to `chrome://extensions/`, enable "Developer mode" and click on "Load unpacked". Select the unzipped folder.
+
+You'll get an error the first time you load the extension, because the native host is not installed yet. You can ignore this error for now.
+
+### Golang Binary
 
 Tweety is available on macOS, Linux.
 
@@ -17,85 +25,41 @@ brew install pomdtr/tap/tweety
 
 or download a binary from [releases](https://github.com/pomdtr/tweety/releases).
 
-If you want to compile it yourself, you can use the following command:
+To allow the extension to communicate with the native host, you'll need to run the following command:
 
 ```sh
-git clone https://github.com/pomdtr/tweety
-cd tweety
-make install
+tweety install --extension-id <extension-id>
 ```
+
+You can find the extension ID in the Chrome extensions page (`chrome://extensions/`), it should look like `pofgojebniiboodkmmjfbapckcnbkhpi`.
 
 ## Usage
 
-```sh
-tweety <entrypoint>
-```
+Start by creating a new config file at `~/.config/tweety/config.json` with the following content:
 
-By default, tweety will start on port 9999, so you can access it at <http://localhost:9999>.
-
-You can use the `--host` and `--port` flags to change the host and port:
-
-```sh
-tweety --host 0.0.0.0 --port 8080 <script-path>
-```
-
-You can pass arguments to your entrypoint script using the `cmd` query parameter. The provided command will be splitted by the [shlex](https://pkg.go.dev/github.com/google/shlex) library, then passed as arguments to your entrypoint script.
-
-- `http://localhost:9999/?cmd=ssh+example.com` will run the command `<entrypoint> ssh example.com`
-- `http://localhost:9999/?cmd=nvim+/home/pomdtr/.zshrc` will run the command `<entrypoint> nvim /home/pomdtr/.zshrc`
-
-Make sure to properly parse and validate params in your entrypoint script.
-
-## Example entrypoint
-
-```ts
-#!/usr/bin/env -S deno run --allow-run
-
-import { program } from 'npm:@commander-js/extra-typings'
-import { existsSync } from "jsr:@std/fs"
-
-// little helper to run commands
-async function run(command: string, ...args: string[]) {
-    const cmd = new Deno.Command(command, { args });
-    const process = cmd.spawn();
-    await process.status;
+```json
+{
+    "command": "/bin/zsh"
 }
+```
 
-// handle http://localhost:9999/
-program.action(async () => {
-    await run("bash")
-})
+Click on the Tweety icon in your browser toolbar, and it will open a new tab with the terminal running in it.
 
-// handle http://localhost:9999?cmd=htop
-program.command("htop").action(async () => {
-    await run("htop");
-})
+You can access the chrome extension api from the shell using the `tweety` command. For example, to list the opened tabs, you can run `tweety tabs query` (which maps to the `chrome.tabs.query` method).
 
-// handle http://localhost:9999?cmd=ssh+<host>
-program.command("ssh").argument("<host>").action(async (host: string) => {
-    await run("ssh", host);
-})
+## Config Properties
 
-// handle http://localhost:9999?cmd=config
-program.command("config").action(async () => {
-    const scriptPath = new URL(import.meta.url).pathname;
-    await run("nvim", scriptPath)
-})
-
-// handle http://localhost:9999?cmd=nvim+<file>
-program.command("nvim").argument("<file>").action(async (file) => {
-    // protect use again `nvim 'term://<malicious-command>'`
-    if (file.startsWith("term://")) {
-        console.error("Invalid file path: cannot use 'term://' prefix");
-        Deno.exitCode = 1;
-        return;
+```jsonc
+{
+    "command": "/bin/zsh", // The command to run in the terminal
+    "env": {
+        // Environment variables to set in the terminal
+        "PATH": "/usr/local/bin:/usr/bin:/bin"
+    },
+    "xterm": {
+        // Xterm.js configuration (see https://xtermjs.org/docs/api/terminal/interfaces/iterminaloptions/)
+        "fontSize": 14,
+        "cursorBlink": false
     }
-
-    await run("nvim", file)
-})
-
-if (import.meta.main) {
-    // parse arguments and run the appropriate command
-    await program.parseAsync();
 }
 ```

@@ -13,14 +13,10 @@ async function main() {
     })
 
     const requestId = crypto.randomUUID();
-    const searchParams = new URLSearchParams(window.location.search);
     const resp = await chrome.runtime.sendMessage<RequestCreateTTY, ResponseCreateTTY>({
         jsonrpc: "2.0",
         id: requestId,
-        method: "tty.create",
-        params: {
-            args: searchParams.get("args") || undefined,
-        }
+        method: "tty.create"
     })
 
     const terminal = new Terminal(config);

@@ -16,9 +16,6 @@ export default {
                 mac: "Command+Shift+T",
             }
         },
-        openInSidePanel: {
-            description: "Open in side panel"
-        },
         openInNewWindow: {
             description: "Open in new window",
         },
