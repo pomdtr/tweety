@@ -87,4 +87,3 @@ You can access the chrome extension api from the shell using the `tweety` comman
     }
 }
 ```
-
