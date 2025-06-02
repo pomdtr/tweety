@@ -364,38 +364,3 @@ function generateSecureId(length = 12) {
   crypto.getRandomValues(array);
   return Array.from(array, (byte) => charset[byte % charset.length]).join('');
 }
-
-chrome.omnibox.onInputStarted.addListener(() => {
-  chrome.omnibox.setDefaultSuggestion({
-    description: "Run with args: %s"
-  });
-})
-
-chrome.omnibox.onInputEntered.addListener(async (text, disposition) => {
-  const url = chrome.runtime.getURL(`tty.html?args=${encodeURIComponent(text)}`)
-  if (disposition == "currentTab") {
-    const tabs = await chrome.tabs.query({ active: true, lastFocusedWindow: true })
-    if (tabs.length === 0 || !tabs[0].id) {
-      console.error("No active tab found");
-      return;
-    }
-
-    await chrome.tabs.create({
-      url,
-      index: tabs[0].index + 1,
-      active: true,
-    })
-    await chrome.tabs.remove(tabs[0].id);
-  } else if (disposition == "newForegroundTab") {
-    await chrome.tabs.create({
-      url,
-      active: true,
-    });
-  } else if (disposition == "newBackgroundTab") {
-    await chrome.tabs.create({
-      url,
-      active: false,
-    });
-  }
-
-})
