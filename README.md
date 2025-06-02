@@ -35,6 +35,33 @@ You can find the extension ID in the Chrome extensions page (`chrome://extension
 
 ## Usage
 
+Click on the extension icon in your browser toolbar to open a new terminal.
+
+### `tweety` command
+
+Use the `tweety` command to create new terminal tabs, or interact with the chrome extension API.
+
+Here are some example commands you can run:
+
+```sh
+ # Open a new terminal tab and connect to a remote host via SSH
+tweety ssh <host>
+# Open a new terminal tab with your configured editor
+tweety edit <file>
+# Open a new browser tab with the provided file or URL opened in it
+tweety open <file-or-url>
+```
+
+In addition to those commands
+
+### apps
+
+You can create new apps by adding executables to the `~/.config/tweety/apps` directory. Each app should be a single executable file.
+
+Each app is accessible at `chrome-extensions://<extension-id>/term.html?mode=app&app=<app-name>`, where `<app-name>` is the name of the executable file.
+
+### `tw
+
 Start by creating a new config file at `~/.config/tweety/config.json` with the following content:
 
 ```json
@@ -60,3 +87,4 @@ You can access the chrome extension api from the shell using the `tweety` comman
     }
 }
 ```
+
