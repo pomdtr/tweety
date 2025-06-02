@@ -5,6 +5,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/pomdtr/tweety/internal/jsonrpc"
 	"github.com/spf13/cobra"
@@ -68,8 +69,9 @@ func NewCmdAppsList() *cobra.Command {
 				if entry.IsDir() {
 					continue
 				}
-				// Print the app name (file name)
-				cmd.Println(entry.Name())
+				// Strip extension for display
+				name := strings.TrimSuffix(entry.Name(), filepath.Ext(entry.Name()))
+				cmd.Println(name)
 			}
 			return nil
 		},
@@ -82,8 +84,32 @@ func NewCmdAppsEdit() *cobra.Command {
 		Args:              cobra.ExactArgs(1),
 		ValidArgsFunction: completeApp,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			// First try to find the exact file name
 			entrypoint := filepath.Join(appDir, args[0])
-			if _, err := os.Stat(entrypoint); os.IsNotExist(err) {
+			_, err := os.Stat(entrypoint)
+
+			// If not found, try to find any file that starts with the app name
+			if os.IsNotExist(err) {
+				files, readErr := os.ReadDir(appDir)
+				if readErr == nil {
+					for _, file := range files {
+						if file.IsDir() {
+							continue
+						}
+
+						name := file.Name()
+						nameWithoutExt := strings.TrimSuffix(name, filepath.Ext(name))
+
+						if nameWithoutExt == args[0] {
+							entrypoint = filepath.Join(appDir, name)
+							_, err = os.Stat(entrypoint)
+							break
+						}
+					}
+				}
+			}
+
+			if err != nil {
 				return fmt.Errorf("app file %s does not exist", args[0])
 			}
 
@@ -91,7 +117,7 @@ func NewCmdAppsEdit() *cobra.Command {
 				"url": fmt.Sprintf("/term.html?mode=editor&file=%s", url.QueryEscape(entrypoint)),
 			}
 
-			_, err := jsonrpc.SendRequest(os.Getenv("TWEETY_SOCKET"), "tabs.create", []any{options})
+			_, err = jsonrpc.SendRequest(os.Getenv("TWEETY_SOCKET"), "tabs.create", []any{options})
 			if err != nil {
 				return fmt.Errorf("failed to create tab: %w", err)
 			}
@@ -113,7 +139,9 @@ func completeApp(cmd *cobra.Command, args []string, toComplete string) ([]string
 		if entry.IsDir() {
 			continue
 		}
-		completions = append(completions, entry.Name())
+		// Strip extension for completion
+		name := strings.TrimSuffix(entry.Name(), filepath.Ext(entry.Name()))
+		completions = append(completions, name)
 	}
 
 	return completions, cobra.ShellCompDirectiveNoFileComp

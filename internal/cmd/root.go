@@ -8,6 +8,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"time"
 
 	jsonparser "github.com/knadh/koanf/parsers/json"
@@ -87,8 +88,31 @@ func NewCmdRoot() *cobra.Command {
 				return cmd.Usage()
 			}
 
+			// First try to find the exact file name
 			entrypoint := filepath.Join(commandDir, args[0])
 			stat, err := os.Stat(entrypoint)
+
+			// If not found, try to find any file that starts with the command name
+			if os.IsNotExist(err) {
+				files, readErr := os.ReadDir(commandDir)
+				if readErr == nil {
+					for _, file := range files {
+						if file.IsDir() {
+							continue
+						}
+
+						name := file.Name()
+						nameWithoutExt := strings.TrimSuffix(name, filepath.Ext(name))
+
+						if nameWithoutExt == args[0] {
+							entrypoint = filepath.Join(commandDir, name)
+							stat, err = os.Stat(entrypoint)
+							break
+						}
+					}
+				}
+			}
+
 			if err != nil {
 				return fmt.Errorf("unknown command: %s", args[0])
 			}
@@ -104,7 +128,7 @@ func NewCmdRoot() *cobra.Command {
 				}
 			}
 
-			cmdExec := exec.Command(filepath.Join(commandDir, args[0]))
+			cmdExec := exec.Command(entrypoint, args[1:]...)
 
 			cmdExec.Stdin = os.Stdin
 			cmdExec.Stdout = os.Stdout
@@ -148,7 +172,10 @@ func completeCommand(cmd *cobra.Command, args []string, toComplete string) ([]st
 			continue
 		}
 
-		commands = append(commands, file.Name())
+		name := file.Name()
+		// Strip any extension for command completion
+		name = strings.TrimSuffix(name, filepath.Ext(name))
+		commands = append(commands, name)
 	}
 
 	return commands, cobra.ShellCompDirectiveNoFileComp

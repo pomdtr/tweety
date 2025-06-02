@@ -198,8 +198,31 @@ func NewHandler(p HandlerParams) http.Handler {
 
 			cmd = exec.Command("sh", "-c", fmt.Sprintf("%s %s", editor, createParams.File))
 		} else if createParams.Mode == "app" {
+			// First try to find the exact file name
 			entrypoint := filepath.Join(appDir, createParams.App)
 			stat, err := os.Stat(entrypoint)
+
+			// If not found, try to find any file that starts with the app name
+			if os.IsNotExist(err) {
+				files, readErr := os.ReadDir(appDir)
+				if readErr == nil {
+					for _, file := range files {
+						if file.IsDir() {
+							continue
+						}
+
+						name := file.Name()
+						nameWithoutExt := strings.TrimSuffix(name, filepath.Ext(name))
+
+						if nameWithoutExt == createParams.App {
+							entrypoint = filepath.Join(appDir, name)
+							stat, err = os.Stat(entrypoint)
+							break
+						}
+					}
+				}
+			}
+
 			if err != nil {
 				return nil, fmt.Errorf("failed to stat app entrypoint: %w", err)
 			}
