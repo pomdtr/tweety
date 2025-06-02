@@ -216,7 +216,7 @@ func NewCmdInstall() *cobra.Command {
 				return fmt.Errorf("failed to parse manifest template: %w", err)
 			}
 
-			dirs, err := getManifestDirs()
+			dirs, err := GetSupportDirs()
 			if err != nil {
 				return fmt.Errorf("failed to get manifest directories: %w", err)
 			}
@@ -226,7 +226,12 @@ func NewCmdInstall() *cobra.Command {
 					continue
 				}
 
-				f, err := os.Create(filepath.Join(dir, "com.github.pomdtr.tweety.json"))
+				manifestDir := filepath.Join(dir, "NativeMessagingHosts")
+				if err := os.MkdirAll(manifestDir, 0755); err != nil {
+					return fmt.Errorf("failed to create native messaging hosts directory: %w", err)
+				}
+
+				f, err := os.Create(filepath.Join(manifestDir, "com.github.pomdtr.tweety.json"))
 				if err != nil {
 					return fmt.Errorf("failed to get manifest file path: %w", err)
 				}
@@ -255,20 +260,9 @@ func NewCmdUninstall() *cobra.Command {
 		Use:   "uninstall",
 		Short: "Uninstall native messaging host",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			dirs, err := getManifestDirs()
+			dirs, err := GetSupportDirs()
 			if err != nil {
 				return fmt.Errorf("failed to get manifest directories: %w", err)
-			}
-
-			for _, dir := range dirs {
-				if _, err := os.Stat(dir); os.IsNotExist(err) {
-					continue
-				}
-
-				manifestPath := filepath.Join(dir, "com.github.pomdtr.tweety.json")
-				if err := os.Remove(manifestPath); err != nil {
-					return fmt.Errorf("failed to remove manifest file: %w", err)
-				}
 			}
 
 			hostPath := filepath.Join(dataDir, "native_messaging_host")
@@ -276,28 +270,39 @@ func NewCmdUninstall() *cobra.Command {
 				return fmt.Errorf("failed to remove native messaging host file: %w", err)
 			}
 
+			for _, dir := range dirs {
+				if _, err := os.Stat(dir); os.IsNotExist(err) {
+					continue
+				}
+
+				manifestPath := filepath.Join(dir, "NativeMessagingHosts", "com.github.pomdtr.tweety.json")
+				if err := os.Remove(manifestPath); err != nil && !os.IsNotExist(err) {
+					return fmt.Errorf("failed to remove manifest file: %w", err)
+				}
+			}
+
 			return nil
 		},
 	}
 }
 
-func getManifestDirs() ([]string, error) {
+func GetSupportDirs() ([]string, error) {
 	switch runtime.GOOS {
 	case "darwin":
 		supportDir := filepath.Join(os.Getenv("HOME"), "Library", "Application Support")
 		return []string{
-			filepath.Join(supportDir, "Google", "Chrome", "NativeMessagingHosts"),
-			filepath.Join(supportDir, "Chromium", "NativeMessagingHosts"),
-			filepath.Join(supportDir, "BraveSoftware", "Brave-Browser", "NativeMessagingHosts"),
-			filepath.Join(supportDir, "Vivaldi", "NativeMessagingHosts"),
-			filepath.Join(supportDir, "Microsoft", "Edge", "NativeMessagingHosts"),
+			filepath.Join(supportDir, "Google", "Chrome"),
+			filepath.Join(supportDir, "Chromium"),
+			filepath.Join(supportDir, "BraveSoftware", "Brave-Browser"),
+			filepath.Join(supportDir, "Vivaldi"),
+			filepath.Join(supportDir, "Microsoft", "Edge"),
 		}, nil
 	case "linux":
 		configDir := filepath.Join(os.Getenv("HOME"), ".config")
 		return []string{
-			filepath.Join(configDir, "google-chrome", "NativeMessagingHosts"),
-			filepath.Join(configDir, "chromium", "NativeMessagingHosts"),
-			filepath.Join(configDir, "microsoft-edge", "NativeMessagingHosts"),
+			filepath.Join(configDir, "google-chrome"),
+			filepath.Join(configDir, "chromium"),
+			filepath.Join(configDir, "microsoft-edge"),
 		}, nil
 	}
 
