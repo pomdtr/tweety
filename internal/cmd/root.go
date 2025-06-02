@@ -49,35 +49,7 @@ func NewCmdRoot() *cobra.Command {
 		SilenceUsage:      true,
 		Short:             "An integrated terminal for your web browser",
 		ValidArgsFunction: completeCommand,
-		Args:              cobra.ExactArgs(1),
-		RunE: func(cmd *cobra.Command, args []string) error {
-			entrypoint := filepath.Join(commandDir, args[0])
-			stat, err := os.Stat(entrypoint)
-			if err != nil {
-				return fmt.Errorf("failed to stat command entrypoint: %w", err)
-			}
-
-			if stat.IsDir() {
-				return fmt.Errorf("command entrypoint is a directory, expected a file: %s", entrypoint)
-			}
-
-			// check if the entrypoint is executable
-			if stat.Mode()&0111 == 0 {
-				if err := os.Chmod(entrypoint, 0755); err != nil {
-					return fmt.Errorf("failed to make command entrypoint executable: %w", err)
-				}
-			}
-
-			// execute the command
-			cmdExec := exec.Command(entrypoint)
-
-			cmdExec.Stdin = os.Stdin
-			cmdExec.Stdout = os.Stdout
-			cmdExec.Stderr = os.Stderr
-
-			cmd.SilenceErrors = true
-			return cmdExec.Run()
-		},
+		Args:              cobra.ArbitraryArgs,
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 			confmapProvider := confmap.Provider(map[string]interface{}{
 				"command": getDefaultShell(),
@@ -102,6 +74,37 @@ func NewCmdRoot() *cobra.Command {
 			})
 
 			return nil
+		},
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if len(args) == 0 {
+				return cmd.Usage()
+			}
+
+			entrypoint := filepath.Join(commandDir, args[0])
+			stat, err := os.Stat(entrypoint)
+			if err != nil {
+				return fmt.Errorf("unknown command: %s", args[0])
+			}
+
+			if stat.IsDir() {
+				return fmt.Errorf("command entrypoint is a directory, expected a file: %s", entrypoint)
+			}
+
+			// check if the entrypoint is executable
+			if stat.Mode()&0111 == 0 {
+				if err := os.Chmod(entrypoint, 0755); err != nil {
+					return fmt.Errorf("failed to make command entrypoint executable: %w", err)
+				}
+			}
+
+			cmdExec := exec.Command(filepath.Join(commandDir, args[0]))
+
+			cmdExec.Stdin = os.Stdin
+			cmdExec.Stdout = os.Stdout
+			cmdExec.Stderr = os.Stderr
+
+			cmd.SilenceErrors = true
+			return cmdExec.Run()
 		},
 	}
 
