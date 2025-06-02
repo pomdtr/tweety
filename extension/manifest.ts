@@ -1,7 +1,4 @@
 export default {
-    author: {
-        email: "contact@pomdtr.me",
-    },
     name: "Tweety",
     description: "An integrated terminal for your browser",
     version: "0.1.0",
