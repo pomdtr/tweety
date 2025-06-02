@@ -439,18 +439,3 @@ func getFreePort() (int, error) {
 	defer l.Close()
 	return l.Addr().(*net.TCPAddr).Port, nil
 }
-
-func getDefaultShell() string {
-	shell := os.Getenv("SHELL")
-	if shell == "" {
-		switch runtime.GOOS {
-		case "darwin":
-			return "/bin/zsh"
-		case "linux":
-			return "/bin/bash"
-		default:
-			return "/bin/sh"
-		}
-	}
-	return shell
-}

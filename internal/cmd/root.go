@@ -1,11 +1,13 @@
 package cmd
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"time"
 
 	jsonparser "github.com/knadh/koanf/parsers/json"
@@ -42,6 +44,25 @@ func NewCmdRoot() *cobra.Command {
 			}, ".")
 			if err := k.Load(confmapProvider, nil); err != nil {
 				return fmt.Errorf("failed to load default config: %w", err)
+			}
+
+			configPath := filepath.Join(configDir, "config.json")
+			if _, err := os.Stat(configPath); os.IsNotExist(err) {
+				if err := os.MkdirAll(configDir, 0755); err != nil {
+					return fmt.Errorf("failed to create config directory: %w", err)
+				}
+
+				configBytes, err := json.MarshalIndent(map[string]interface{}{
+					"command": getDefaultShell(),
+					"editor":  getDefaultEditor(),
+				}, "", "  ")
+				if err != nil {
+					return fmt.Errorf("failed to marshal default config: %w", err)
+				}
+
+				if err := os.WriteFile(configPath, configBytes, 0644); err != nil {
+					return fmt.Errorf("failed to write default config: %w", err)
+				}
 			}
 
 			f := file.Provider(filepath.Join(configDir, "config.json"))
@@ -131,4 +152,27 @@ func completeCommand(cmd *cobra.Command, args []string, toComplete string) ([]st
 	}
 
 	return commands, cobra.ShellCompDirectiveNoFileComp
+}
+
+func getDefaultShell() string {
+	shell := os.Getenv("SHELL")
+	if shell == "" {
+		switch runtime.GOOS {
+		case "darwin":
+			return "/bin/zsh"
+		case "linux":
+			return "/bin/bash"
+		default:
+			return "/bin/sh"
+		}
+	}
+	return shell
+}
+
+func getDefaultEditor() string {
+	if env := os.Getenv("EDITOR"); env != "" {
+		return env
+	}
+
+	return "vi"
 }
