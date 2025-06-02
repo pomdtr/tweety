@@ -9,6 +9,7 @@ export default {
     side_panel: {
         default_path: "term.html",
     },
+    devtools_page: "src/devtools.html",
     commands: {
         openInNewTab: {
             description: "Open in new tab",

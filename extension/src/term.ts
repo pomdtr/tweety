@@ -19,36 +19,36 @@ async function main() {
     })
 
     const requestId = crypto.randomUUID();
-    const urlParams = new URLSearchParams(window.location.search);
-    const mode = urlParams.get("mode")
+    const searchParams = new URLSearchParams(window.location.search);
+    const mode = searchParams.get("mode")
     let params: RequestCreateTTY["params"];
     if (mode == "editor") {
-        if (!urlParams.has("file")) {
+        if (!searchParams.has("file")) {
             console.error("File parameter is required for editor mode");
             return;
         }
 
         params = {
             mode: "editor",
-            file: urlParams.get("file")!
+            file: searchParams.get("file")!
         }
     } else if (mode == "ssh") {
-        if (!urlParams.has("host")) {
+        if (!searchParams.has("host")) {
             console.error("Host parameter is required for SSH mode");
             return;
         }
         params = {
             mode: "ssh",
-            host: urlParams.get("host")!
+            host: searchParams.get("host")!
         }
     } else if (mode == "app") {
-        if (!urlParams.has("app")) {
+        if (!searchParams.has("app")) {
             console.error("App parameter is required for app mode");
             return;
         }
         params = {
             mode: "app",
-            app: urlParams.get("app")!
+            app: searchParams.get("app")!
         }
 
 
@@ -97,6 +97,11 @@ async function main() {
     };
 
     ws.onclose = async () => {
+        if (searchParams.has("reload")) {
+            globalThis.location.reload();
+            return;
+        }
+
         globalThis.close();
     }
 
