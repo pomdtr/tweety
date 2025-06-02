@@ -47,15 +47,12 @@ Click on the Tweety icon in your browser toolbar, and it will open a new tab wit
 
 You can access the chrome extension api from the shell using the `tweety` command. For example, to list the opened tabs, you can run `tweety tabs query` (which maps to the `chrome.tabs.query` method).
 
-## Config Properties
+### Config Properties
 
 ```jsonc
 {
-    "command": "/bin/zsh", // The command to run in the terminal
-    "env": {
-        // Environment variables to set in the terminal
-        "PATH": "/usr/local/bin:/usr/bin:/bin"
-    },
+    "command": "/opt/homebrew/bin/fish", // The command to run in the terminal
+    "editor": "/opt/homebrew/bin/kak", // The editor to use for opening files
     "xterm": {
         // Xterm.js configuration (see https://xtermjs.org/docs/api/terminal/interfaces/iterminaloptions/)
         "fontSize": 14,
