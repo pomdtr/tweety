@@ -2,7 +2,25 @@
 
 Minimize your context switching by interacting with your terminal directly from your browser.
 
-![tweety running from the browser](./static/tabs.png)
+![tweety running from the browser](./media/terminal-tab.png)
+
+## Features
+
+### Terminal Tabs
+
+![tweety running from a browser tab](./media/terminal-tab.png)
+
+### Side Panel
+
+![tweety running from the side panel](./media/side-panel.png)
+
+### Devtools Integration
+
+![tweety running from the devtools](./media/devtools.png)
+
+### Scripting using the Chrome Extension API
+
+![tweety running from the scripting API](./media/scripting-api.png)
 
 ## Installation
 
@@ -79,6 +97,8 @@ printf "[%s](%s)" "$TITLE" "$URL" | pbcopy
 ```
 
 Then invoke it with `tweety copy-markdown-link` to copy the current tab's title and URL as a markdown link to your clipboard.
+
+![copy-markdown-link command in action](./media/copy-markdown-link.png)
 
 ### Configuration
 
