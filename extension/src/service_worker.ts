@@ -1,6 +1,23 @@
 import { JSONRPCRequest, JSONRPCResponse } from "./rpc";
 
-chrome.runtime.onInstalled.addListener(() => {
+async function initializeBrowser() {
+  let { browserId } = await chrome.storage.local.get<{ browserId?: string; }>("browserId");
+  if (!browserId) {
+    browserId = generateSecureId(12);
+    await chrome.storage.local.set({ browserId });
+  }
+
+  nativePort.postMessage({
+    jsonrpc: "2.0",
+    method: "initialize",
+    params: {
+      browserId,
+      version: chrome.runtime.getManifest().version,
+    }
+  })
+}
+
+chrome.runtime.onInstalled.addListener(async () => {
   chrome.sidePanel.setPanelBehavior({
     openPanelOnActionClick: false
   });
@@ -46,23 +63,12 @@ chrome.runtime.onInstalled.addListener(() => {
     contexts: ['action'],
     checked: false,
   });
+
+  await initializeBrowser();
 });
 
 chrome.runtime.onStartup.addListener(async () => {
-  let { browserId } = await chrome.storage.local.get<{ browserId?: string; }>("browserId");
-  if (!browserId) {
-    browserId = generateSecureId(12);
-    await chrome.storage.local.set({ browserId });
-  }
-
-  nativePort.postMessage({
-    jsonrpc: "2.0",
-    method: "initialize",
-    params: {
-      browserId,
-      version: chrome.runtime.getManifest().version,
-    }
-  })
+  await initializeBrowser();
 })
 
 // Store and use the selected default behavior
