@@ -1,4 +1,6 @@
 import { JSONRPCRequest, JSONRPCResponse } from "./rpc";
+import { Base64 } from 'js-base64';
+
 
 let _nativePort: chrome.runtime.Port | null = null;
 
@@ -174,6 +176,21 @@ function registerHandlers(nativePort: chrome.runtime.Port) {
     console.log("Received message:", message);
     try {
       switch (method) {
+        case "fetch": {
+          try {
+            const resp = await fetch(params[0], params[1])
+            sendResponse({
+              status: resp.status,
+              // @ts-ignore
+              headers: Object.fromEntries(resp.headers.entries()),
+              body: await Base64.fromUint8Array(new Uint8Array(await resp.arrayBuffer())),
+            })
+          } catch (error) {
+            console.error("Fetch error:", error);
+            sendError({ code: -32000, message: `Fetch failed: ${(error as Error).message}` });
+          }
+          break;
+        }
         // Tabs methods
         case "tabs.query":
           const tabs = await chrome.tabs.query(params[0]);

@@ -177,6 +177,7 @@ func NewCmdRoot() *cobra.Command {
 		NewCmdNotifications(),
 		NewCmdRun(),
 		NewCmdOpen(),
+		NewCmdFetch(),
 	)
 
 	return cmd

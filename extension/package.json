@@ -10,7 +10,7 @@
   "devDependencies": {
     "@samrum/vite-plugin-web-extension": "^5.1.1",
     "@types/chrome": "^0.0.326",
-    "typescript": "^5.2.2",
+    "typescript": "^5.8.3",
     "vite": "^5.0.0",
     "web-ext": "^7.8.0"
   },
@@ -20,6 +20,7 @@
     "@xterm/addon-web-links": "^0.11.0",
     "@xterm/addon-webgl": "^0.18.0",
     "@xterm/xterm": "^5.5.0",
+    "js-base64": "^3.7.7",
     "webextension-polyfill": "^0.10.0"
   }
 }
