@@ -40,51 +40,12 @@ chrome.runtime.onInstalled.addListener(async () => {
     contexts: ['action'],
   });
 
-  // Radio group for default action behavior
-  chrome.contextMenus.create({
-    id: 'defaultBehavior',
-    title: 'Action button behavior',
-    type: 'normal',
-    contexts: ['action'],
-  });
-  chrome.contextMenus.create({
-    id: 'defaultBehavior_newTab',
-    parentId: 'defaultBehavior',
-    title: 'Open in new tab',
-    type: 'radio',
-    contexts: ['action'],
-    checked: true,
-  });
-  chrome.contextMenus.create({
-    id: 'defaultBehavior_sidePanel',
-    parentId: 'defaultBehavior',
-    title: 'Open in side panel',
-    type: 'radio',
-    contexts: ['action'],
-    checked: false,
-  });
-
   await initializeBrowser();
 });
 
 chrome.runtime.onStartup.addListener(async () => {
   await initializeBrowser();
 })
-
-// Store and use the selected default behavior
-chrome.contextMenus.onClicked.addListener((info) => {
-  if (typeof info.menuItemId !== 'string') {
-    return
-  }
-
-  if (!info.menuItemId.startsWith('defaultBehavior_')) {
-    return; // Ignore clicks on other menu items
-  }
-
-  chrome.sidePanel.setPanelBehavior({
-    openPanelOnActionClick: info.menuItemId === 'defaultBehavior_sidePanel',
-  })
-});
 
 // Override the action button click to use the selected default behavior
 chrome.action.onClicked.addListener(() => {

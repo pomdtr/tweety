@@ -26,6 +26,7 @@ export default {
             48: "icons/icon48.png",
         },
         default_title: "Create Terminal",
+        default_popup: "src/popup.html",
     },
     background: {
         service_worker: "src/service_worker.ts",
