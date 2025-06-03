@@ -12,7 +12,7 @@ async function main() {
         return;
     }
 
-    const { result: config } = await chrome.runtime.sendMessage<RequestGetXtermConfig, ResponseGetXtermConfig>({
+    const xtermResp = await chrome.runtime.sendMessage<RequestGetXtermConfig, ResponseGetXtermConfig>({
         jsonrpc: "2.0",
         id: crypto.randomUUID(),
         method: "xterm.getConfig",
@@ -20,6 +20,22 @@ async function main() {
             variant: window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"
         }
     })
+
+    if ("error" in xtermResp) {
+        const terminal = new Terminal();
+        const fitAddon = new FitAddon();
+        terminal.loadAddon(fitAddon);
+        terminal.open(anchor);
+
+        fitAddon.fit();
+
+        terminal.writeln(`Tweety is not responding. Please run the following command to install the native messaging host:`)
+        terminal.writeln("")
+        terminal.writeln(`tweety install --extension-id ${chrome.runtime.id}`);
+        terminal.writeln("")
+        terminal.writeln(`Then, restart your browser and try again.`);
+        return;
+    }
 
     const requestId = crypto.randomUUID();
     const searchParams = new URLSearchParams(window.location.search);
@@ -38,7 +54,13 @@ async function main() {
         params
     })
 
-    const terminal = new Terminal(config);
+    if ("error" in resp) {
+        console.error("Error creating TTY:", resp.error);
+        globalThis.document.body.innerHTML = `<h1>Error: ${resp.error.message}</h1>`;
+        return;
+    }
+
+    const terminal = new Terminal(xtermResp.result);
     const fitAddon = new FitAddon();
 
     terminal.loadAddon(fitAddon);
@@ -92,14 +114,19 @@ async function main() {
 
     window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", async (event) => {
         const variant = event.matches ? "dark" : "light";
-        const { result } = await chrome.runtime.sendMessage<RequestGetXtermConfig, ResponseGetXtermConfig>({
+        const resp = await chrome.runtime.sendMessage<RequestGetXtermConfig, ResponseGetXtermConfig>({
             jsonrpc: "2.0",
             id: crypto.randomUUID(),
             method: "xterm.getConfig",
             params: { variant }
         });
+        if ("error" in resp) {
+            console.error("Error getting Xterm config:", resp.error);
+            return;
+        }
 
-        terminal.options.theme = result.theme
+
+        terminal.options.theme = resp.result.theme
     });
 
     terminal.focus();

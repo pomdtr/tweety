@@ -32,6 +32,14 @@ type JSONRPCResponseBase<T extends Record<string, any> = Record<string, any>> = 
     jsonrpc: "2.0";
     id: string;
     result: T;
+} | {
+    jsonrpc: "2.0";
+    id: string;
+    error: {
+        code: number;
+        message: string;
+        data?: Record<string, any>;
+    }
 }
 
 export type JSONRPCResponse = {

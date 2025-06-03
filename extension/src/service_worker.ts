@@ -1,10 +1,32 @@
 import { JSONRPCRequest, JSONRPCResponse } from "./rpc";
 
+let nativePort: chrome.runtime.Port | null = null;
+let nativeHostAvailable = true;
+
+try {
+  nativePort = chrome.runtime.connectNative("com.github.pomdtr.tweety");
+  nativePort.onDisconnect.addListener(() => {
+    nativeHostAvailable = false;
+    const lastError = chrome.runtime.lastError;
+    console.error("Native host disconnected.", lastError ? lastError.message : "");
+    // Optionally, notify the user here (e.g., via chrome.notifications)
+  });
+} catch (err) {
+  nativeHostAvailable = false;
+  console.error("Failed to connect to native host:", (err as Error).message);
+  // Optionally, notify the user here (e.g., via chrome.notifications)
+}
+
 async function initializeBrowser() {
   let { browserId } = await chrome.storage.local.get<{ browserId?: string; }>("browserId");
   if (!browserId) {
     browserId = generateSecureId(12);
     await chrome.storage.local.set({ browserId });
+  }
+
+  if (!nativeHostAvailable || !nativePort) {
+    console.error("Native host is not available. Skipping initialization.");
+    return;
   }
 
   nativePort.postMessage({
@@ -83,204 +105,215 @@ chrome.commands.onCommand.addListener(async (command) => {
   await handleCommand(command);
 });
 
-const nativePort = chrome.runtime.connectNative("com.github.pomdtr.tweety");
+if (nativePort && nativeHostAvailable) {
+  nativePort.onMessage.addListener(async (message) => {
+    if (!isJsonRpcRequest(message)) {
+      return;
+    }
 
-nativePort.onMessage.addListener(async (message) => {
-  if (!isJsonRpcRequest(message)) {
-    return;
-  }
+    const { id, method, params } = message;
 
-  const { id, method, params } = message;
+    // Helper to send JSON-RPC response
+    const sendResponse = (result: unknown) => nativePort.postMessage({
+      jsonrpc: "2.0",
+      id,
+      result
+    });
 
-  // Helper to send JSON-RPC response
-  const sendResponse = (result: unknown) => nativePort.postMessage({
-    jsonrpc: "2.0",
-    id,
-    result
-  });
+    // Helper to send JSON-RPC error
+    const sendError = (error: unknown) => nativePort.postMessage({
+      jsonrpc: "2.0",
+      id,
+      error
+    });
+    if (!Array.isArray(params)) {
+      console.error("Invalid params: expected an array", params);
+      sendError({ code: -32602, message: "Invalid params: expected an array" });
+      return
+    }
 
-  // Helper to send JSON-RPC error
-  const sendError = (error: unknown) => nativePort.postMessage({
-    jsonrpc: "2.0",
-    id,
-    error
-  });
-  if (!Array.isArray(params)) {
-    console.error("Invalid params: expected an array", params);
-    sendError({ code: -32602, message: "Invalid params: expected an array" });
-    return
-  }
-
-  console.log("Received message:", message);
-  try {
-    switch (method) {
-      // Tabs methods
-      case "tabs.query":
-        const tabs = await chrome.tabs.query(params[0]);
-        sendResponse(tabs);
-        break;
-      case "tabs.get":
-        if (params.length == 0) {
-          const currentTab = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
-          if (currentTab.length === 0 || !currentTab[0].id) {
-            sendError({ code: -32602, message: "No active tab found" });
-            return;
-          }
-
-          const tab = await chrome.tabs.get(currentTab[0].id);
-          sendResponse(tab);
-          break
-        }
-        const tab = await chrome.tabs.get(params[0]);
-        sendResponse(tab);
-        break;
-      case "tabs.create":
-        const newTab = await chrome.tabs.create(params[0]);
-        sendResponse(newTab);
-        break;
-      case "tabs.duplicate":
-        const duplicatedTab = await chrome.tabs.duplicate(params[0]);
-        sendResponse(duplicatedTab);
-        break;
-      case "tabs.discard":
-        await chrome.tabs.discard(params[0]);
-        sendResponse(null);
-        break;
-      case "tabs.remove":
-        await chrome.tabs.remove(params[0]);
-        sendResponse(null);
-        break;
-      case "tabs.captureVisibleTab":
-        const capturedTab = await chrome.tabs.captureVisibleTab();
-        sendResponse(capturedTab);
-        break;
-      case "tabs.update":
-        const resp = await chrome.tabs.update(params[0], params[1]);
-        sendResponse(resp);
-        break;
-      case "tabs.reload":
-        await chrome.tabs.reload(params[0], params[1]);
-        sendResponse(null);
-        break;
-      case "tabs.goForward":
-        await chrome.tabs.goForward(params[0]);
-        sendResponse(null);
-        break;
-      case "tabs.goBack":
-        await chrome.tabs.goBack(params[0]);
-        sendResponse(null);
-        break;
-      case "tabs.print":
-        try {
-          let targetTabId: number;
-
-          if (params.length === 0) {
+    console.log("Received message:", message);
+    try {
+      switch (method) {
+        // Tabs methods
+        case "tabs.query":
+          const tabs = await chrome.tabs.query(params[0]);
+          sendResponse(tabs);
+          break;
+        case "tabs.get":
+          if (params.length == 0) {
             const currentTab = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
             if (currentTab.length === 0 || !currentTab[0].id) {
               sendError({ code: -32602, message: "No active tab found" });
               return;
             }
-            targetTabId = currentTab[0].id;
-          } else {
-            targetTabId = params[0];
+
+            const tab = await chrome.tabs.get(currentTab[0].id);
+            sendResponse(tab);
+            break
+          }
+          const tab = await chrome.tabs.get(params[0]);
+          sendResponse(tab);
+          break;
+        case "tabs.create":
+          const newTab = await chrome.tabs.create(params[0]);
+          sendResponse(newTab);
+          break;
+        case "tabs.duplicate":
+          const duplicatedTab = await chrome.tabs.duplicate(params[0]);
+          sendResponse(duplicatedTab);
+          break;
+        case "tabs.discard":
+          await chrome.tabs.discard(params[0]);
+          sendResponse(null);
+          break;
+        case "tabs.remove":
+          await chrome.tabs.remove(params[0]);
+          sendResponse(null);
+          break;
+        case "tabs.captureVisibleTab":
+          const capturedTab = await chrome.tabs.captureVisibleTab();
+          sendResponse(capturedTab);
+          break;
+        case "tabs.update":
+          const resp = await chrome.tabs.update(params[0], params[1]);
+          sendResponse(resp);
+          break;
+        case "tabs.reload":
+          await chrome.tabs.reload(params[0], params[1]);
+          sendResponse(null);
+          break;
+        case "tabs.goForward":
+          await chrome.tabs.goForward(params[0]);
+          sendResponse(null);
+          break;
+        case "tabs.goBack":
+          await chrome.tabs.goBack(params[0]);
+          sendResponse(null);
+          break;
+        case "tabs.print":
+          try {
+            let targetTabId: number;
+
+            if (params.length === 0) {
+              const currentTab = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
+              if (currentTab.length === 0 || !currentTab[0].id) {
+                sendError({ code: -32602, message: "No active tab found" });
+                return;
+              }
+              targetTabId = currentTab[0].id;
+            } else {
+              targetTabId = params[0];
+            }
+
+            const results = await chrome.scripting.executeScript({
+              target: { tabId: targetTabId },
+              func: () => document.documentElement.outerHTML,
+            });
+            console.log("Tab content retrieved for printing:", results[0].result);
+            sendResponse(results[0].result);
+          } catch (error) {
+            sendError({ code: -32000, message: `Failed to get tab content: ${(error as Error).message}` });
+          }
+          break;
+        case "windows.getAll":
+          const windows = await chrome.windows.getAll();
+          sendResponse(windows);
+          break;
+        case "windows.get":
+          const window = await chrome.windows.get(params[0]);
+          sendResponse(window);
+          break;
+        case "windows.getCurrent":
+          const currentWindow = await chrome.windows.getCurrent();
+          sendResponse(currentWindow);
+          break;
+        case "windows.getLastFocused":
+          const lastFocusedWindow = await chrome.windows.getLastFocused();
+          sendResponse(lastFocusedWindow);
+          break;
+        case "windows.create":
+          const newWindow = await chrome.windows.create(params[0]);
+          sendResponse(newWindow);
+          break;
+        case "windows.remove":
+          await chrome.windows.remove(params[0]);
+          sendResponse(null);
+          break;
+        case "windows.update":
+          const updatedWindow = await chrome.windows.update(params[0], params[1]);
+          sendResponse(updatedWindow);
+          break;
+        case "history.search":
+          const historyItems = await chrome.history.search(params[0]);
+          sendResponse(historyItems);
+          break;
+        case "bookmarks.getTree":
+          const bookmarksTree = await chrome.bookmarks.getTree();
+          sendResponse(bookmarksTree);
+          break;
+        case "bookmarks.getRecent":
+          const recentBookmarks = await chrome.bookmarks.getRecent(params[0]);
+          sendResponse(recentBookmarks);
+          break;
+        case "bookmarks.search":
+          const searchResults = await chrome.bookmarks.search(params[0]);
+          sendResponse(searchResults);
+          break;
+        case "bookmarks.create":
+          const createdBookmark = await chrome.bookmarks.create(params[0]);
+          sendResponse(createdBookmark);
+          break;
+        case "bookmarks.update":
+          const updatedBookmark = await chrome.bookmarks.update(params[0], params[1]);
+          sendResponse(updatedBookmark);
+          break;
+        case "bookmarks.remove":
+          await chrome.bookmarks.remove(params[0]);
+          sendResponse(null);
+          break;
+        case "notifications.create":
+          if (params.length == 2) {
+            const res = await chrome.notifications.create(params[0], params[1]);
+            await sendResponse(res);
+            break;
           }
 
-          const results = await chrome.scripting.executeScript({
-            target: { tabId: targetTabId },
-            func: () => document.documentElement.outerHTML,
-          });
-          console.log("Tab content retrieved for printing:", results[0].result);
-          sendResponse(results[0].result);
-        } catch (error) {
-          sendError({ code: -32000, message: `Failed to get tab content: ${(error as Error).message}` });
-        }
-        break;
-      case "windows.getAll":
-        const windows = await chrome.windows.getAll();
-        sendResponse(windows);
-        break;
-      case "windows.get":
-        const window = await chrome.windows.get(params[0]);
-        sendResponse(window);
-        break;
-      case "windows.getCurrent":
-        const currentWindow = await chrome.windows.getCurrent();
-        sendResponse(currentWindow);
-        break;
-      case "windows.getLastFocused":
-        const lastFocusedWindow = await chrome.windows.getLastFocused();
-        sendResponse(lastFocusedWindow);
-        break;
-      case "windows.create":
-        const newWindow = await chrome.windows.create(params[0]);
-        sendResponse(newWindow);
-        break;
-      case "windows.remove":
-        await chrome.windows.remove(params[0]);
-        sendResponse(null);
-        break;
-      case "windows.update":
-        const updatedWindow = await chrome.windows.update(params[0], params[1]);
-        sendResponse(updatedWindow);
-        break;
-      case "history.search":
-        const historyItems = await chrome.history.search(params[0]);
-        sendResponse(historyItems);
-        break;
-      case "bookmarks.getTree":
-        const bookmarksTree = await chrome.bookmarks.getTree();
-        sendResponse(bookmarksTree);
-        break;
-      case "bookmarks.getRecent":
-        const recentBookmarks = await chrome.bookmarks.getRecent(params[0]);
-        sendResponse(recentBookmarks);
-        break;
-      case "bookmarks.search":
-        const searchResults = await chrome.bookmarks.search(params[0]);
-        sendResponse(searchResults);
-        break;
-      case "bookmarks.create":
-        const createdBookmark = await chrome.bookmarks.create(params[0]);
-        sendResponse(createdBookmark);
-        break;
-      case "bookmarks.update":
-        const updatedBookmark = await chrome.bookmarks.update(params[0], params[1]);
-        sendResponse(updatedBookmark);
-        break;
-      case "bookmarks.remove":
-        await chrome.bookmarks.remove(params[0]);
-        sendResponse(null);
-        break;
-      case "notifications.create":
-        if (params.length == 2) {
-          const res = await chrome.notifications.create(params[0], params[1]);
-          await sendResponse(res);
+          if (params.length == 1) {
+            const res = await chrome.notifications.create(params[0]);
+            await sendResponse(res);
+            break;
+          }
+          console.error("Invalid params for notifications.create:", params);
+          sendError({ code: -32602, message: "Invalid params for notifications.create" });
           break;
-        }
-
-        if (params.length == 1) {
-          const res = await chrome.notifications.create(params[0]);
-          await sendResponse(res);
+        default:
+          console.error("Method not found:", method);
+          sendError({ code: -32601, message: `Method not found: ${method}` });
           break;
-        }
-        console.error("Invalid params for notifications.create:", params);
-        sendError({ code: -32602, message: "Invalid params for notifications.create" });
-        break;
-      default:
-        console.error("Method not found:", method);
-        sendError({ code: -32601, message: `Method not found: ${method}` });
-        break;
+      }
+    } catch (err) {
+      console.error("Error handling message:", err);
+      sendError({ code: -32000, message: (err as Error).message });
     }
-  } catch (err) {
-    console.error("Error handling message:", err);
-    sendError({ code: -32000, message: (err as Error).message });
-  }
-});
+  });
+}
 
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (sender.id !== chrome.runtime.id) {
     console.warn("Received message from unknown sender:", sender.id);
     return false; // Ignore messages from unknown senders
+  }
+
+  if (!nativeHostAvailable || !nativePort) {
+    sendResponse({
+      jsonrpc: "2.0",
+      id: msg.id,
+      error: {
+        code: -32001, message: "Native host is not available."
+      }
+    });
+    return true;
   }
 
   console.log("Message received from content script or popup", msg);
