@@ -101,7 +101,9 @@ And access it at `chrome-extensions://pofgojebniiboodkmmjfbapckcnbkhpi/term.html
 // ~/.config/tweety/config.json
 {
     "command": "/opt/homebrew/bin/fish", // The command to run in the terminal
-    "editor": "/opt/homebrew/bin/kak", // The editor to use for opening files
+    "args": [
+        "--login" // Arguments to pass to the command
+    ],
     "env": {
         // Environment variables to set in the terminal
     },
