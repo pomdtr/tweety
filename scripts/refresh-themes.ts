@@ -40,7 +40,7 @@ const keyMapping = {
   "terminalCursor.foreground": "cursor",
 } as Record<string, string>;
 
-const themeDir = path.join(import.meta.dirname!, "..", "embed", "themes");
+const themeDir = path.join(import.meta.dirname!, "..", "internal", "cmd", "themes");
 if (existsSync(themeDir)) {
   Deno.removeSync(themeDir, { recursive: true });
 }

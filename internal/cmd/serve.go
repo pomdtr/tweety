@@ -3,6 +3,7 @@ package cmd
 import (
 	"bytes"
 	"crypto/rand"
+	"embed"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -22,6 +23,9 @@ import (
 	"github.com/pomdtr/tweety/internal/jsonrpc"
 	"github.com/spf13/cobra"
 )
+
+//go:embed all:themes
+var themeFs embed.FS
 
 func NewCmdServe() *cobra.Command {
 	cmd := &cobra.Command{
@@ -288,6 +292,12 @@ func NewHandler(p HandlerParams) http.Handler {
 	})
 
 	messagingHost.HandleRequest("xterm.getConfig", func(input []byte) (any, error) {
+		theme := k.String("theme")
+		themeBytes, err := themeFs.ReadFile(filepath.Join("themes", theme+".json"))
+		if err != nil {
+			return nil, fmt.Errorf("failed to read theme file: %w", err)
+		}
+
 		xtermConfig := map[string]interface{}{
 			"cursorBlink":                   true,
 			"allowProposedApi":              true,
@@ -295,28 +305,7 @@ func NewHandler(p HandlerParams) http.Handler {
 			"macOptionClickForcesSelection": true,
 			"fontSize":                      13,
 			"fontFamily":                    "Consolas,Liberation Mono,Menlo,Courier,monospace",
-			"theme": map[string]interface{}{
-				"foreground":          "#c5c8c6",
-				"background":          "#1d1f21",
-				"ansiBlack":           "#000000",
-				"ansiBlue":            "#81a2be",
-				"ansiCyan":            "#8abeb7",
-				"ansiGreen":           "#b5bd68",
-				"ansiMagenta":         "#b294bb",
-				"ansiRed":             "#cc6666",
-				"ansiWhite":           "#ffffff",
-				"ansiYellow":          "#f0c674",
-				"ansiBrightBlack":     "#000000",
-				"ansiBrightBlue":      "#81a2be",
-				"ansiBrightCyan":      "#8abeb7",
-				"ansiBrightGreen":     "#b5bd68",
-				"ansiBrightMagenta":   "#b294bb",
-				"ansiBrightRed":       "#cc6666",
-				"ansiBrightWhite":     "#ffffff",
-				"ansiBrightYellow":    "#f0c674",
-				"selectionBackground": "#373b41",
-				"cursor":              "#c5c8c6",
-			},
+			"theme":                         json.RawMessage(themeBytes),
 		}
 
 		if err := k.Unmarshal("xterm", &xtermConfig); err != nil {

@@ -42,6 +42,7 @@ func NewCmdRoot() *cobra.Command {
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 			confmapProvider := confmap.Provider(map[string]interface{}{
 				"command": getDefaultShell(),
+				"theme":   "Tomorrow Night",
 			}, ".")
 			if err := k.Load(confmapProvider, nil); err != nil {
 				return fmt.Errorf("failed to load default config: %w", err)

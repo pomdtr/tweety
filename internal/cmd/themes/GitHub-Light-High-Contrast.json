@@ -1,0 +1,23 @@
+{
+    "foreground": "#0e1116",
+    "background": "#ffffff",
+    "ansiBlack": "#0e1116",
+    "ansiBlue": "#0349b4",
+    "ansiCyan": "#1b7c83",
+    "ansiGreen": "#024c1a",
+    "ansiMagenta": "#622cbc",
+    "ansiRed": "#a0111f",
+    "ansiWhite": "#66707b",
+    "ansiYellow": "#3f2200",
+    "ansiBrightBlack": "#4b535d",
+    "ansiBrightBlue": "#1168e3",
+    "ansiBrightCyan": "#3192aa",
+    "ansiBrightGreen": "#055d20",
+    "ansiBrightMagenta": "#844ae7",
+    "ansiBrightRed": "#86061d",
+    "ansiBrightWhite": "#88929d",
+    "ansiBrightYellow": "#4e2c00",
+    "selectionBackground": "#0e1116",
+    "undefined": "#0349b4",
+    "cursor": "#0349b4"
+}
