@@ -57,17 +57,6 @@ Click on the extension icon in your browser toolbar to open a new terminal.
 
 Use the `tweety` command to create new terminal tabs, or interact with the chrome extension API.
 
-Here are some example commands you can run:
-
-```sh
- # Open a new terminal tab and connect to a remote host via SSH
-tweety ssh <host>
-# Open a new terminal tab with your configured editor
-tweety edit <file>
-# Open a new browser tab with the provided file or URL opened in it
-tweety open <file-or-url>
-```
-
 Make sure to setup the completions using the `tweety completion` command.
 
 ### Custom Commands
@@ -104,7 +93,7 @@ For example, I can create a file `~/.config/tweety/apps/htop.sh` with the follow
 exec /opt/homebrew/bin/htop
 ```
 
-And access it at `chrome-extensions://pofgojebniiboodkmmjfbapckcnbkhpi/term.html?mode=app&app=htop` or open it in a new tab using the `tweety app open htop` command.
+And access it at `chrome-extensions://pofgojebniiboodkmmjfbapckcnbkhpi/term.html?mode=app&app=htop` or open it in a new tab using the `tweety run htop` command.
 
 ### Configuration
 
@@ -113,6 +102,9 @@ And access it at `chrome-extensions://pofgojebniiboodkmmjfbapckcnbkhpi/term.html
 {
     "command": "/opt/homebrew/bin/fish", // The command to run in the terminal
     "editor": "/opt/homebrew/bin/kak", // The editor to use for opening files
+    "env": {
+        // Environment variables to set in the terminal
+    },
     "xterm": {
         // Xterm.js configuration (see https://xtermjs.org/docs/api/terminal/interfaces/iterminaloptions/)
         "fontSize": 14,

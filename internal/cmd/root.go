@@ -31,6 +31,7 @@ var configDir = filepath.Join(os.Getenv("HOME"), ".config", "tweety")
 var cacheDir = filepath.Join(os.Getenv("HOME"), ".cache", "tweety")
 var dataDir = filepath.Join(os.Getenv("HOME"), ".local", "share", "tweety")
 var commandDir = filepath.Join(configDir, "commands")
+var appDir = filepath.Join(configDir, "apps")
 
 func NewCmdRoot() *cobra.Command {
 	cmd := &cobra.Command{
@@ -151,11 +152,8 @@ func NewCmdRoot() *cobra.Command {
 		NewCmdHistory(),
 		NewCmdWindows(),
 		NewCmdNotifications(),
-		NewCmdEdit(),
-		NewCmdSSH(),
+		NewCmdRun(),
 		NewCmdOpen(),
-		NewCmdConfig(),
-		NewCmdApps(),
 	)
 
 	return cmd

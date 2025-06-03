@@ -55,15 +55,9 @@ func NewCmdServe() *cobra.Command {
 			}
 
 			ttyMap := make(map[string]*os.File)
-			messagingHost := NewMessagingHost(MessagingHostParams{
-				Logger: logger,
-				Port:   port,
-				TTYMap: ttyMap,
-			})
+			messagingHost := NewMessagingHost(logger, port, ttyMap)
 
-			handler := NewWebSocketHandler(WebSocketHandlerParams{
-				TTYMap: ttyMap,
-			})
+			handler := NewWebSocketHandler(ttyMap)
 
 			logger.Info("Listening", "port", port)
 
@@ -144,12 +138,8 @@ type MessagingHostParams struct {
 	TTYMap map[string]*os.File
 }
 
-type WebSocketHandlerParams struct {
-	TTYMap map[string]*os.File
-}
-
-func NewMessagingHost(p MessagingHostParams) *jsonrpc.Host {
-	messagingHost := jsonrpc.NewHost(p.Logger)
+func NewMessagingHost(logger *slog.Logger, port int, ttyMap map[string]*os.File) *jsonrpc.Host {
+	messagingHost := jsonrpc.NewHost(logger)
 
 	messagingHost.HandleNotification("initialize", func(input []byte) error {
 		var params struct {
@@ -161,7 +151,7 @@ func NewMessagingHost(p MessagingHostParams) *jsonrpc.Host {
 			return fmt.Errorf("failed to unmarshal initialize params: %w", err)
 		}
 
-		p.Logger.Info("Received initialize notification", "version", params.Version, "browserId", params.BrowserID)
+		logger.Info("Received initialize notification", "version", params.Version, "browserId", params.BrowserID)
 		socketPath := filepath.Join(cacheDir, "sockets", fmt.Sprintf("%s.sock", params.BrowserID))
 		if err := os.MkdirAll(filepath.Dir(socketPath), 0755); err != nil {
 			return fmt.Errorf("failed to create socket directory: %w", err)
@@ -178,7 +168,7 @@ func NewMessagingHost(p MessagingHostParams) *jsonrpc.Host {
 		// create a listener
 		listener, err := net.Listen("unix", socketPath)
 		if err != nil {
-			p.Logger.Error("Failed to create unix socket listener", "error", err)
+			logger.Error("Failed to create unix socket listener", "error", err)
 			return fmt.Errorf("failed to create unix socket listener: %w", err)
 		}
 
@@ -204,54 +194,22 @@ func NewMessagingHost(p MessagingHostParams) *jsonrpc.Host {
 	})
 
 	messagingHost.HandleRequest("tty.create", func(input []byte) (any, error) {
-		var createParams struct {
-			Mode string `json:"mode"`
-			File string `json:"file"`
-			Host string `json:"host"`
-			App  string `json:"app"`
+		var params struct {
+			App  string   `json:"app"`
+			Args []string `json:"args"`
 		}
 
-		if err := json.Unmarshal(input, &createParams); err != nil {
-			return nil, fmt.Errorf("failed to unmarshal create params: %w", err)
+		if len(input) > 0 {
+			if err := json.Unmarshal(input, &params); err != nil {
+				return nil, fmt.Errorf("failed to unmarshal create params: %w", err)
+			}
 		}
 
 		var cmd *exec.Cmd
-		if createParams.Mode == "terminal" {
-			var args []string
-			if command := k.String("command"); strings.Contains(command, " ") {
-				args = []string{"/bin/sh", "-c", command}
-			} else {
-				args = []string{command}
-			}
-			cmd = exec.Command(args[0], args[1:]...)
-		} else if createParams.Mode == "ssh" {
-			if createParams.Host == "" {
-				return nil, fmt.Errorf("host is required for ssh mode")
-			}
 
-			cmd = exec.Command("ssh", createParams.Host)
-		} else if createParams.Mode == "editor" {
-			if createParams.File == "" {
-				return nil, fmt.Errorf("file is required for editor mode")
-			}
-
-			if _, err := os.Stat(createParams.File); os.IsNotExist(err) {
-				return nil, fmt.Errorf("file does not exist: %s", createParams.File)
-			}
-
-			editor := k.String("editor")
-			if editor == "" {
-				if editorEnv := os.Getenv("EDITOR"); editorEnv != "" {
-					editor = editorEnv
-				} else {
-					editor = "vi" // default editor
-				}
-			}
-
-			cmd = exec.Command("sh", "-c", fmt.Sprintf("%s %s", editor, createParams.File))
-		} else if createParams.Mode == "app" {
+		if params.App != "" {
 			// First try to find the exact file name
-			entrypoint := filepath.Join(appDir, createParams.App)
+			entrypoint := filepath.Join(appDir, params.App)
 			stat, err := os.Stat(entrypoint)
 
 			// If not found, try to find any file that starts with the app name
@@ -266,7 +224,7 @@ func NewMessagingHost(p MessagingHostParams) *jsonrpc.Host {
 						name := file.Name()
 						nameWithoutExt := strings.TrimSuffix(name, filepath.Ext(name))
 
-						if nameWithoutExt == createParams.App {
+						if nameWithoutExt == params.App {
 							entrypoint = filepath.Join(appDir, name)
 							stat, err = os.Stat(entrypoint)
 							break
@@ -290,14 +248,17 @@ func NewMessagingHost(p MessagingHostParams) *jsonrpc.Host {
 				}
 			}
 
-			cmd = exec.Command(entrypoint)
+			cmd = exec.Command(entrypoint, params.Args...)
 		} else {
-			return nil, fmt.Errorf("invalid mode: %s", createParams.Mode)
+			cmd = exec.Command(k.String("command"), k.Strings("args")...)
 		}
 
 		cmd.Env = os.Environ()
 		cmd.Env = append(cmd.Env, "TERM=xterm-256color")
 		cmd.Env = append(cmd.Env, "TERM_PROGRAM=tweety")
+		for key, value := range k.StringMap("env") {
+			cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", key, value))
+		}
 
 		cmd.Dir = os.Getenv("HOME")
 		log.Println("executing command:", cmd.String())
@@ -308,10 +269,10 @@ func NewMessagingHost(p MessagingHostParams) *jsonrpc.Host {
 		}
 
 		ttyID := strings.ToLower(rand.Text())
-		p.TTYMap[ttyID] = tty
+		ttyMap[ttyID] = tty
 
 		return map[string]string{
-			"url": fmt.Sprintf("ws://127.0.0.1:%d/tty/%s", p.Port, ttyID),
+			"url": fmt.Sprintf("ws://127.0.0.1:%d/tty/%s", port, ttyID),
 			"id":  ttyID,
 		}, nil
 	})
@@ -326,7 +287,7 @@ func NewMessagingHost(p MessagingHostParams) *jsonrpc.Host {
 			return fmt.Errorf("failed to unmarshal resize params: %w", err)
 		}
 
-		tty, ok := p.TTYMap[requestParams.TTY]
+		tty, ok := ttyMap[requestParams.TTY]
 		if !ok {
 			return fmt.Errorf("invalid tty ID: %s", requestParams.TTY)
 		}
@@ -379,17 +340,17 @@ func NewMessagingHost(p MessagingHostParams) *jsonrpc.Host {
 	return messagingHost
 }
 
-func NewWebSocketHandler(p WebSocketHandlerParams) http.Handler {
+func NewWebSocketHandler(ttyMap map[string]*os.File) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ttyID := strings.TrimPrefix(r.URL.Path, "/tty/")
-		tty, ok := p.TTYMap[ttyID]
+		tty, ok := ttyMap[ttyID]
 		if !ok {
 			http.Error(w, fmt.Sprintf("invalid terminal ID: %s", ttyID), http.StatusBadRequest)
 			return
 		}
 
 		defer func() {
-			delete(p.TTYMap, ttyID)
+			delete(ttyMap, ttyID)
 			tty.Close()
 		}()
 

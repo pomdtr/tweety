@@ -19,16 +19,8 @@ export type RequestResizeTTY = JSONRPCRequestBase<"tty.resize", {
 }>
 
 export type RequestCreateTTY = JSONRPCRequestBase<"tty.create", ({
-    mode: "terminal"
-} | {
-    mode: "editor",
-    file: string;
-} | {
-    mode: "app",
     app: string;
-} | {
-    mode: "ssh",
-    host: string;
+    args: string[];
 })>
 
 export type RequestGetXtermConfig = JSONRPCRequestBase<"xterm.getConfig", {

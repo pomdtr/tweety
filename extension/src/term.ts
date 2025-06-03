@@ -23,41 +23,11 @@ async function main() {
 
     const requestId = crypto.randomUUID();
     const searchParams = new URLSearchParams(window.location.search);
-    const mode = searchParams.get("mode")
-    let params: RequestCreateTTY["params"];
-    if (mode == "editor") {
-        if (!searchParams.has("file")) {
-            console.error("File parameter is required for editor mode");
-            return;
-        }
-
+    let params: RequestCreateTTY["params"]
+    if (searchParams.has("app")) {
         params = {
-            mode: "editor",
-            file: searchParams.get("file")!
-        }
-    } else if (mode == "ssh") {
-        if (!searchParams.has("host")) {
-            console.error("Host parameter is required for SSH mode");
-            return;
-        }
-        params = {
-            mode: "ssh",
-            host: searchParams.get("host")!
-        }
-    } else if (mode == "app") {
-        if (!searchParams.has("app")) {
-            console.error("App parameter is required for app mode");
-            return;
-        }
-        params = {
-            mode: "app",
-            app: searchParams.get("app")!
-        }
-
-
-    } else {
-        params = {
-            mode: "terminal",
+            app: searchParams.get("app")!,
+            args: searchParams.getAll("arg"),
         }
     }
 
@@ -65,7 +35,7 @@ async function main() {
         jsonrpc: "2.0",
         id: requestId,
         method: "tty.create",
-        params: params
+        params
     })
 
     const terminal = new Terminal(config);
