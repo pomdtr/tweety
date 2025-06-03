@@ -1,10 +1,13 @@
 package cmd
 
 import (
+	"bytes"
 	"fmt"
 	"os"
 	"strconv"
 
+	"github.com/cli/cli/v2/pkg/jsoncolor"
+	"github.com/mattn/go-isatty"
 	"github.com/pomdtr/tweety/internal/jsonrpc"
 	"github.com/spf13/cobra"
 )
@@ -45,7 +48,13 @@ func NewCmdWindowsGetAll() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			os.Stdout.Write(resp.Result)
+
+			if !isatty.IsTerminal(os.Stdout.Fd()) {
+				os.Stdout.Write(resp.Result)
+				return nil
+			}
+
+			jsoncolor.Write(os.Stdout, bytes.NewReader(resp.Result), "  ")
 			return nil
 		},
 	}
@@ -66,7 +75,13 @@ func NewCmdWindowsGet() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			os.Stdout.Write(resp.Result)
+
+			if !isatty.IsTerminal(os.Stdout.Fd()) {
+				os.Stdout.Write(resp.Result)
+				return nil
+			}
+
+			jsoncolor.Write(os.Stdout, bytes.NewReader(resp.Result), "  ")
 			return nil
 		},
 	}
@@ -81,7 +96,13 @@ func NewCmdWindowsGetCurrent() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			os.Stdout.Write(resp.Result)
+
+			if !isatty.IsTerminal(os.Stdout.Fd()) {
+				os.Stdout.Write(resp.Result)
+				return nil
+			}
+
+			jsoncolor.Write(os.Stdout, bytes.NewReader(resp.Result), "  ")
 			return nil
 		},
 	}
@@ -96,7 +117,13 @@ func NewCmdWindowsGetLastFocused() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			os.Stdout.Write(resp.Result)
+
+			if !isatty.IsTerminal(os.Stdout.Fd()) {
+				os.Stdout.Write(resp.Result)
+				return nil
+			}
+
+			jsoncolor.Write(os.Stdout, bytes.NewReader(resp.Result), "  ")
 			return nil
 		},
 	}
@@ -146,7 +173,13 @@ func NewCmdWindowsCreate() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			os.Stdout.Write(resp.Result)
+
+			if !isatty.IsTerminal(os.Stdout.Fd()) {
+				os.Stdout.Write(resp.Result)
+				return nil
+			}
+
+			jsoncolor.Write(os.Stdout, bytes.NewReader(resp.Result), "  ")
 			return nil
 		},
 	}
@@ -216,7 +249,13 @@ func NewCmdWindowsUpdate() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			os.Stdout.Write(resp.Result)
+
+			if !isatty.IsTerminal(os.Stdout.Fd()) {
+				os.Stdout.Write(resp.Result)
+				return nil
+			}
+
+			jsoncolor.Write(os.Stdout, bytes.NewReader(resp.Result), "  ")
 			return nil
 		},
 	}

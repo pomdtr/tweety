@@ -1,9 +1,12 @@
 package cmd
 
 import (
+	"bytes"
 	"fmt"
 	"os"
 
+	"github.com/cli/cli/v2/pkg/jsoncolor"
+	"github.com/mattn/go-isatty"
 	"github.com/pomdtr/tweety/internal/jsonrpc"
 	"github.com/spf13/cobra"
 )
@@ -51,7 +54,12 @@ func NewCmdHistorySearch() *cobra.Command {
 				return fmt.Errorf("failed to search history: %w", err)
 			}
 
-			os.Stdout.Write(resp.Result)
+			if !isatty.IsTerminal(os.Stdout.Fd()) {
+				os.Stdout.Write(resp.Result)
+				return nil
+			}
+
+			jsoncolor.Write(os.Stdout, bytes.NewReader(resp.Result), "  ")
 			return nil
 		},
 	}
@@ -76,7 +84,12 @@ func NewCmdHistoryAdd() *cobra.Command {
 				return fmt.Errorf("failed to add history entry: %w", err)
 			}
 
-			os.Stdout.Write(resp.Result)
+			if !isatty.IsTerminal(os.Stdout.Fd()) {
+				os.Stdout.Write(resp.Result)
+				return nil
+			}
+
+			jsoncolor.Write(os.Stdout, bytes.NewReader(resp.Result), "  ")
 			return nil
 		},
 	}

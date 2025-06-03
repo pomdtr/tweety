@@ -1,11 +1,14 @@
 package cmd
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"os"
 	"strconv"
 
+	"github.com/cli/cli/v2/pkg/jsoncolor"
+	"github.com/mattn/go-isatty"
 	"github.com/pomdtr/tweety/internal/jsonrpc"
 	"github.com/spf13/cobra"
 )
@@ -78,7 +81,12 @@ func NewCmdTabQuery() *cobra.Command {
 				return fmt.Errorf("failed to list tabs: %w", err)
 			}
 
-			os.Stdout.Write(resp.Result)
+			if !isatty.IsTerminal(os.Stdout.Fd()) {
+				os.Stdout.Write(resp.Result)
+				return nil
+			}
+
+			jsoncolor.Write(os.Stdout, bytes.NewReader(resp.Result), "  ")
 			return nil
 		},
 	}
@@ -108,6 +116,8 @@ func NewCmdTabsCreate() *cobra.Command {
 
 			if cmd.Flags().Changed("url") {
 				options["url"] = flags.URL
+			} else {
+				options["url"] = "/term.html"
 			}
 
 			if cmd.Flags().Changed("pinned") {
@@ -123,7 +133,12 @@ func NewCmdTabsCreate() *cobra.Command {
 				return fmt.Errorf("failed to create tab: %w", err)
 			}
 
-			os.Stdout.Write(resp.Result)
+			if !isatty.IsTerminal(os.Stdout.Fd()) {
+				os.Stdout.Write(resp.Result)
+				return nil
+			}
+
+			jsoncolor.Write(os.Stdout, bytes.NewReader(resp.Result), "  ")
 			return nil
 		},
 	}
@@ -216,7 +231,12 @@ func NewCmdTabsUpdate() *cobra.Command {
 				return fmt.Errorf("failed to focus tab: %w", err)
 			}
 
-			os.Stdout.Write(resp.Result)
+			if !isatty.IsTerminal(os.Stdout.Fd()) {
+				os.Stdout.Write(resp.Result)
+				return nil
+			}
+
+			jsoncolor.Write(os.Stdout, bytes.NewReader(resp.Result), "  ")
 			return nil
 		},
 	}
@@ -250,7 +270,12 @@ func NewCmdTabsGet() *cobra.Command {
 				return fmt.Errorf("failed to get tab: %w", err)
 			}
 
-			os.Stdout.Write(resp.Result)
+			if !isatty.IsTerminal(os.Stdout.Fd()) {
+				os.Stdout.Write(resp.Result)
+				return nil
+			}
+
+			jsoncolor.Write(os.Stdout, bytes.NewReader(resp.Result), "  ")
 			return nil
 		},
 	}
@@ -274,7 +299,12 @@ func NewCmdTabsDuplicate() *cobra.Command {
 				return fmt.Errorf("failed to duplicate tab: %w", err)
 			}
 
-			os.Stdout.Write(resp.Result)
+			if !isatty.IsTerminal(os.Stdout.Fd()) {
+				os.Stdout.Write(resp.Result)
+				return nil
+			}
+
+			jsoncolor.Write(os.Stdout, bytes.NewReader(resp.Result), "  ")
 			return nil
 		},
 	}
@@ -320,7 +350,12 @@ func NewCmdTabsCaptureVisibleTab() *cobra.Command {
 				return fmt.Errorf("failed to capture visible tab: %w", err)
 			}
 
-			os.Stdout.Write(resp.Result)
+			if !isatty.IsTerminal(os.Stdout.Fd()) {
+				os.Stdout.Write(resp.Result)
+				return nil
+			}
+
+			jsoncolor.Write(os.Stdout, bytes.NewReader(resp.Result), "  ")
 			return nil
 		},
 	}
