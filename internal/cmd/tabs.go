@@ -152,9 +152,10 @@ func NewCmdTabsCreate() *cobra.Command {
 
 func NewCmdTabsRemove() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "remove <tabID> [<tabID>...]",
-		Short: "Close a tab",
-		Args:  cobra.MinimumNArgs(1),
+		Use:     "remove <tabID> [<tabID>...]",
+		Aliases: []string{"rm", "delete"},
+		Short:   "Close a tab",
+		Args:    cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var tabIds []int
 			for _, arg := range args {
