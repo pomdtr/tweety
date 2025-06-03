@@ -31,7 +31,9 @@ export type RequestCreateTTY = JSONRPCRequestBase<"tty.create", ({
     host: string;
 })>
 
-export type RequestGetXtermConfig = JSONRPCRequestBase<"xterm.getConfig">;
+export type RequestGetXtermConfig = JSONRPCRequestBase<"xterm.getConfig", {
+    variant?: "light" | "dark";
+}>;
 
 
 type JSONRPCResponseBase<T extends Record<string, any> = Record<string, any>> = {

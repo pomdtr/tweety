@@ -16,6 +16,9 @@ async function main() {
         jsonrpc: "2.0",
         id: crypto.randomUUID(),
         method: "xterm.getConfig",
+        params: {
+            variant: window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"
+        }
     })
 
     const requestId = crypto.randomUUID();
@@ -116,6 +119,18 @@ async function main() {
     globalThis.onfocus = () => {
         terminal.focus();
     };
+
+    window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", async (event) => {
+        const variant = event.matches ? "dark" : "light";
+        const { result } = await chrome.runtime.sendMessage<RequestGetXtermConfig, ResponseGetXtermConfig>({
+            jsonrpc: "2.0",
+            id: crypto.randomUUID(),
+            method: "xterm.getConfig",
+            params: { variant }
+        });
+
+        terminal.options.theme = result.theme
+    });
 
     terminal.focus();
 }

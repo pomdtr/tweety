@@ -292,7 +292,21 @@ func NewHandler(p HandlerParams) http.Handler {
 	})
 
 	messagingHost.HandleRequest("xterm.getConfig", func(input []byte) (any, error) {
-		theme := k.String("theme")
+		var params struct {
+			Variant string `json:"variant"`
+		}
+
+		if err := json.Unmarshal(input, &params); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal xterm config params: %w", err)
+		}
+
+		var theme string
+		if darkTheme := k.String("themeDark"); params.Variant == "dark" && darkTheme != "" {
+			theme = darkTheme
+		} else {
+			theme = k.String("theme")
+		}
+
 		themeBytes, err := themeFs.ReadFile(filepath.Join("themes", theme+".json"))
 		if err != nil {
 			return nil, fmt.Errorf("failed to read theme file: %w", err)
