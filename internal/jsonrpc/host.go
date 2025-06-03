@@ -39,11 +39,17 @@ func NewHost(logger *slog.Logger) *Host {
 	}
 }
 
-func (h *Host) Listen() {
+func (h *Host) Listen() error {
 	for {
 		lengthBytes := make([]byte, 4)
 		if _, err := io.ReadFull(os.Stdin, lengthBytes); err != nil {
-			continue
+			if err == io.EOF {
+				h.logger.Info("EOF reached, stopping listener")
+				return nil
+			}
+
+			h.logger.Error("failed to read message length", "error", err)
+			return err
 		}
 
 		length := binary.LittleEndian.Uint32(lengthBytes)
@@ -72,7 +78,7 @@ func (h *Host) Listen() {
 			var response JSONRPCResponse
 			if err := json.Unmarshal(msgBytes, &response); err != nil {
 				h.logger.Error("failed to unmarshal response", "error", err)
-				return
+				return err
 			}
 
 			h.mu.Lock()
@@ -92,7 +98,7 @@ func (h *Host) Listen() {
 		var request JSONRPCRequest
 		if err := json.Unmarshal(msgBytes, &request); err != nil {
 			h.logger.Error("failed to unmarshal request", "error", err)
-			return
+			return err
 		}
 
 		if request.ID == "" {

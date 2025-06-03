@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"bytes"
+	"context"
 	"crypto/rand"
 	"embed"
 	"encoding/json"
@@ -53,13 +54,51 @@ func NewCmdServe() *cobra.Command {
 				return fmt.Errorf("failed to get free port: %w", err)
 			}
 
-			handler := NewHandler(HandlerParams{
+			ttyMap := make(map[string]*os.File)
+			messagingHost := NewMessagingHost(MessagingHostParams{
 				Logger: logger,
 				Port:   port,
+				TTYMap: ttyMap,
+			})
+
+			handler := NewWebSocketHandler(WebSocketHandlerParams{
+				TTYMap: ttyMap,
 			})
 
 			logger.Info("Listening", "port", port)
-			return http.ListenAndServe(fmt.Sprintf(":%d", port), handler)
+
+			server := &http.Server{
+				Addr:    fmt.Sprintf(":%d", port),
+				Handler: handler,
+			}
+
+			// Channel to signal when messaging host stops
+			done := make(chan error, 1)
+
+			// Start messaging host
+			go func() {
+				if err := messagingHost.Listen(); err != nil {
+					logger.Error("Messaging host listen loop exited", "error", err)
+					done <- err
+				} else {
+					logger.Info("Messaging host stopped normally")
+					done <- nil
+				}
+			}()
+
+			// Start HTTP server
+			go func() {
+				if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+					logger.Error("HTTP server error", "error", err)
+					done <- err
+				}
+			}()
+
+			// Wait for either messaging host to stop or server error
+			err = <-done
+			logger.Info("Shutting down server")
+			server.Shutdown(context.Background())
+			return err
 		},
 	}
 
@@ -99,8 +138,17 @@ type ScriptCommand struct {
 	Title string `json:"title"`
 }
 
-func NewHandler(p HandlerParams) http.Handler {
-	var ttyMap = make(map[string]*os.File)
+type MessagingHostParams struct {
+	Logger *slog.Logger
+	Port   int
+	TTYMap map[string]*os.File
+}
+
+type WebSocketHandlerParams struct {
+	TTYMap map[string]*os.File
+}
+
+func NewMessagingHost(p MessagingHostParams) *jsonrpc.Host {
 	messagingHost := jsonrpc.NewHost(p.Logger)
 
 	messagingHost.HandleNotification("initialize", func(input []byte) error {
@@ -260,13 +308,12 @@ func NewHandler(p HandlerParams) http.Handler {
 		}
 
 		ttyID := strings.ToLower(rand.Text())
-		ttyMap[ttyID] = tty
+		p.TTYMap[ttyID] = tty
 
 		return map[string]string{
 			"url": fmt.Sprintf("ws://127.0.0.1:%d/tty/%s", p.Port, ttyID),
 			"id":  ttyID,
 		}, nil
-
 	})
 
 	messagingHost.HandleNotification("tty.resize", func(input []byte) error {
@@ -279,7 +326,7 @@ func NewHandler(p HandlerParams) http.Handler {
 			return fmt.Errorf("failed to unmarshal resize params: %w", err)
 		}
 
-		tty, ok := ttyMap[requestParams.TTY]
+		tty, ok := p.TTYMap[requestParams.TTY]
 		if !ok {
 			return fmt.Errorf("invalid tty ID: %s", requestParams.TTY)
 		}
@@ -329,18 +376,20 @@ func NewHandler(p HandlerParams) http.Handler {
 		return xtermConfig, nil
 	})
 
-	go messagingHost.Listen()
+	return messagingHost
+}
 
+func NewWebSocketHandler(p WebSocketHandlerParams) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ttyID := strings.TrimPrefix(r.URL.Path, "/tty/")
-		tty, ok := ttyMap[ttyID]
+		tty, ok := p.TTYMap[ttyID]
 		if !ok {
 			http.Error(w, fmt.Sprintf("invalid terminal ID: %s", ttyID), http.StatusBadRequest)
 			return
 		}
 
 		defer func() {
-			delete(ttyMap, ttyID)
+			delete(p.TTYMap, ttyID)
 			tty.Close()
 		}()
 
