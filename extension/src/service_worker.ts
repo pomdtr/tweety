@@ -1,41 +1,86 @@
 import { JSONRPCRequest, JSONRPCResponse } from "./rpc";
 
-let nativePort: chrome.runtime.Port | null = null;
+let _nativePort: chrome.runtime.Port | null = null;
 
 async function getNativePort(): Promise<chrome.runtime.Port | null> {
-  if (nativePort) {
-    return nativePort;
+  if (_nativePort) {
+    return _nativePort;
   }
 
-  try {
-    nativePort = chrome.runtime.connectNative("com.github.pomdtr.tweety");
-    registerHandlers(nativePort);
-    nativePort.onDisconnect.addListener(() => {
-      console.warn("Native host disconnected");
-      nativePort = null;
+  const port = chrome.runtime.connectNative("com.github.pomdtr.tweety");
+
+  const connected = await new Promise<boolean>((resolve) => {
+    const onDisconnect = () => {
+      port.onDisconnect.removeListener(onDisconnect);
+
+      if (chrome.runtime.lastError) {
+        console.warn("Failed to connect:", chrome.runtime.lastError.message);
+        resolve(false);
+      } else {
+        console.warn("Disconnected from native messaging host");
+        resolve(false);
+      }
+    };
+
+    port.onDisconnect.addListener(onDisconnect);
+
+    // Give the port a small window to disconnect if the host doesn't exist.
+    setTimeout(() => {
+      // Still connected after timeout — assume success
+      resolve(true);
+    }, 100); // 100ms is enough — disconnect happens almost instantly on failure
+  });
+
+  if (!connected) {
+    return null;
+  }
+
+  _nativePort = port;
+
+  _nativePort.onDisconnect.addListener(() => {
+    _nativePort = null;
+    if (chrome.runtime.lastError) {
+      console.warn("Port disconnected:", chrome.runtime.lastError.message);
+    } else {
+      console.warn("Native messaging host disconnected");
+    }
+  });
+
+  registerHandlers(_nativePort);
+
+  let { browserId } = await chrome.storage.local.get<{ browserId?: string }>("browserId");
+  if (!browserId) {
+    browserId = generateSecureId(12);
+    await chrome.storage.local.set({ browserId });
+  }
+
+  await initialize(_nativePort, browserId);
+
+  return _nativePort;
+}
+
+function initialize(port: chrome.runtime.Port, browserId: string) {
+  return new Promise((resolve) => {
+    const requestId = crypto.randomUUID();
+
+    port.onMessage.addListener((message) => {
+      if (!isJsonRpcResponse(message) || message.id !== requestId) {
+        return;
+      }
+
+      return resolve(message);
     });
 
-    let { browserId } = await chrome.storage.local.get<{ browserId?: string; }>("browserId");
-    if (!browserId) {
-      browserId = generateSecureId(12);
-      await chrome.storage.local.set({ browserId });
-    }
-
-    nativePort.postMessage({
+    port.postMessage({
       jsonrpc: "2.0",
       method: "initialize",
-      id: crypto.randomUUID(),
+      id: requestId,
       params: {
         browserId,
         version: chrome.runtime.getManifest().version,
       }
     })
-
-    return nativePort;
-  } catch (err) {
-    console.error("Failed to connect to native host:", (err as Error).message);
-    return null;
-  }
+  })
 }
 
 chrome.runtime.onInstalled.addListener(async () => {

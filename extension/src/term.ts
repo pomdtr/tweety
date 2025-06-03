@@ -33,7 +33,14 @@ async function main() {
         terminal.writeln("")
         terminal.writeln(`tweety install --extension-id ${chrome.runtime.id}`);
         terminal.writeln("")
-        terminal.writeln(`Then, restart your browser and try again.`);
+        terminal.writeln(`Then, hit enter to reload the page.`);
+
+        terminal.onKey((event) => {
+            if (event.key === "\r" || event.key === "\n") {
+                globalThis.location.reload();
+            }
+        });
+
         return;
     }
 

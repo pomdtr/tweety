@@ -141,27 +141,27 @@ type MessagingHostParams struct {
 func NewMessagingHost(logger *slog.Logger, port int, ttyMap map[string]*os.File) *jsonrpc.Host {
 	messagingHost := jsonrpc.NewHost(logger)
 
-	messagingHost.HandleNotification("initialize", func(input []byte) error {
+	messagingHost.HandleRequest("initialize", func(input []byte) (any, error) {
 		var params struct {
 			Version   string `json:"version"`
 			BrowserID string `json:"browserId"`
 		}
 
 		if err := json.Unmarshal(input, &params); err != nil {
-			return fmt.Errorf("failed to unmarshal initialize params: %w", err)
+			return nil, fmt.Errorf("failed to unmarshal initialize params: %w", err)
 		}
 
 		logger.Info("Received initialize notification", "version", params.Version, "browserId", params.BrowserID)
 		socketPath := filepath.Join(cacheDir, "sockets", fmt.Sprintf("%s.sock", params.BrowserID))
 		if err := os.MkdirAll(filepath.Dir(socketPath), 0755); err != nil {
-			return fmt.Errorf("failed to create socket directory: %w", err)
+			return nil, fmt.Errorf("failed to create socket directory: %w", err)
 		}
 
 		os.Setenv("TWEETY_SOCKET", socketPath)
 		if _, err := os.Stat(socketPath); err == nil {
 			if err := os.Remove(socketPath); err != nil {
 				log.Printf("Failed to remove existing socket file: %s", err)
-				return fmt.Errorf("failed to remove existing socket file: %w", err)
+				return nil, fmt.Errorf("failed to remove existing socket file: %w", err)
 			}
 		}
 
@@ -169,10 +169,10 @@ func NewMessagingHost(logger *slog.Logger, port int, ttyMap map[string]*os.File)
 		listener, err := net.Listen("unix", socketPath)
 		if err != nil {
 			logger.Error("Failed to create unix socket listener", "error", err)
-			return fmt.Errorf("failed to create unix socket listener: %w", err)
+			return nil, fmt.Errorf("failed to create unix socket listener: %w", err)
 		}
 
-		return http.Serve(listener, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		go http.Serve(listener, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			var request jsonrpc.JSONRPCRequest
 			if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
 				http.Error(w, fmt.Sprintf("failed to decode request: %s", err), http.StatusBadRequest)
@@ -191,6 +191,8 @@ func NewMessagingHost(logger *slog.Logger, port int, ttyMap map[string]*os.File)
 				return
 			}
 		}))
+
+		return map[string]any{}, nil
 	})
 
 	messagingHost.HandleRequest("tty.create", func(input []byte) (any, error) {
