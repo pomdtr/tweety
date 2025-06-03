@@ -109,6 +109,10 @@ Then invoke it with `tweety copy-markdown-link` to copy the current tab's title 
         // Xterm.js configuration (see https://xtermjs.org/docs/api/terminal/interfaces/iterminaloptions/)
         "fontSize": 14,
         "cursorBlink": false
-    }
+    },
+    "theme": "Tomorrow", // The theme to use for the terminal
+    "themeDark": "Tomorrow Night" // The theme to use for the terminal in dark mode
 }
 ```
+
+You can find out the available themes by checking the `internal/cmd/themes` folder. The theme name corresponds to the name of the file without the `.json` extension.
