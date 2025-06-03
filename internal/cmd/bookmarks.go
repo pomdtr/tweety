@@ -176,11 +176,11 @@ func NewCmdBookmarksRemove() *cobra.Command {
 		Short: "Remove a bookmark",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			resp, err := jsonrpc.SendRequest(os.Getenv("TWEETY_SOCKET"), "bookmarks.remove", []any{args[0]})
+			_, err := jsonrpc.SendRequest(os.Getenv("TWEETY_SOCKET"), "bookmarks.remove", []any{args[0]})
 			if err != nil {
 				return err
 			}
-			os.Stdout.Write(resp.Result)
+
 			return nil
 		},
 	}

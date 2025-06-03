@@ -96,12 +96,11 @@ func NewCmdHistoryRemove() *cobra.Command {
 			url, _ := cmd.Flags().GetString("url")
 
 			params := map[string]interface{}{"url": url}
-			resp, err := jsonrpc.SendRequest(os.Getenv("TWEETY_SOCKET"), "history.remove", params)
+			_, err := jsonrpc.SendRequest(os.Getenv("TWEETY_SOCKET"), "history.remove", params)
 			if err != nil {
 				return fmt.Errorf("failed to remove history entry: %w", err)
 			}
 
-			os.Stdout.Write(resp.Result)
 			return nil
 		},
 	}
