@@ -1,42 +1,41 @@
 import { JSONRPCRequest, JSONRPCResponse } from "./rpc";
 
 let nativePort: chrome.runtime.Port | null = null;
-let nativeHostAvailable = true;
 
-try {
-  nativePort = chrome.runtime.connectNative("com.github.pomdtr.tweety");
-  nativePort.onDisconnect.addListener(() => {
-    nativeHostAvailable = false;
-    const lastError = chrome.runtime.lastError;
-    console.error("Native host disconnected.", lastError ? lastError.message : "");
-    // Optionally, notify the user here (e.g., via chrome.notifications)
-  });
-} catch (err) {
-  nativeHostAvailable = false;
-  console.error("Failed to connect to native host:", (err as Error).message);
-  // Optionally, notify the user here (e.g., via chrome.notifications)
-}
-
-async function initializeBrowser() {
-  let { browserId } = await chrome.storage.local.get<{ browserId?: string; }>("browserId");
-  if (!browserId) {
-    browserId = generateSecureId(12);
-    await chrome.storage.local.set({ browserId });
+async function getNativePort(): Promise<chrome.runtime.Port | null> {
+  if (nativePort) {
+    return nativePort;
   }
 
-  if (!nativeHostAvailable || !nativePort) {
-    console.error("Native host is not available. Skipping initialization.");
-    return;
-  }
+  try {
+    nativePort = chrome.runtime.connectNative("com.github.pomdtr.tweety");
+    registerHandlers(nativePort);
+    nativePort.onDisconnect.addListener(() => {
+      console.warn("Native host disconnected");
+      nativePort = null;
+    });
 
-  nativePort.postMessage({
-    jsonrpc: "2.0",
-    method: "initialize",
-    params: {
-      browserId,
-      version: chrome.runtime.getManifest().version,
+    let { browserId } = await chrome.storage.local.get<{ browserId?: string; }>("browserId");
+    if (!browserId) {
+      browserId = generateSecureId(12);
+      await chrome.storage.local.set({ browserId });
     }
-  })
+
+    nativePort.postMessage({
+      jsonrpc: "2.0",
+      method: "initialize",
+      id: crypto.randomUUID(),
+      params: {
+        browserId,
+        version: chrome.runtime.getManifest().version,
+      }
+    })
+
+    return nativePort;
+  } catch (err) {
+    console.error("Failed to connect to native host:", (err as Error).message);
+    return null;
+  }
 }
 
 chrome.runtime.onInstalled.addListener(async () => {
@@ -62,12 +61,7 @@ chrome.runtime.onInstalled.addListener(async () => {
     contexts: ['action'],
   });
 
-  await initializeBrowser();
 });
-
-chrome.runtime.onStartup.addListener(async () => {
-  await initializeBrowser();
-})
 
 // Override the action button click to use the selected default behavior
 chrome.action.onClicked.addListener(() => {
@@ -105,7 +99,7 @@ chrome.commands.onCommand.addListener(async (command) => {
   await handleCommand(command);
 });
 
-if (nativePort && nativeHostAvailable) {
+function registerHandlers(nativePort: chrome.runtime.Port) {
   nativePort.onMessage.addListener(async (message) => {
     if (!isJsonRpcRequest(message)) {
       return;
@@ -297,6 +291,7 @@ if (nativePort && nativeHostAvailable) {
       sendError({ code: -32000, message: (err as Error).message });
     }
   });
+
 }
 
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
@@ -305,38 +300,37 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     return false; // Ignore messages from unknown senders
   }
 
-  if (!nativeHostAvailable || !nativePort) {
-    sendResponse({
-      jsonrpc: "2.0",
-      id: msg.id,
-      error: {
-        code: -32001, message: "Native host is not available."
+  getNativePort().then((nativePort) => {
+    if (!nativePort) {
+      return sendResponse({
+        jsonrpc: "2.0",
+        id: msg.id || generateSecureId(12),
+        error: {
+          code: -32001,
+          message: "Native host is not connected",
+        }
+      });
+    }
+
+    const listener = (res: unknown) => {
+      if (typeof res !== "object" || res === null) {
+        return;
       }
-    });
-    return true;
-  }
 
-  console.log("Message received from content script or popup", msg);
-  if (!isJsonRpcRequest(msg)) {
-    return false; // Ignore invalid messages
-  }
+      if (!isJsonRpcResponse(res)) {
+        console.error("Received invalid JSON-RPC response:", res);
+        return;
+      }
 
-  const listener = (res: unknown) => {
-    if (typeof res !== "object" || res === null) {
-      return;
+      nativePort.onMessage.removeListener(listener);
+      sendResponse(res);
     }
 
-    if (!isJsonRpcResponse(res)) {
-      console.error("Received invalid JSON-RPC response:", res);
-      return;
-    }
+    nativePort.onMessage.addListener(listener)
+    nativePort.postMessage(msg);
+  })
 
-    nativePort.onMessage.removeListener(listener);
-    sendResponse(res);
-  }
 
-  nativePort.onMessage.addListener(listener)
-  nativePort.postMessage(msg);
   return true
 })
 
