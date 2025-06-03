@@ -341,21 +341,42 @@ func NewCmdTabsDiscard() *cobra.Command {
 }
 
 func NewCmdTabsCaptureVisibleTab() *cobra.Command {
+	var options struct {
+		Format string `json:"format"`
+	}
+
 	cmd := &cobra.Command{
-		Use:   "capture-visible-tab",
+		Use:   "capture-visible-tab [window-id]",
 		Short: "Capture the visible area of a tab",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			resp, err := jsonrpc.SendRequest(os.Getenv("TWEETY_SOCKET"), "tabs.captureVisibleTab", []any{})
+			var params []any
+			if len(args) > 0 {
+				var err error
+				windowId, err := strconv.Atoi(args[0])
+				if err != nil {
+					return fmt.Errorf("invalid window ID: %w", err)
+				}
+				params = append(params, windowId, options)
+			} else {
+				params = append(params, nil, options)
+			}
+
+			resp, err := jsonrpc.SendRequest(os.Getenv("TWEETY_SOCKET"), "tabs.captureVisibleTab", params)
 			if err != nil {
 				return fmt.Errorf("failed to capture visible tab: %w", err)
 			}
 
-			if !isatty.IsTerminal(os.Stdout.Fd()) {
-				os.Stdout.Write(resp.Result)
-				return nil
+			if resp.Error != nil {
+				os.Stderr.Write(resp.Error)
+				os.Exit(1)
 			}
 
-			jsoncolor.Write(os.Stdout, bytes.NewReader(resp.Result), "  ")
+			var res string
+			if err := json.Unmarshal(resp.Result, &res); err != nil {
+				return fmt.Errorf("failed to parse capture result: %w", err)
+			}
+
+			os.Stdout.WriteString(res)
 			return nil
 		},
 	}
