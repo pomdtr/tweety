@@ -8,6 +8,12 @@ export default {
     },
     devtools_page: "src/devtools.html",
     commands: {
+        _execute_action: {
+            suggested_key: {
+                default: "Ctrl+J",
+                mac: "Command+J",
+            }
+        },
         openInNewTab: {
             description: "Open in new tab",
             suggested_key: {
