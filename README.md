@@ -70,19 +70,11 @@ tweety open <file-or-url>
 
 Make sure to setup the completions using the `tweety completion` command.
 
-### Apps
-
-You can create new apps by adding executables to the `~/.config/tweety/apps` directory. Each app should be a single executable file.
-
-Each app is accessible at `chrome-extensions://<extension-id>/term.html?mode=app&app=<app-name>`, where `<app-name>` is the name of the executable file.
-
-You can also use `tweety app open <app-name>` to open an app in a new terminal tab.
-
 ### Custom Commands
 
 You can register custom subcommands for the `tweety` cli by creating executables in the `~/.config/tweety/commands` directory. Each executable should be a single file and will be available as `tweety <command-name>`.
 
-For example, you can create `~/.config/tweety/commands/copy-markdown-link` with the following content:
+For example, you can create `~/.config/tweety/commands/copy-markdown-link.sh` with the following content:
 
 ```sh
 #!/bin/sh
@@ -97,6 +89,22 @@ printf "[%s](%s)" "$TITLE" "$URL" | pbcopy
 Then invoke it with `tweety copy-markdown-link` to copy the current tab's title and URL as a markdown link to your clipboard.
 
 ![copy-markdown-link command in action](./media/copy-markdown-link.png)
+
+### Apps
+
+You can create new apps by adding executables to the `~/.config/tweety/apps` directory. Each app should be a single executable file.
+
+Each app is accessible at `chrome-extensions://<extension-id>/term.html?mode=app&app=<app-name>`, where `<app-name>` is the name of the executable file.
+
+For example, I can create a file `~/.config/tweety/apps/htop.sh` with the following content:
+
+```sh
+#!/bin/sh
+
+exec /opt/homebrew/bin/htop
+```
+
+And access it at `chrome-extensions://pofgojebniiboodkmmjfbapckcnbkhpi/term.html?mode=app&app=htop` or open it in a new tab using the `tweety app open htop` command.
 
 ### Configuration
 
