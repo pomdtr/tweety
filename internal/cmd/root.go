@@ -35,11 +35,34 @@ var appDir = filepath.Join(configDir, "apps")
 
 func NewCmdRoot() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:               "tweety",
-		SilenceUsage:      true,
-		Short:             "An integrated terminal for your web browser",
-		ValidArgsFunction: completeCommand,
-		Args:              cobra.ArbitraryArgs,
+		Use:          "tweety",
+		SilenceUsage: true,
+		Short:        "An integrated terminal for your web browser",
+		ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+			if len(args) > 0 {
+				return nil, cobra.ShellCompDirectiveDefault
+			}
+
+			files, err := os.ReadDir(commandDir)
+			if err != nil {
+				return nil, cobra.ShellCompDirectiveError
+			}
+
+			var commands []string
+			for _, file := range files {
+				if file.IsDir() {
+					continue
+				}
+
+				name := file.Name()
+				// Strip any extension for command completion
+				name = strings.TrimSuffix(name, filepath.Ext(name))
+				commands = append(commands, name)
+			}
+
+			return commands, cobra.ShellCompDirectiveNoFileComp
+		},
+		Args: cobra.ArbitraryArgs,
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 			confmapProvider := confmap.Provider(map[string]interface{}{
 				"command": getDefaultShell(),
@@ -157,27 +180,6 @@ func NewCmdRoot() *cobra.Command {
 	)
 
 	return cmd
-}
-
-func completeCommand(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
-	files, err := os.ReadDir(commandDir)
-	if err != nil {
-		return nil, cobra.ShellCompDirectiveError
-	}
-
-	var commands []string
-	for _, file := range files {
-		if file.IsDir() {
-			continue
-		}
-
-		name := file.Name()
-		// Strip any extension for command completion
-		name = strings.TrimSuffix(name, filepath.Ext(name))
-		commands = append(commands, name)
-	}
-
-	return commands, cobra.ShellCompDirectiveNoFileComp
 }
 
 func getDefaultShell() string {
