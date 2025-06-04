@@ -14,10 +14,9 @@ import (
 //go:embed all:embed
 var embedFs embed.FS
 
-var extensionsDir = filepath.Join(dataDir, "extensions")
-
 func NewCmdInstall() *cobra.Command {
 	var flags struct {
+		dataDir   string
 		overwrite bool
 	}
 
@@ -25,6 +24,7 @@ func NewCmdInstall() *cobra.Command {
 		Use:   "install",
 		Short: "Install extension",
 		RunE: func(cmd *cobra.Command, args []string) error {
+			extensionsDir := filepath.Join(flags.dataDir, "extensions")
 			if err := os.MkdirAll(extensionsDir, 0755); err != nil {
 				return fmt.Errorf("failed to create data directory: %w", err)
 			}
@@ -110,6 +110,7 @@ func NewCmdInstall() *cobra.Command {
 		},
 	}
 
+	cmd.Flags().StringVar(&flags.dataDir, "data-dir", dataDir, "Directory to install the extension and native messaging host")
 	cmd.Flags().BoolVar(&flags.overwrite, "overwrite", false, "Overwrite existing native messaging host and manifest files")
 
 	return cmd

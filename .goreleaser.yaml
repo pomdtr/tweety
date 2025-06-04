@@ -35,4 +35,4 @@ brews:
     install: |-
       bin.install "tweety"
     post_install: |-
-      system "#{bin}/tweety", "install", "--overwrite"
+      system "#{bin}/tweety", "install", "--overwrite", "--data-dir", "#{HOMEBREW_PREFIX}/share/tweety"
