@@ -15,21 +15,33 @@ import (
 var embedFs embed.FS
 
 func NewCmdInstall() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "install",
+		Short: "Install Tweety extension",
+		Long:  "Installs the Tweety browser extension and sets up the native messaging host.",
+	}
+
+	cmd.AddCommand(NewCmdInstallExtension())
+	cmd.AddCommand(NewCmdInstallManifest())
+
+	return cmd
+}
+
+func NewCmdInstallExtension() *cobra.Command {
 	var flags struct {
-		dataDir   string
 		overwrite bool
 	}
 
 	cmd := &cobra.Command{
-		Use:   "install",
+		Use:   "extension <dir>",
 		Short: "Install extension",
+		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			extensionsDir := filepath.Join(flags.dataDir, "extensions")
-			if err := os.MkdirAll(extensionsDir, 0755); err != nil {
-				return fmt.Errorf("failed to create data directory: %w", err)
+			extensionDir := filepath.Join(args[0])
+			if err := os.MkdirAll(extensionDir, 0755); err != nil {
+				return fmt.Errorf("failed to create extension directory: %w", err)
 			}
 
-			extensionDir := filepath.Join(extensionsDir, "chrome")
 			if _, err := os.Stat(extensionDir); err == nil {
 				if !flags.overwrite {
 					return fmt.Errorf("extension already installed, use --overwrite to reinstall")
@@ -45,6 +57,24 @@ func NewCmdInstall() *cobra.Command {
 			}
 
 			cmd.Printf("Extension installed successfully at %s\n", extensionDir)
+			return nil
+
+		},
+	}
+
+	cmd.Flags().BoolVar(&flags.overwrite, "overwrite", false, "Overwrite existing native messaging host and manifest files")
+
+	return cmd
+}
+
+func NewCmdInstallManifest() *cobra.Command {
+	return &cobra.Command{
+		Use:   "manifest",
+		Short: "Install native messaging host manifest",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if err := os.MkdirAll(dataDir, 0755); err != nil {
+				return fmt.Errorf("failed to create data directory: %w", err)
+			}
 
 			hostTemplate, err := template.ParseFS(embedFs, "embed/native_messaging_host.tmpl")
 			if err != nil {
@@ -103,42 +133,6 @@ func NewCmdInstall() *cobra.Command {
 					"Path": hostPath,
 				}); err != nil {
 					return fmt.Errorf("failed to execute manifest template: %w", err)
-				}
-			}
-
-			return nil
-		},
-	}
-
-	cmd.Flags().StringVar(&flags.dataDir, "data-dir", dataDir, "Directory to install the extension and native messaging host")
-	cmd.Flags().BoolVar(&flags.overwrite, "overwrite", false, "Overwrite existing native messaging host and manifest files")
-
-	return cmd
-}
-
-func NewCmdUninstall() *cobra.Command {
-	return &cobra.Command{
-		Use:   "uninstall",
-		Short: "Uninstall native messaging host",
-		RunE: func(cmd *cobra.Command, args []string) error {
-			dirs, err := GetSupportDirs()
-			if err != nil {
-				return fmt.Errorf("failed to get manifest directories: %w", err)
-			}
-
-			hostPath := filepath.Join(dataDir, "native_messaging_host")
-			if err := os.Remove(hostPath); err != nil {
-				return fmt.Errorf("failed to remove native messaging host file: %w", err)
-			}
-
-			for _, dir := range dirs {
-				if _, err := os.Stat(dir); os.IsNotExist(err) {
-					continue
-				}
-
-				manifestPath := filepath.Join(dir, "NativeMessagingHosts", "com.github.pomdtr.tweety.json")
-				if err := os.Remove(manifestPath); err != nil && !os.IsNotExist(err) {
-					return fmt.Errorf("failed to remove manifest file: %w", err)
 				}
 			}
 

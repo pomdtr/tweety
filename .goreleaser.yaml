@@ -34,8 +34,8 @@ brews:
       name: homebrew-tap
     install: |-
       bin.install "tweety"
+    post_install: |-
+      system "#{bin}/tweety", "install", "extension", "--overwrite", "#{share}/tweety/extensions/chrome"
     caveats: |
       After installation, run:
-        tweety install --overwrite
-      This will install files into:
-        ~/.local/share/tweety
+        tweety install manifest

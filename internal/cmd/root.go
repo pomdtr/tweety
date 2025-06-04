@@ -169,7 +169,6 @@ func NewCmdRoot() *cobra.Command {
 	cmd.AddCommand(
 		NewCmdServe(),
 		NewCmdInstall(),
-		NewCmdUninstall(),
 		NewCmdTabs(),
 		NewCmdBookmarks(),
 		NewCmdHistory(),
