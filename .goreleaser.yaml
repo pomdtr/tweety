@@ -22,8 +22,6 @@ archives:
       - LICENSE-MIT
 release:
   prerelease: auto
-  extra_files:
-    - glob: "extension/dist/web-ext-artifacts/chrome-extension.zip"
 checksum:
   name_template: "checksums.txt"
 snapshot:
@@ -36,3 +34,5 @@ brews:
       name: homebrew-tap
     install: |-
       bin.install "tweety"
+    post_install: |-
+      system "#{bin}/tweety", "install", "--overwrite"

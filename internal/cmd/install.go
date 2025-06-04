@@ -7,24 +7,44 @@ import (
 	"path/filepath"
 	"text/template"
 
+	"github.com/pomdtr/tweety/extension"
 	"github.com/spf13/cobra"
 )
 
 //go:embed all:embed
 var embedFs embed.FS
 
+var extensionsDir = filepath.Join(dataDir, "extensions")
+
 func NewCmdInstall() *cobra.Command {
 	var flags struct {
-		extensionID string
+		overwrite bool
 	}
 
 	cmd := &cobra.Command{
 		Use:   "install",
-		Short: "Install native messaging host",
+		Short: "Install extension",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := os.MkdirAll(dataDir, 0755); err != nil {
+			if err := os.MkdirAll(extensionsDir, 0755); err != nil {
 				return fmt.Errorf("failed to create data directory: %w", err)
 			}
+
+			extensionDir := filepath.Join(extensionsDir, "chrome")
+			if _, err := os.Stat(extensionDir); err == nil {
+				if !flags.overwrite {
+					return fmt.Errorf("extension already installed, use --overwrite to reinstall")
+				}
+
+				if err := os.RemoveAll(extensionDir); err != nil && !os.IsNotExist(err) {
+					return fmt.Errorf("failed to remove existing extension directory: %w", err)
+				}
+			}
+
+			if err := os.CopyFS(extensionDir, extension.FS); err != nil {
+				return fmt.Errorf("failed to copy extension files: %w", err)
+			}
+
+			cmd.Printf("Extension installed successfully at %s\n", extensionDir)
 
 			hostTemplate, err := template.ParseFS(embedFs, "embed/native_messaging_host.tmpl")
 			if err != nil {
@@ -80,8 +100,7 @@ func NewCmdInstall() *cobra.Command {
 				defer f.Close()
 
 				if err := manifestTemplate.Execute(f, map[string]interface{}{
-					"Path":        hostPath,
-					"ExtensionID": flags.extensionID,
+					"Path": hostPath,
 				}); err != nil {
 					return fmt.Errorf("failed to execute manifest template: %w", err)
 				}
@@ -91,8 +110,7 @@ func NewCmdInstall() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVar(&flags.extensionID, "extension-id", "", "Extension ID for the native messaging host")
-	cmd.MarkFlagRequired("extension-id")
+	cmd.Flags().BoolVar(&flags.overwrite, "overwrite", false, "Overwrite existing native messaging host and manifest files")
 
 	return cmd
 }

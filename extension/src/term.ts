@@ -22,25 +22,7 @@ async function main() {
     })
 
     if ("error" in xtermResp) {
-        const terminal = new Terminal();
-        const fitAddon = new FitAddon();
-        terminal.loadAddon(fitAddon);
-        terminal.open(anchor);
-
-        fitAddon.fit();
-
-        terminal.writeln(`Tweety is not responding. Please run the following command to install the native messaging host:`)
-        terminal.writeln("")
-        terminal.writeln(`tweety install --extension-id ${chrome.runtime.id}`);
-        terminal.writeln("")
-        terminal.writeln(`Then, hit enter to reload the page.`);
-
-        terminal.onKey((event) => {
-            if (event.key === "\r" || event.key === "\n") {
-                globalThis.location.reload();
-            }
-        });
-
+        console.error("Error getting Xterm config:", xtermResp.error);
         return;
     }
 
