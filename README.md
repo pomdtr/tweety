@@ -2,52 +2,40 @@
 
 Minimize your context switching by interacting with your terminal directly from your browser.
 
-## Features
-
-### Terminal Tabs
-
-![tweety running from a browser tab](./media/terminal-tab.png)
-
-### Side Panel
-
-![tweety running from the side panel](./media/side-panel.png)
-
-### Devtools Integration
-
-![tweety running from the devtools](./media/devtools.png)
-
-### Scripting using the Chrome Extension API
-
-![tweety running from the scripting API](./media/scripting-api.png)
-
 ## Installation
 
-### Chrome Extension
+### Using Homebrew (recommended)
 
-Download the extension zip from the [releases](https://github.com/pomdtr/tweety/release).
-
-Unzip the file and open Chrome. Go to `chrome://extensions/`, enable "Developer mode" and click on "Load unpacked". Select the unzipped folder.
-
-You'll get an error the first time you load the extension, because the native host is not installed yet. You can ignore this error for now.
-
-### Golang Binary
-
-Tweety is available on macOS, Linux.
+First install the `tweety` cli:
 
 ```sh
-# Homebrew (recommended)
 brew install pomdtr/tap/tweety
+tweety install manifest
 ```
 
-or download a binary from [releases](https://github.com/pomdtr/tweety/releases).
+Then go to `chrome://extensions/` in your browser, enable "Developer mode" and click on "Load unpacked". Select the `/opt/homebrew/share/tweety/extensions/chrome` directory.
 
-To allow the extension to communicate with the native host, you'll need to run the following command:
+You can upgrade tweety using `brew update && brew upgrade tweety`. Make sure to reload the extension in your browser after upgrading.
+
+### Manual Installation
+
+You can also install the extension manually by downloading the latest release from the [releases page](https://github.com/pomdtr/tweety/releases) and extracting it to a directory of your choice.
+
+In addition to running the `tweety install manifest` command, you will also need to install the extension assets manually.
+
+Each binary embed the chrome extension assets, and you can extract them using:
 
 ```sh
-tweety install --extension-id <extension-id>
+tweety install extension <dest-dir>
 ```
 
-You can find the extension ID in the Chrome extensions page (`chrome://extensions/`), it should look like `pofgojebniiboodkmmjfbapckcnbkhpi`.
+If you want to update these assets, you can use the `--overwrite` flag to overwrite the existing files:
+
+```sh
+tweety install extension <dest-dir> --overwrite
+```
+
+Then go to `chrome://extensions/` in your browser, enable "Developer mode" and click on "Load unpacked". Then, select the directory where you extracted the extension.
 
 ## Usage
 

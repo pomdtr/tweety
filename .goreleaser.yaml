@@ -3,6 +3,11 @@ version: 2
 before:
   hooks:
     - go mod tidy
+    - rm -rf completions
+    - mkdir completions
+    - sh -c 'go run . completion "bash" >./completions/tweety.bash'
+    - sh -c 'go run . completion "zsh" >./completions/tweety.zsh'
+    - sh -c 'go run . completion "fish" >./completions/tweety.fish'
 changelog:
   disable: true
 builds:
@@ -13,7 +18,7 @@ builds:
       - linux
       - darwin
 archives:
-  - name_template: "{{ .ProjectName }}-{{ .Version }}-{{ .Os }}_{{ .Arch }}"
+  - name_template: "tweety-{{ .Version }}-{{ .Os }}_{{ .Arch }}"
     format_overrides:
       - goos: windows
         formats: ["zip"]
@@ -34,6 +39,9 @@ brews:
       name: homebrew-tap
     install: |-
       bin.install "tweety"
+      bash_completion.install "completions/sunbeam.bash"
+      zsh_completion.install "completions/sunbeam.zsh"
+      fish_completion.install "completions/sunbeam.fish"
     post_install: |-
       system "#{bin}/tweety", "install", "extension", "--overwrite", "#{share}/tweety/extensions/chrome"
     caveats: |
