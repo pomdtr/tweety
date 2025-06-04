@@ -1,7 +1,5 @@
 # Tweety - An Integrated Terminal for your Browser
 
-Minimize your context switching by interacting with your terminal directly from your browser.
-
 ![tweety summarizing a page](./media/demo.png)
 
 ## Features
@@ -76,8 +74,6 @@ printf "[%s](%s)" "$TITLE" "$URL" | pbcopy
 ```
 
 Then invoke it with `tweety copy-markdown-link` to copy the current tab's title and URL as a markdown link to your clipboard.
-
-![copy-markdown-link command in action](./media/copy-markdown-link.png)
 
 ### Apps
 
