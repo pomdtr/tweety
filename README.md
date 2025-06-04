@@ -14,7 +14,7 @@ Minimize your context switching by interacting with your terminal directly from 
 
 ## Installation
 
-### Using Homebrew (recommended)
+### Using [Homebrew](https://brew.sh/) (recommended)
 
 First install the `tweety` cli:
 
@@ -23,7 +23,7 @@ brew install pomdtr/tap/tweety
 tweety install manifest
 ```
 
-Then go to `chrome://extensions/` in your browser, enable "Developer mode" and click on "Load unpacked". Select the `/opt/homebrew/share/tweety/extensions/chrome` directory.
+Then go to `chrome://extensions/` in your browser, enable "Developer mode" and click on "Load unpacked". Select the `/opt/homebrew/share/tweety/extensions/chrome` on macOS or `/home/linuxbrew/.linuxbrew/share/tweety/extensions/chrome` on Linux.
 
 You can upgrade tweety using `brew update && brew upgrade tweety`. Make sure to reload the extension in your browser after upgrading.
 
@@ -31,7 +31,7 @@ You can upgrade tweety using `brew update && brew upgrade tweety`. Make sure to 
 
 You can also install the extension manually by downloading the latest release from the [releases page](https://github.com/pomdtr/tweety/releases) and extracting it to a directory of your choice.
 
-In addition to running the `tweety install manifest` command, you will also need to install the extension assets manually.
+In addition to running the `tweety install manifest` command, you'll need to install the extension assets manually.
 
 Each binary embed the chrome extension assets, and you can extract them using:
 
@@ -39,13 +39,13 @@ Each binary embed the chrome extension assets, and you can extract them using:
 tweety install extension <dest-dir>
 ```
 
-If you want to update these assets, you can use the `--overwrite` flag to overwrite the existing files:
+Then go to `chrome://extensions/` in your browser, enable "Developer mode" and click on "Load unpacked". Then, select the directory where you extracted the extension.
+
+If you upgrade tweety, you'll need to use the `--overwrite` flag to also upgrade the extension assets:
 
 ```sh
 tweety install extension <dest-dir> --overwrite
 ```
-
-Then go to `chrome://extensions/` in your browser, enable "Developer mode" and click on "Load unpacked". Then, select the directory where you extracted the extension.
 
 You can install completions for your shell using the `tweety completion` command.
 
