@@ -2,6 +2,16 @@
 
 Minimize your context switching by interacting with your terminal directly from your browser.
 
+![tweety summarizing a page](./media/demo.png)
+
+## Features
+
+- terminal tabs
+- terminal panel in devtools
+- terminal popup
+- forward the chrome extension API to your shell
+- bookmark commands
+
 ## Installation
 
 ### Using Homebrew (recommended)
@@ -36,6 +46,8 @@ tweety install extension <dest-dir> --overwrite
 ```
 
 Then go to `chrome://extensions/` in your browser, enable "Developer mode" and click on "Load unpacked". Then, select the directory where you extracted the extension.
+
+You can install completions for your shell using the `tweety completion` command.
 
 ## Usage
 
