@@ -34,5 +34,8 @@ brews:
       name: homebrew-tap
     install: |-
       bin.install "tweety"
-    post_install: |-
-      system "#{bin}/tweety", "install", "--overwrite", "--data-dir", "#{HOMEBREW_PREFIX}/share/tweety"
+    caveats: |
+      After installation, run:
+        tweety install --overwrite
+      This will install files into:
+        ~/.local/share/tweety
