@@ -25,6 +25,7 @@ archives:
     files:
       - README.md
       - LICENSE-MIT
+      - completions/*
 release:
   prerelease: auto
 checksum:
