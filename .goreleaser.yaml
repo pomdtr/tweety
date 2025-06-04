@@ -39,9 +39,9 @@ brews:
       name: homebrew-tap
     install: |-
       bin.install "tweety"
-      bash_completion.install "completions/sunbeam.bash"
-      zsh_completion.install "completions/sunbeam.zsh"
-      fish_completion.install "completions/sunbeam.fish"
+      bash_completion.install "completions/tweety.bash"
+      zsh_completion.install "completions/tweety.zsh"
+      fish_completion.install "completions/tweety.fish"
     post_install: |-
       system "#{bin}/tweety", "install", "extension", "--overwrite", "#{share}/tweety/extensions/chrome"
     caveats: |
