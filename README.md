@@ -16,38 +16,39 @@ Tweety is not distributed through the Chrome Web Store, as I don't think it woul
 
 ### Using [Homebrew](https://brew.sh/) (recommended)
 
-First install the `tweety` cli:
+First install the `tweety` cli, and the extension manifest:
 
 ```sh
 brew install pomdtr/tap/tweety
 tweety install manifest
 ```
 
-Then go to `chrome://extensions/` in your browser, enable "Developer mode" and click on "Load unpacked". Select the `/opt/homebrew/share/tweety/extensions/chrome` on macOS or `/home/linuxbrew/.linuxbrew/share/tweety/extensions/chrome` on Linux.
+Then, install the browser extension:
 
-You can upgrade tweety using `brew update && brew upgrade tweety`. Make sure to reload the extension in your browser after upgrading.
+- If you're using chrome:
+
+    1. Go to `chrome://extensions/` in your browser.
+    1. Enable "Developer mode" in the top right corner.
+    1. Click on "Load unpacked".
+    1. Select the `/opt/homebrew/share/tweety/extensions/chrome` on macOS or `/home/linuxbrew/.linuxbrew/share/tweety/extensions/chrome` on Linux.
+
+- If you're using firefox developer edition:
+    1. Go to `about:config` in your browser.
+    2. Set `xpinstall.signatures.required` to `false`.
+    3. Go to `about:addons`
+    4. Click on the gear icon in the top right corner and select "Install Add-on From File...".
+    5. Select the `firefox.zip` file located in `/opt/homebrew/share/tweety/extensions/firefox` on macOS or `/home/linuxbrew/.linuxbrew/share/tweety/extensions/firefox` on Linux.
+
+You can upgrade tweety using `brew update && brew upgrade tweety`.
+
+- On chrome, you can also click on the "Reload" button in the extensions page to reload the extension after upgrading.
+- On firefox, you'll need to remove, then re-install the extension after upgrading.
 
 ### Manual Installation
 
 You can also install the extension manually by downloading the latest release from the [releases page](https://github.com/pomdtr/tweety/releases) and extracting it to a directory of your choice.
 
-In addition to running the `tweety install manifest` command, you'll need to install the extension assets manually.
-
-Each binary embed the chrome extension assets, and you can extract them using:
-
-```sh
-tweety install extension <dest-dir>
-```
-
-Then go to `chrome://extensions/` in your browser, enable "Developer mode" and click on "Load unpacked". Then, select the directory where you extracted the extension.
-
-If you upgrade tweety, you'll need to use the `--overwrite` flag to also upgrade the extension assets:
-
-```sh
-tweety install extension <dest-dir> --overwrite
-```
-
-You can install completions for your shell using the `tweety completion` command.
+You'll find the extension files in the `extensions` directory.
 
 ## Usage
 
