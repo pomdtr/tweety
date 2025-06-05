@@ -23,12 +23,7 @@ export default defineConfig({
         ],
         commands: manifestVersion == 3 ? {
         } : {
-            _execute_browser_action: {
-                suggested_key: {
-                    default: "Ctrl+Shift+J",
-                    mac: "Command+Shift+J",
-                }
-            },
+            _execute_browser_action: {},
             openInNewTab: {
                 description: "Open in new tab"
             },

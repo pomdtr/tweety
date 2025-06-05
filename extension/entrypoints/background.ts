@@ -87,28 +87,20 @@ export default defineBackground(() => {
   }
 
   browser.runtime.onInstalled.addListener(async () => {
-    browser.sidePanel.setPanelBehavior({
+    browser.sidePanel?.setPanelBehavior({
       openPanelOnActionClick: false
     });
 
     browser.contextMenus.create({
       id: 'openInNewTab',
       title: 'Open in new tab',
-      contexts: ['action'],
+      contexts: import.meta.env.MANIFEST_VERSION == 3 ? ['action'] : ['browser_action'],
     });
     browser.contextMenus.create({
       id: 'openInNewWindow',
       title: 'Open in new window',
-      contexts: ['action'],
+      contexts: import.meta.env.MANIFEST_VERSION == 3 ? ['action'] : ['browser_action'],
     });
-
-    // Separator between action commands and default behavior group
-    browser.contextMenus.create({
-      type: 'separator',
-      id: 'actionSeparator',
-      contexts: ['action'],
-    });
-
   });
 
   // should not be async, else side panel will not open when invoked from the keyboard shortcut
