@@ -20,7 +20,8 @@ First install the `tweety` cli, and the extension manifest:
 
 ```sh
 brew install pomdtr/tap/tweety
-tweety install manifest
+# install the native messaging host manifest
+tweety install
 ```
 
 Then, install the browser extension:
