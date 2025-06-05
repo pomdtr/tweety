@@ -12,7 +12,7 @@ async function main() {
         return;
     }
 
-    const xtermResp = await chrome.runtime.sendMessage<RequestGetXtermConfig, ResponseGetXtermConfig>({
+    const xtermResp = await browser.runtime.sendMessage<RequestGetXtermConfig, ResponseGetXtermConfig>({
         jsonrpc: "2.0",
         id: crypto.randomUUID(),
         method: "xterm.getConfig",
@@ -36,7 +36,7 @@ async function main() {
         }
     }
 
-    const resp = await chrome.runtime.sendMessage<RequestCreateTTY, ResponseCreateTTY>({
+    const resp = await browser.runtime.sendMessage<RequestCreateTTY, ResponseCreateTTY>({
         jsonrpc: "2.0",
         id: requestId,
         method: "tty.create",
@@ -63,7 +63,7 @@ async function main() {
     terminal.open(anchor);
     terminal.onResize(async (size) => {
         const { cols, rows } = size;
-        await chrome.runtime.sendMessage<RequestResizeTTY>({
+        await browser.runtime.sendMessage<RequestResizeTTY>({
             jsonrpc: "2.0",
             method: "tty.resize",
             params: {
@@ -103,7 +103,7 @@ async function main() {
 
     window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", async (event) => {
         const variant = event.matches ? "dark" : "light";
-        const resp = await chrome.runtime.sendMessage<RequestGetXtermConfig, ResponseGetXtermConfig>({
+        const resp = await browser.runtime.sendMessage<RequestGetXtermConfig, ResponseGetXtermConfig>({
             jsonrpc: "2.0",
             id: crypto.randomUUID(),
             method: "xterm.getConfig",

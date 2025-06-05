@@ -1,18 +1,21 @@
 {
+  "name": "tweety",
+  "private": true,
+  "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "build": "tsc && vite build",
-    "watch": "vite build --watch --mode development --minify false",
-    "dev": "vite",
-    "serve:firefox": "web-ext run --start-url \"about:debugging#/runtime/this-firefox\"  --source-dir ./dist/",
-    "serve:chrome": "web-ext run -t chromium --start-url \"https://example.com\" --source-dir ./dist/"
+    "dev": "wxt",
+    "dev:firefox": "wxt -b firefox",
+    "build": "wxt build",
+    "build:firefox": "wxt build -b firefox",
+    "zip": "wxt zip",
+    "zip:firefox": "wxt zip -b firefox",
+    "compile": "tsc --noEmit",
+    "postinstall": "wxt prepare"
   },
   "devDependencies": {
-    "@samrum/vite-plugin-web-extension": "^5.1.1",
-    "@types/chrome": "^0.0.326",
     "typescript": "^5.8.3",
-    "vite": "^5.0.0",
-    "web-ext": "^7.8.0"
+    "wxt": "^0.20.6"
   },
   "dependencies": {
     "@xterm/addon-attach": "^0.11.0",
@@ -20,7 +23,6 @@
     "@xterm/addon-web-links": "^0.11.0",
     "@xterm/addon-webgl": "^0.18.0",
     "@xterm/xterm": "^5.5.0",
-    "js-base64": "^3.7.7",
-    "webextension-polyfill": "^0.10.0"
+    "js-base64": "^3.7.7"
   }
 }
