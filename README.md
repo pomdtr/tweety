@@ -12,6 +12,9 @@
 
 ## Installation
 
+> [!WARNING]
+> Windows is not supported at the moment.
+
 Tweety is not distributed through the Chrome Web Store, as I don't think it would pass the review process. Instead, you can install it manually or using Homebrew.
 
 ### Using [Homebrew](https://brew.sh/) (recommended)
