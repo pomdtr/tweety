@@ -3,7 +3,13 @@
     "description": "An integrated terminal for your browser",
     "type": "stdio",
     "path": "{{ .Path }}",
+    {{- if eq .Browser "chromium" }}
     "allowed_origins": [
         "chrome-extension://eakooboihfgnikdhdldcmoiafgioeglm/"
     ]
+    {{- else if eq .Browser "gecko" }}
+    "allowed_extensions": [
+        "tweety@pomdtr.me"
+    ]
+    {{- end }}
 }

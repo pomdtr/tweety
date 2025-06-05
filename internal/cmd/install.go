@@ -5,71 +5,25 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"text/template"
 
-	"github.com/pomdtr/tweety/extension"
 	"github.com/spf13/cobra"
 )
 
 //go:embed all:embed
 var embedFs embed.FS
 
+type BrowserType string
+
+var (
+	BrowserTypeChromium BrowserType = "chromium"
+	BrowserTypeGecko    BrowserType = "gecko"
+)
+
 func NewCmdInstall() *cobra.Command {
-	cmd := &cobra.Command{
-		Use:   "install",
-		Short: "Install Tweety extension",
-		Long:  "Installs the Tweety browser extension and sets up the native messaging host.",
-	}
-
-	cmd.AddCommand(NewCmdInstallExtension())
-	cmd.AddCommand(NewCmdInstallManifest())
-
-	return cmd
-}
-
-func NewCmdInstallExtension() *cobra.Command {
-	var flags struct {
-		overwrite bool
-	}
-
-	cmd := &cobra.Command{
-		Use:   "extension <dir>",
-		Short: "Install extension",
-		Args:  cobra.ExactArgs(1),
-		RunE: func(cmd *cobra.Command, args []string) error {
-			extensionDir := filepath.Join(args[0])
-			if err := os.MkdirAll(extensionDir, 0755); err != nil {
-				return fmt.Errorf("failed to create extension directory: %w", err)
-			}
-
-			if _, err := os.Stat(extensionDir); err == nil {
-				if !flags.overwrite {
-					return fmt.Errorf("extension already installed, use --overwrite to reinstall")
-				}
-
-				if err := os.RemoveAll(extensionDir); err != nil && !os.IsNotExist(err) {
-					return fmt.Errorf("failed to remove existing extension directory: %w", err)
-				}
-			}
-
-			if err := os.CopyFS(extensionDir, extension.FS); err != nil {
-				return fmt.Errorf("failed to copy extension files: %w", err)
-			}
-
-			cmd.Printf("Extension installed successfully at %s\n", extensionDir)
-			return nil
-
-		},
-	}
-
-	cmd.Flags().BoolVar(&flags.overwrite, "overwrite", false, "Overwrite existing native messaging host and manifest files")
-
-	return cmd
-}
-
-func NewCmdInstallManifest() *cobra.Command {
 	return &cobra.Command{
-		Use:   "manifest",
+		Use:   "install",
 		Short: "Install native messaging host manifest",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := os.MkdirAll(dataDir, 0755); err != nil {
@@ -108,17 +62,17 @@ func NewCmdInstallManifest() *cobra.Command {
 				return fmt.Errorf("failed to parse manifest template: %w", err)
 			}
 
-			dirs, err := GetSupportDirs()
+			browsers, err := GetBrowsers()
 			if err != nil {
 				return fmt.Errorf("failed to get manifest directories: %w", err)
 			}
 
-			for _, dir := range dirs {
-				if _, err := os.Stat(dir); os.IsNotExist(err) {
+			for _, browser := range browsers {
+				if _, err := os.Stat(browser.Dir); os.IsNotExist(err) {
 					continue
 				}
 
-				manifestDir := filepath.Join(dir, "NativeMessagingHosts")
+				manifestDir := filepath.Join(browser.Dir, "NativeMessagingHosts")
 				if err := os.MkdirAll(manifestDir, 0755); err != nil {
 					return fmt.Errorf("failed to create native messaging hosts directory: %w", err)
 				}
@@ -130,7 +84,8 @@ func NewCmdInstallManifest() *cobra.Command {
 				defer f.Close()
 
 				if err := manifestTemplate.Execute(f, map[string]interface{}{
-					"Path": hostPath,
+					"Path":    hostPath,
+					"Browser": browser.Type,
 				}); err != nil {
 					return fmt.Errorf("failed to execute manifest template: %w", err)
 				}
@@ -139,4 +94,34 @@ func NewCmdInstallManifest() *cobra.Command {
 			return nil
 		},
 	}
+}
+
+type Browser struct {
+	Dir  string
+	Type BrowserType
+}
+
+func GetBrowsers() ([]Browser, error) {
+	switch runtime.GOOS {
+	case "darwin":
+		supportDir := filepath.Join(os.Getenv("HOME"), "Library", "Application Support")
+		return []Browser{
+			{filepath.Join(supportDir, "Google", "Chrome"), BrowserTypeChromium},
+			{filepath.Join(supportDir, "Chromium"), BrowserTypeChromium},
+			{filepath.Join(supportDir, "BraveSoftware", "Brave-Browser"), BrowserTypeChromium},
+			{filepath.Join(supportDir, "Vivaldi"), BrowserTypeChromium},
+			{filepath.Join(supportDir, "Microsoft", "Edge"), BrowserTypeChromium},
+			{filepath.Join(supportDir, "Mozilla"), BrowserTypeGecko},
+			{filepath.Join(supportDir, "zen"), BrowserTypeGecko},
+		}, nil
+	case "linux":
+		configDir := filepath.Join(os.Getenv("HOME"), ".config")
+		return []Browser{
+			{filepath.Join(configDir, "google-chrome"), BrowserTypeChromium},
+			{filepath.Join(configDir, "chromium"), BrowserTypeChromium},
+			{filepath.Join(configDir, "microsoft-edge"), BrowserTypeChromium},
+		}, nil
+	}
+
+	return nil, fmt.Errorf("unsupported OS: %s", runtime.GOOS)
 }

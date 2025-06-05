@@ -14,7 +14,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"runtime"
 	"strings"
 	"sync"
 	"time"
@@ -97,29 +96,6 @@ func NewCmdServe() *cobra.Command {
 	}
 
 	return cmd
-}
-
-func GetSupportDirs() ([]string, error) {
-	switch runtime.GOOS {
-	case "darwin":
-		supportDir := filepath.Join(os.Getenv("HOME"), "Library", "Application Support")
-		return []string{
-			filepath.Join(supportDir, "Google", "Chrome"),
-			filepath.Join(supportDir, "Chromium"),
-			filepath.Join(supportDir, "BraveSoftware", "Brave-Browser"),
-			filepath.Join(supportDir, "Vivaldi"),
-			filepath.Join(supportDir, "Microsoft", "Edge"),
-		}, nil
-	case "linux":
-		configDir := filepath.Join(os.Getenv("HOME"), ".config")
-		return []string{
-			filepath.Join(configDir, "google-chrome"),
-			filepath.Join(configDir, "chromium"),
-			filepath.Join(configDir, "microsoft-edge"),
-		}, nil
-	}
-
-	return nil, fmt.Errorf("unsupported OS: %s", runtime.GOOS)
 }
 
 type HandlerParams struct {
