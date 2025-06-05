@@ -32,7 +32,8 @@ Then, install the browser extension:
     1. Click on "Load unpacked".
     1. Select the `/opt/homebrew/share/tweety/extensions/chrome` on macOS or `/home/linuxbrew/.linuxbrew/share/tweety/extensions/chrome` on Linux.
 
-- If you're using firefox developer edition:
+- If you're using firefox developer edition or the zen browser:
+
     1. Go to `about:config` in your browser.
     2. Set `xpinstall.signatures.required` to `false`.
     3. Go to `about:addons`
