@@ -39,7 +39,7 @@ Then, install the browser extension:
     2. Set `xpinstall.signatures.required` to `false`.
     3. Go to `about:addons`
     4. Click on the gear icon in the top right corner and select "Install Add-on From File...".
-    5. Select the `firefox.zip` file located in `/opt/homebrew/share/tweety/extensions/firefox` on macOS or `/home/linuxbrew/.linuxbrew/share/tweety/extensions/firefox` on Linux.
+    5. Select the `firefox.zip` file located in `/opt/homebrew/share/tweety/extensions/firefox.zip` on macOS or `/home/linuxbrew/.linuxbrew/share/tweety/extensions/firefox.zip` on Linux.
 
 You can upgrade tweety using `brew update && brew upgrade tweety`.
 
