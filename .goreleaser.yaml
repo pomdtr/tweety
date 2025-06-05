@@ -44,7 +44,7 @@ brews:
       name: homebrew-tap
     install: |-
       bin.install "tweety"
-      share.install "extensions" => "tweety/extensions"
+      (share/"tweety").install "extensions"
       bash_completion.install "completions/tweety.bash"
       zsh_completion.install "completions/tweety.zsh"
       fish_completion.install "completions/tweety.fish"
