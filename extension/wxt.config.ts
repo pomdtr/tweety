@@ -21,15 +21,13 @@ export default defineConfig({
         host_permissions: [
             "<all_urls>"
         ],
-        commands: manifestVersion == 3 ? {
-        } : {
-            _execute_browser_action: {},
+        commands: {
             openInNewTab: {
                 description: "Open in new tab"
             },
             openInNewWindow: {
                 description: "Open in new window",
-            },
+            }
         },
         browser_specific_settings: browser == "firefox" ? {
             gecko: {
