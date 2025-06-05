@@ -1,0 +1,60 @@
+html::-webkit-scrollbar,
+body::-webkit-scrollbar,
+div::-webkit-scrollbar {
+    display: none;
+    width: 0;
+}
+
+html,
+body {
+    margin: 0;
+    overflow: hidden;
+    padding: 0;
+    /* default background color */
+    background-color: #ffffff;
+
+    /* Dark mode */
+    @media (prefers-color-scheme: dark) {
+        background-color: #1d1f21;
+    }
+}
+
+div#terminal {
+    height: 100%;
+    width: 100%;
+    left: 0;
+    position: absolute;
+    top: 0;
+}
+
+.xterm {
+    box-sizing: border-box;
+    padding: 10px;
+    height: 100%;
+    width: 100%;
+}
+
+.tooltip {
+    box-sizing: border-box;
+    position: fixed;
+    font-size: 13px;
+    font-family: courier-new, courier, monospace;
+    border-radius: 5px;
+    padding: 5px;
+    color: hsl(0, 0%, 0%);
+    background-color: #fff;
+    border: 1px solid #C8C8C8;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+
+    /* Dark mode */
+    @media (prefers-color-scheme: dark) {
+        background-color: #2E333A;
+        color: #fff;
+        border: 1px solid #454545;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    }
+}
+
+.tooltip a {
+    color: #6599EE;
+}

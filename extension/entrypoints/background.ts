@@ -111,14 +111,6 @@ export default defineBackground(() => {
 
   });
 
-  // Override the action button click to use the selected default behavior
-  browser.action.onClicked.addListener(() => {
-    browser.tabs.create({
-      url: browser.runtime.getURL("/term.html"),
-      active: true,
-    });
-  })
-
   // should not be async, else side panel will not open when invoked from the keyboard shortcut
   async function handleCommand(commandId: string) {
     if (commandId === 'openInNewTab') {
