@@ -48,7 +48,7 @@ You can upgrade tweety using `brew update && brew upgrade tweety`.
 
 You can also install the extension manually by downloading the latest release from the [releases page](https://github.com/pomdtr/tweety/releases) and extracting it to a directory of your choice.
 
-You'll find the extension files in the `extensions` directory.
+You'll find the extension assets in the `extensions` directory of the extracted archive. You can then load the extension in your browser as described above.
 
 ## Usage
 

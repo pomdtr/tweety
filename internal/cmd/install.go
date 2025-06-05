@@ -68,16 +68,15 @@ func NewCmdInstall() *cobra.Command {
 			}
 
 			for _, browser := range browsers {
-				if _, err := os.Stat(browser.Dir); os.IsNotExist(err) {
+				if _, err := os.Stat(filepath.Dir(browser.ManifestDir)); os.IsNotExist(err) {
 					continue
 				}
 
-				manifestDir := filepath.Join(browser.Dir, "NativeMessagingHosts")
-				if err := os.MkdirAll(manifestDir, 0755); err != nil {
+				if err := os.MkdirAll(browser.ManifestDir, 0755); err != nil {
 					return fmt.Errorf("failed to create native messaging hosts directory: %w", err)
 				}
 
-				f, err := os.Create(filepath.Join(manifestDir, "com.github.pomdtr.tweety.json"))
+				f, err := os.Create(filepath.Join(browser.ManifestDir, "com.github.pomdtr.tweety.json"))
 				if err != nil {
 					return fmt.Errorf("failed to get manifest file path: %w", err)
 				}
@@ -97,8 +96,8 @@ func NewCmdInstall() *cobra.Command {
 }
 
 type Browser struct {
-	Dir  string
-	Type BrowserType
+	ManifestDir string
+	Type        BrowserType
 }
 
 func GetBrowsers() ([]Browser, error) {
@@ -106,20 +105,22 @@ func GetBrowsers() ([]Browser, error) {
 	case "darwin":
 		supportDir := filepath.Join(os.Getenv("HOME"), "Library", "Application Support")
 		return []Browser{
-			{filepath.Join(supportDir, "Google", "Chrome"), BrowserTypeChromium},
-			{filepath.Join(supportDir, "Chromium"), BrowserTypeChromium},
-			{filepath.Join(supportDir, "BraveSoftware", "Brave-Browser"), BrowserTypeChromium},
-			{filepath.Join(supportDir, "Vivaldi"), BrowserTypeChromium},
-			{filepath.Join(supportDir, "Microsoft", "Edge"), BrowserTypeChromium},
-			{filepath.Join(supportDir, "Mozilla"), BrowserTypeGecko},
-			{filepath.Join(supportDir, "zen"), BrowserTypeGecko},
+			{filepath.Join(supportDir, "Google", "Chrome", "NativeMessagingHosts"), BrowserTypeChromium},
+			{filepath.Join(supportDir, "Chromium", "NativeMessagingHosts"), BrowserTypeChromium},
+			{filepath.Join(supportDir, "BraveSoftware", "Brave-Browser", "NativeMessagingHosts"), BrowserTypeChromium},
+			{filepath.Join(supportDir, "Vivaldi", "NativeMessagingHosts"), BrowserTypeChromium},
+			{filepath.Join(supportDir, "Microsoft", "Edge", "NativeMessagingHosts"), BrowserTypeChromium},
+			{filepath.Join(supportDir, "Mozilla", "NativeMessagingHosts"), BrowserTypeGecko},
+			{filepath.Join(supportDir, "zen", "NativeMessagingHosts"), BrowserTypeGecko},
 		}, nil
 	case "linux":
 		configDir := filepath.Join(os.Getenv("HOME"), ".config")
 		return []Browser{
-			{filepath.Join(configDir, "google-chrome"), BrowserTypeChromium},
-			{filepath.Join(configDir, "chromium"), BrowserTypeChromium},
-			{filepath.Join(configDir, "microsoft-edge"), BrowserTypeChromium},
+			{filepath.Join(configDir, "google-chrome", "native-messaging-hosts"), BrowserTypeChromium},
+			{filepath.Join(configDir, "chromium", "native-messaging-hosts"), BrowserTypeChromium},
+			{filepath.Join(configDir, "microsoft-edge", "native-messaging-hosts"), BrowserTypeChromium},
+			{filepath.Join(configDir, "mozilla", "native-messaging-hosts"), BrowserTypeGecko},
+			{filepath.Join(configDir, "zen", "native-messaging-hosts"), BrowserTypeGecko},
 		}, nil
 	}
 
