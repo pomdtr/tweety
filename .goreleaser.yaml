@@ -26,6 +26,10 @@ archives:
       - README.md
       - LICENSE-MIT
       - completions/*
+      - src: extension/dist/chrome-mv3/*
+        dst: extensions/chrome
+      - src: extension/dist/tweety-{{ .Version }}-firefox.zip
+        dst: extensions/firefox.zip
 release:
   prerelease: auto
 checksum:
@@ -40,11 +44,10 @@ brews:
       name: homebrew-tap
     install: |-
       bin.install "tweety"
+      share.install "extensions" => "tweety/extensions"
       bash_completion.install "completions/tweety.bash"
       zsh_completion.install "completions/tweety.zsh"
       fish_completion.install "completions/tweety.fish"
-    post_install: |-
-      system "#{bin}/tweety", "install", "extension", "--overwrite", "#{share}/tweety/extensions/chrome"
     caveats: |
       After installation, run:
         tweety install manifest

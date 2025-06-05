@@ -24,9 +24,13 @@ jobs:
           node-version: "18"
           cache: "npm"
           cache-dependency-path: "extension/package-lock.json"
+      - name: Set VERSION env var
+        run: echo "VERSION=$(git describe --tags --abbrev=0 | sed 's/^v//')" >> $GITHUB_ENV
       - name: Build extension
-        run: npm ci && npm run build
+        run: npm ci && npm run build && npm run zip:firefox
         working-directory: extension
+        env:
+          MANIFEST_VERSION: ${{ env.VERSION }}
       - uses: actions/setup-go@v3
         with:
           go-version: ">=1.19.4"
