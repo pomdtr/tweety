@@ -22,7 +22,7 @@ Tweety is not distributed through the Chrome Web Store, as I don't think it woul
 First install the `tweety` cli, and the extension manifest:
 
 ```sh
-brew install pomdtr/tap/tweety
+brew install --no-quarantine pomdtr/tap/tweety
 # install the native messaging host manifest
 tweety install
 ```
