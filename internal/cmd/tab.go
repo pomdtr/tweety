@@ -15,8 +15,8 @@ import (
 
 func NewCmdTabs() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:     "tabs",
-		Aliases: []string{"tab"},
+		Use:     "tab",
+		Aliases: []string{"tabs"},
 		Short:   "Manage tabs",
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 			if env := os.Getenv("TWEETY_SOCKET"); env == "" {

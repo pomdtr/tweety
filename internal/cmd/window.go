@@ -14,8 +14,8 @@ import (
 
 func NewCmdWindows() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:     "windows",
-		Aliases: []string{"window"},
+		Use:     "window",
+		Aliases: []string{"windows"},
 		Short:   "Manage browser windows",
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 			if env := os.Getenv("TWEETY_SOCKET"); env == "" {
