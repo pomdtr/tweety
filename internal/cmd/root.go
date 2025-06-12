@@ -33,11 +33,12 @@ var dataDir = filepath.Join(os.Getenv("HOME"), ".local", "share", "tweety")
 var commandDir = filepath.Join(configDir, "commands")
 var appDir = filepath.Join(configDir, "apps")
 
-func NewCmdRoot() *cobra.Command {
+func NewCmdRoot(version string) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:          "tweety",
 		SilenceUsage: true,
 		Short:        "An integrated terminal for your web browser",
+		Version:      version,
 		ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 			if len(args) > 0 {
 				return nil, cobra.ShellCompDirectiveDefault
