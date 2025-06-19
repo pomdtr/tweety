@@ -34,7 +34,7 @@ export class SearchBarAddon implements ITerminalAddon {
     }
 
     dispose() {
-        this.hidden();
+        this.close();
     }
 
     /**
@@ -69,7 +69,7 @@ export class SearchBarAddon implements ITerminalAddon {
         }
         parentElement.appendChild(this.searchBarElement);
         this.on('.search-bar__btn.close', 'click', () => {
-            this.hidden();
+            this.close();
         });
         this.on('.search-bar__btn.next', 'click', () => {
             this.searchAddon.findNext(this.searchKey, {
@@ -94,7 +94,7 @@ export class SearchBarAddon implements ITerminalAddon {
      * You can manually call close, also can click the close button on the bar
      * @memberof SearchBarAddon
      */
-    hidden() {
+    close() {
         if (this.searchBarElement && (this.terminal.element as HTMLElement).parentElement) {
             this.searchBarElement.style.visibility = 'hidden';
         }

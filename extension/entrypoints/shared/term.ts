@@ -111,26 +111,28 @@ async function main() {
 
 
     // show the search bar on cmd+f on macOS or ctrl+f on other platforms
-    let searchBarIsVisible = false;
+    let searchbarIsVisible = false;
     globalThis.addEventListener("keydown", (event) => {
         console.log("Key pressed:", event.key, "Meta:", event.metaKey, "Ctrl:", event.ctrlKey);
         if ((event.metaKey || event.ctrlKey) && event.key === "f") {
             event.preventDefault();
 
-            if (searchBarIsVisible) {
-                searchBarAddon.hidden();
-                searchBarIsVisible = false;
+            if (searchbarIsVisible) {
+                searchBarAddon.close();
+                terminal.focus();
+                searchbarIsVisible = false;
                 return;
             }
 
             searchBarAddon.show()
-            searchBarIsVisible = true;
+            searchbarIsVisible = true;
             return;
         }
 
-        if (event.key === "Escape" && searchBarIsVisible) {
-            searchBarAddon.hidden();
-            searchBarIsVisible = false;
+        if (event.key === "Escape" && searchbarIsVisible) {
+            searchBarAddon.close();
+            terminal.focus();
+            searchbarIsVisible = false;
             return;
         }
     })
