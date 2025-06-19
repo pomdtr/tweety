@@ -1,6 +1,8 @@
 import { Terminal } from "@xterm/xterm";
 import { FitAddon } from "@xterm/addon-fit";
 import { AttachAddon } from "@xterm/addon-attach";
+import { SearchAddon } from '@xterm/addon-search'
+import { SearchBarAddon } from "./search"
 import { WebglAddon } from "@xterm/addon-webgl";
 import { WebLinksAddon } from "@xterm/addon-web-links";
 import { RequestCreateTTY, RequestGetXtermConfig, RequestResizeTTY, ResponseCreateTTY, ResponseGetXtermConfig } from "./rpc";
@@ -50,11 +52,17 @@ async function main() {
     }
 
     const terminal = new Terminal(xtermResp.result);
-    const fitAddon = new FitAddon();
 
+    const fitAddon = new FitAddon();
     terminal.loadAddon(fitAddon);
+
     terminal.loadAddon(new WebglAddon());
     terminal.loadAddon(new WebLinksAddon());
+
+    const searchAddon = new SearchAddon();
+    const searchBarAddon = new SearchBarAddon({ searchAddon });
+    terminal.loadAddon(searchAddon);
+    terminal.loadAddon(searchBarAddon)
 
     const ws = new WebSocket(resp.result.url);
     const attachAddon = new AttachAddon(ws);
@@ -100,6 +108,32 @@ async function main() {
     globalThis.onfocus = () => {
         terminal.focus();
     };
+
+
+    // show the search bar on cmd+f on macOS or ctrl+f on other platforms
+    let searchBarIsVisible = false;
+    globalThis.addEventListener("keydown", (event) => {
+        console.log("Key pressed:", event.key, "Meta:", event.metaKey, "Ctrl:", event.ctrlKey);
+        if ((event.metaKey || event.ctrlKey) && event.key === "f") {
+            event.preventDefault();
+
+            if (searchBarIsVisible) {
+                searchBarAddon.hidden();
+                searchBarIsVisible = false;
+                return;
+            }
+
+            searchBarAddon.show()
+            searchBarIsVisible = true;
+            return;
+        }
+
+        if (event.key === "Escape" && searchBarIsVisible) {
+            searchBarAddon.hidden();
+            searchBarIsVisible = false;
+            return;
+        }
+    })
 
     window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", async (event) => {
         const variant = event.matches ? "dark" : "light";
