@@ -114,12 +114,14 @@ func GetBrowsers() ([]Browser, error) {
 			{filepath.Join(supportDir, "zen", "NativeMessagingHosts"), BrowserTypeGecko},
 		}, nil
 	case "linux":
-		configDir := filepath.Join(os.Getenv("HOME"), ".config")
+		homeDir := os.Getenv("HOME")
+		configDir := filepath.Join(homeDir, ".config")
+		mozillaConfigDir := filepath.Join(homeDir, ".mozilla")
 		return []Browser{
 			{filepath.Join(configDir, "google-chrome", "native-messaging-hosts"), BrowserTypeChromium},
 			{filepath.Join(configDir, "chromium", "native-messaging-hosts"), BrowserTypeChromium},
 			{filepath.Join(configDir, "microsoft-edge", "native-messaging-hosts"), BrowserTypeChromium},
-			{filepath.Join(configDir, "mozilla", "native-messaging-hosts"), BrowserTypeGecko},
+			{filepath.Join(mozillaConfigDir, "native-messaging-hosts"), BrowserTypeGecko},
 			{filepath.Join(configDir, "zen", "native-messaging-hosts"), BrowserTypeGecko},
 		}, nil
 	}
