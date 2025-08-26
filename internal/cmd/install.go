@@ -90,6 +90,7 @@ func NewCmdInstall() *cobra.Command {
 				}
 			}
 
+			cmd.PrintErrln("Installed native messaging host manifest.")
 			return nil
 		},
 	}

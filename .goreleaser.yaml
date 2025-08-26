@@ -50,4 +50,4 @@ brews:
       fish_completion.install "completions/tweety.fish"
     caveats: |
       After installation, run:
-        tweety install manifest
+        tweety install
