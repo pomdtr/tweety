@@ -180,7 +180,7 @@ func (h *Host) Listen() error {
 	}
 }
 
-func (h *Host) Send(request JSONRPCRequest) (JSONRPCResponse, error) {
+func (h *Host) SendRequest(request JSONRPCRequest) (JSONRPCResponse, error) {
 	h.mu.Lock()
 	responseChan := make(chan JSONRPCResponse)
 	h.clientChannels[request.ID] = responseChan
@@ -196,6 +196,25 @@ func (h *Host) Send(request JSONRPCRequest) (JSONRPCResponse, error) {
 	case <-time.After(5 * time.Second):
 		return JSONRPCResponse{}, fmt.Errorf("timeout waiting for response")
 	}
+}
+
+func (h *Host) SendNotification(method string, params interface{}) error {
+	paramsBytes, err := json.Marshal(params)
+	if err != nil {
+		return fmt.Errorf("failed to marshal params: %w", err)
+	}
+
+	notification := JSONRPCRequest{
+		JSONRPCVersion: "2.0",
+		Method:         method,
+		Params:         paramsBytes,
+	}
+
+	if err := writeMessage(notification); err != nil {
+		return fmt.Errorf("failed to write notification: %w", err)
+	}
+
+	return nil
 }
 
 func writeMessage(data interface{}) error {

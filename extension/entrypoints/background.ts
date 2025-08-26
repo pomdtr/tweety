@@ -91,20 +91,12 @@ export default defineBackground(() => {
       openPanelOnActionClick: false
     });
 
-    browser.contextMenus.create({
-      id: 'openInNewTab',
-      title: 'Open in new tab',
-      contexts: import.meta.env.MANIFEST_VERSION == 3 ? ['action'] : ['browser_action'],
-    });
-    browser.contextMenus.create({
-      id: 'openInNewWindow',
-      title: 'Open in new window',
-      contexts: import.meta.env.MANIFEST_VERSION == 3 ? ['action'] : ['browser_action'],
-    });
+    await getNativePort();
   });
 
+
   // should not be async, else side panel will not open when invoked from the keyboard shortcut
-  async function handleCommand(commandId: string) {
+  async function handleCommand(commandId: string, input?: unknown) {
     if (commandId === 'openInNewTab') {
       await browser.tabs.create({
         url: browser.runtime.getURL("/term.html"),
@@ -115,6 +107,53 @@ export default defineBackground(() => {
         url: browser.runtime.getURL("/term.html"),
         focused: true,
       });
+    } else if (commandId.startsWith("commands:")) {
+      const [_, command] = commandId.split(":");
+      console.log("Running command:", command);
+      const nativePort = await getNativePort()
+      if (!nativePort) {
+        console.warn("Native host is not connected");
+        return;
+      }
+
+      const msg: JSONRPCRequest = {
+        jsonrpc: "2.0",
+        id: crypto.randomUUID(),
+        method: "commands.run",
+        params: {
+          command,
+          input
+        },
+      }
+
+      const listener = (res: unknown) => {
+        if (typeof res !== "object" || res === null) {
+          return;
+        }
+
+        if (!isJsonRpcResponse(res)) {
+          console.error("Received invalid JSON-RPC response:", res);
+          return;
+        }
+
+        if (res.id !== msg.id) {
+          return;
+        }
+
+        if (res.error) {
+          browser.notifications.create({
+            type: "basic",
+            iconUrl: browser.runtime.getURL("/icon/128.png"),
+            title: "Command Error",
+            message: res.error.message,
+          });
+        }
+
+        nativePort.onMessage.removeListener(listener);
+      }
+
+      nativePort.onMessage.addListener(listener)
+      nativePort.postMessage(msg);
     }
   }
 
@@ -124,12 +163,55 @@ export default defineBackground(() => {
       return;
     }
 
-    await handleCommand(info.menuItemId);
+    await handleCommand(info.menuItemId, {
+      linkUrl: info.linkUrl,
+      srcUrl: info.srcUrl,
+      pageUrl: info.pageUrl,
+      frameUrl: info.frameUrl,
+      selectionText: info.selectionText,
+      mediaType: info.mediaType,
+    });
   })
 
   browser.commands.onCommand.addListener(async (command) => {
     await handleCommand(command);
   });
+
+  function setContextMenus(commands: { id: string, meta: { title: string, contexts: string[] } }[]) {
+    browser.contextMenus.removeAll();
+
+    browser.contextMenus.create({
+      id: 'openInNewTab',
+      title: 'Open in New Tab',
+      contexts: ['all'],
+    });
+
+    browser.contextMenus.create({
+      id: 'openInNewWindow',
+      title: 'Open in New Window',
+      contexts: ['all'],
+    });
+
+    if (commands.length === 0) {
+      return;
+    }
+
+    browser.contextMenus.create({
+      id: "runCommand",
+      title: "Run Command",
+      contexts: ['all'],
+    });
+
+    for (const command of commands) {
+      browser.contextMenus.create({
+        id: `commands:${command.id}`,
+        parentId: "runCommand",
+        title: command.meta.title,
+        // @ts-ignore
+        contexts: command.meta.contexts
+      });
+    }
+  }
 
   function registerHandlers(nativePort: Browser.runtime.Port) {
     nativePort.onMessage.addListener(async (message) => {
@@ -174,6 +256,11 @@ export default defineBackground(() => {
               console.error("Fetch error:", error);
               sendError({ code: -32000, message: `Fetch failed: ${(error as Error).message}` });
             }
+            break;
+          }
+          case "commands.update": {
+            console.log("Updating commands:", params[0]);
+            setContextMenus(params[0])
             break;
           }
           // Tabs methods
@@ -366,6 +453,10 @@ export default defineBackground(() => {
 
         if (!isJsonRpcResponse(res)) {
           console.error("Received invalid JSON-RPC response:", res);
+          return;
+        }
+
+        if (res.id !== msg.id) {
           return;
         }
 

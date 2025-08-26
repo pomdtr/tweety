@@ -1,12 +1,15 @@
 package cmd
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"crypto/rand"
 	"embed"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io"
 	"log"
 	"log/slog"
 	"net"
@@ -14,11 +17,13 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/creack/pty"
+	"github.com/fsnotify/fsnotify"
 	"github.com/gorilla/websocket"
 	"github.com/pomdtr/tweety/internal/jsonrpc"
 	"github.com/spf13/cobra"
@@ -103,15 +108,21 @@ type HandlerParams struct {
 	Port   int
 }
 
-type ScriptCommand struct {
-	Name  string `json:"name"`
-	Title string `json:"title"`
-}
-
 type MessagingHostParams struct {
 	Logger *slog.Logger
 	Port   int
 	TTYMap map[string]*os.File
+}
+
+type Command struct {
+	ID   string          `json:"id"`
+	Meta CommandMetadata `json:"meta"`
+}
+
+// CommandMetadata holds the structured metadata extracted from the script file.
+type CommandMetadata struct {
+	Title    string   `json:"title"`
+	Contexts []string `json:"contexts"`
 }
 
 func NewMessagingHost(logger *slog.Logger, port int, ttyMap map[string]*os.File) *jsonrpc.Host {
@@ -148,6 +159,120 @@ func NewMessagingHost(logger *slog.Logger, port int, ttyMap map[string]*os.File)
 			return nil, fmt.Errorf("failed to create unix socket listener: %w", err)
 		}
 
+		// scanCommands reads the commandDir and sends a commands.update notification.
+		scanCommands := func() error {
+			entries, err := os.ReadDir(commandDir)
+			if err != nil {
+				return fmt.Errorf("failed to read command directory: %w", err)
+			}
+
+			var commands []Command
+			for _, entry := range entries {
+				if entry.IsDir() {
+					continue
+				}
+
+				f, err := os.Open(filepath.Join(commandDir, entry.Name()))
+				if err != nil {
+					logger.Error("Failed to open command file", "file", entry.Name(), "error", err)
+					continue
+				}
+				// ensure file is closed after processing this file
+				func() {
+					defer f.Close()
+
+					metadata, err := ExtractMetadata(f)
+					if err != nil {
+						logger.Error("Failed to extract metadata from command file", "file", entry.Name(), "error", err)
+						return
+					}
+
+					if metadata.Title == "" {
+						return
+					}
+
+					if len(metadata.Contexts) == 0 {
+						return
+					}
+
+					commands = append(commands, Command{
+						ID:   entry.Name(),
+						Meta: metadata,
+					})
+				}()
+			}
+
+			if err := messagingHost.SendNotification("commands.update", [][]Command{commands}); err != nil {
+				logger.Error("Failed to send commands.update notification", "error", err)
+				return fmt.Errorf("failed to send commands.update notification: %w", err)
+			}
+
+			return nil
+		}
+
+		// Run an initial scan immediately
+		logger.Info("Running initial command scan")
+		if err := scanCommands(); err != nil {
+			logger.Error("initial scan failed", "error", err)
+			// Do not return an error here; allow initialize to continue but report back
+		}
+
+		// Start fsnotify watcher on appDir to re-run the scan whenever the appDir changes.
+		watcher, err := fsnotify.NewWatcher()
+		if err != nil {
+			logger.Error("failed to create fsnotify watcher", "error", err)
+		} else {
+			// attempt to add appDir to watcher
+			if err := watcher.Add(commandDir); err != nil {
+				logger.Error("failed to add appDir to watcher", "appDir", appDir, "error", err)
+			} else {
+				// debounced scanning to coalesce bursts of file events
+				var mu sync.Mutex
+				var pending bool
+
+				scheduleScan := func() {
+					mu.Lock()
+					if pending {
+						mu.Unlock()
+						return
+					}
+					pending = true
+					mu.Unlock()
+
+					go func() {
+						time.Sleep(150 * time.Millisecond)
+						mu.Lock()
+						pending = false
+						mu.Unlock()
+						if err := scanCommands(); err != nil {
+							logger.Error("scanCommands failed after fsnotify event", "error", err)
+						}
+					}()
+				}
+
+				go func() {
+					for {
+						select {
+						case ev, ok := <-watcher.Events:
+							if !ok {
+								return
+							}
+							// react to write/create/remove/rename events
+							if ev.Op&(fsnotify.Create|fsnotify.Write|fsnotify.Remove|fsnotify.Rename|fsnotify.Chmod) != 0 {
+								logger.Info("fsnotify event detected, rescanning commands")
+								scheduleScan()
+							}
+						case err, ok := <-watcher.Errors:
+							if !ok {
+								return
+							}
+							logger.Error("fsnotify watcher error", "error", err)
+						}
+					}
+				}()
+			}
+		}
+
 		go http.Serve(listener, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			var request jsonrpc.JSONRPCRequest
 			if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
@@ -155,7 +280,7 @@ func NewMessagingHost(logger *slog.Logger, port int, ttyMap map[string]*os.File)
 				return
 			}
 
-			resp, err := messagingHost.Send(request)
+			resp, err := messagingHost.SendRequest(request)
 			if err != nil {
 				http.Error(w, fmt.Sprintf("failed to send request: %s", err), http.StatusInternalServerError)
 				return
@@ -169,6 +294,42 @@ func NewMessagingHost(logger *slog.Logger, port int, ttyMap map[string]*os.File)
 		}))
 
 		return map[string]any{}, nil
+	})
+
+	messagingHost.HandleRequest("commands.run", func(input []byte) (any, error) {
+		var params struct {
+			Command string          `json:"command"`
+			Input   json.RawMessage `json:"input"`
+		}
+
+		logger.Info("Received commands.run notification", "input", string(params.Input))
+
+		if err := json.Unmarshal(input, &params); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal command params: %w", err)
+		}
+
+		entrypoint := filepath.Join(commandDir, params.Command)
+		if _, err := os.Stat(entrypoint); err != nil {
+			return nil, fmt.Errorf("failed to stat command entrypoint: %w", err)
+		}
+
+		cmd := exec.Command(entrypoint)
+		cmd.Stdin = bytes.NewReader(params.Input)
+		cmd.Env = os.Environ()
+		for key, value := range k.StringMap("env") {
+			cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", key, value))
+		}
+
+		if err := cmd.Run(); err != nil {
+			var exitErr *exec.ExitError
+			if ok := errors.As(err, &exitErr); ok {
+				// Command exited with non-zero status
+				return nil, fmt.Errorf("command exited with status %d, stderr: %s", exitErr.ExitCode(), string(exitErr.Stderr))
+			}
+			return nil, fmt.Errorf("failed to run command: %w", err)
+		}
+
+		return nil, nil
 	})
 
 	messagingHost.HandleRequest("tty.create", func(input []byte) (any, error) {
@@ -454,4 +615,61 @@ func getFreePort() (int, error) {
 	}
 	defer l.Close()
 	return l.Addr().(*net.TCPAddr).Port, nil
+}
+
+func ExtractMetadata(reader io.Reader) (CommandMetadata, error) { // Removed commentPrefixes parameter
+	var result CommandMetadata // Initialize an empty Metadata struct
+	scanner := bufio.NewScanner(reader)
+
+	// Regular expression to find lines like "anything @tweety.key value anything"
+	// It captures the key (Group 1) and the value (Group 2).
+	//   ^           -> Start of the line
+	//   .*?         -> Any characters (non-greedy) - this will consume any comment prefix
+	//   @tweety\.   -> Literal "@tweety."
+	//   (\w+)       -> Capture Group 1: The key (e.g., "title", "contexts" - word characters)
+	//   \s+         -> One or more whitespace characters separating key and value
+	//   (.*)        -> Capture Group 2: The value (any characters until end of line)
+	//   \s*$        -> Optional trailing spaces and end of line
+	metadataRegex := regexp.MustCompile(`^.*?@tweety\.(\w+)\s+(.*)\s*$`)
+
+	for scanner.Scan() {
+		line := scanner.Text() // Get the raw line
+
+		matches := metadataRegex.FindStringSubmatch(line)
+		if len(matches) < 3 {
+			// No match, or not enough capturing groups (expecting 3: full match, key, value)
+			continue
+		}
+
+		key := matches[1]      // The captured key (e.g., "title")
+		rawValue := matches[2] // The captured value (e.g., "Open in archive.ph" or `["all"]`)
+
+		switch key {
+		case "title":
+			result.Title = rawValue
+		case "contexts":
+			var contextsRaw []string // Expecting a slice of strings
+			// Attempt to unmarshal the value as a JSON array of strings
+			err := json.Unmarshal([]byte(rawValue), &contextsRaw)
+			if err != nil {
+				// If it's not a JSON array of strings, return an error
+				return CommandMetadata{}, fmt.Errorf("failed to parse 'contexts' as string array from '%s': %w", rawValue, err)
+			}
+			result.Contexts = contextsRaw
+			// Add more cases here for other @tweety.keys if they map to struct fields
+			// case "version":
+			// 	result.Version = rawValue
+			// case "enabled":
+			// 	boolVal, err := strconv.ParseBool(rawValue)
+			// 	if err == nil {
+			// 		result.Enabled = boolVal
+			// 	}
+		}
+	}
+
+	if err := scanner.Err(); err != nil {
+		return CommandMetadata{}, err
+	}
+
+	return result, nil
 }
