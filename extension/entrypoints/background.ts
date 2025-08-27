@@ -203,6 +203,12 @@ export default defineBackground(() => {
     });
 
     for (const command of commands) {
+      let contexts = command.meta.contexts;
+      if (import.meta.env.MANIFEST_VERSION === 2) {
+        // replace "action" with "browser_action" for MV2 compatibility
+        contexts = contexts.map(ctx => ctx === "action" ? "browser_action" : ctx);
+      }
+
       console.log("Registering context menu for command:", command);
       browser.contextMenus.create({
         id: `commands:${command.id}`,
