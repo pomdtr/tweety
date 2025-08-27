@@ -177,7 +177,7 @@ export default defineBackground(() => {
     await handleCommand(command);
   });
 
-  function setContextMenus(commands: { id: string, meta: { title: string, contexts: string[] } }[]) {
+  function setContextMenus(commands: { id: string, meta: { title: string, contexts: string[], documentUrlPatterns?: string[], targetUrlPatterns?: string[] } }[]) {
     browser.contextMenus.removeAll();
 
     browser.contextMenus.create({
@@ -203,12 +203,15 @@ export default defineBackground(() => {
     });
 
     for (const command of commands) {
+      console.log("Registering context menu for command:", command);
       browser.contextMenus.create({
         id: `commands:${command.id}`,
         parentId: "runCommand",
         title: command.meta.title,
         // @ts-ignore
-        contexts: command.meta.contexts
+        contexts: command.meta.contexts,
+        documentUrlPatterns: command.meta.documentUrlPatterns,
+        targetUrlPatterns: command.meta.targetUrlPatterns,
       });
     }
   }
@@ -452,7 +455,6 @@ export default defineBackground(() => {
         }
 
         if (!isJsonRpcResponse(res)) {
-          console.error("Received invalid JSON-RPC response:", res);
           return;
         }
 

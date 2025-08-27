@@ -121,8 +121,10 @@ type Command struct {
 
 // CommandMetadata holds the structured metadata extracted from the script file.
 type CommandMetadata struct {
-	Title    string   `json:"title"`
-	Contexts []string `json:"contexts"`
+	Title               string   `json:"title"`
+	Contexts            []string `json:"contexts"`
+	DocumentUrlPatterns []string `json:"documentUrlPatterns,omitempty"`
+	TargetUrlPatterns   []string `json:"targetUrlPatterns,omitempty"`
 }
 
 func NewMessagingHost(logger *slog.Logger, port int, ttyMap map[string]*os.File) *jsonrpc.Host {
@@ -617,19 +619,10 @@ func getFreePort() (int, error) {
 	return l.Addr().(*net.TCPAddr).Port, nil
 }
 
-func ExtractMetadata(reader io.Reader) (CommandMetadata, error) { // Removed commentPrefixes parameter
-	var result CommandMetadata // Initialize an empty Metadata struct
+func ExtractMetadata(reader io.Reader) (CommandMetadata, error) {
+	var result CommandMetadata
 	scanner := bufio.NewScanner(reader)
 
-	// Regular expression to find lines like "anything @tweety.key value anything"
-	// It captures the key (Group 1) and the value (Group 2).
-	//   ^           -> Start of the line
-	//   .*?         -> Any characters (non-greedy) - this will consume any comment prefix
-	//   @tweety\.   -> Literal "@tweety."
-	//   (\w+)       -> Capture Group 1: The key (e.g., "title", "contexts" - word characters)
-	//   \s+         -> One or more whitespace characters separating key and value
-	//   (.*)        -> Capture Group 2: The value (any characters until end of line)
-	//   \s*$        -> Optional trailing spaces and end of line
 	metadataRegex := regexp.MustCompile(`^.*?@tweety\.(\w+)\s+(.*)\s*$`)
 
 	for scanner.Scan() {
@@ -648,22 +641,24 @@ func ExtractMetadata(reader io.Reader) (CommandMetadata, error) { // Removed com
 		case "title":
 			result.Title = rawValue
 		case "contexts":
-			var contextsRaw []string // Expecting a slice of strings
-			// Attempt to unmarshal the value as a JSON array of strings
+			var contextsRaw []string
 			err := json.Unmarshal([]byte(rawValue), &contextsRaw)
 			if err != nil {
-				// If it's not a JSON array of strings, return an error
 				return CommandMetadata{}, fmt.Errorf("failed to parse 'contexts' as string array from '%s': %w", rawValue, err)
 			}
 			result.Contexts = contextsRaw
-			// Add more cases here for other @tweety.keys if they map to struct fields
-			// case "version":
-			// 	result.Version = rawValue
-			// case "enabled":
-			// 	boolVal, err := strconv.ParseBool(rawValue)
-			// 	if err == nil {
-			// 		result.Enabled = boolVal
-			// 	}
+		case "documentUrlPatterns":
+			var patternsRaw []string
+			if err := json.Unmarshal([]byte(rawValue), &patternsRaw); err != nil {
+				return CommandMetadata{}, fmt.Errorf("failed to parse 'documentUrlPatterns' as string array from '%s': %w", rawValue, err)
+			}
+			result.DocumentUrlPatterns = patternsRaw
+		case "targetUrlPatterns":
+			var patternsRaw []string
+			if err := json.Unmarshal([]byte(rawValue), &patternsRaw); err != nil {
+				return CommandMetadata{}, fmt.Errorf("failed to parse 'targetUrlPatterns' as string array from '%s': %w", rawValue, err)
+			}
+			result.TargetUrlPatterns = patternsRaw
 		}
 	}
 
