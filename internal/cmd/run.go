@@ -2,89 +2,86 @@ package cmd
 
 import (
 	"fmt"
-	"net/url"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 
-	"github.com/pomdtr/tweety/internal/jsonrpc"
 	"github.com/spf13/cobra"
 )
 
 func NewCmdRun() *cobra.Command {
 	cmd := &cobra.Command{
-		Use: "run <app> [args...]",
+		Use: "run <command> [args...]",
 		ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
-			if len(args) > 0 {
-				return nil, cobra.ShellCompDirectiveDefault
-			}
-
-			entries, err := os.ReadDir(appDir)
+			files, err := os.ReadDir(commandDir)
 			if err != nil {
 				return nil, cobra.ShellCompDirectiveError
 			}
 
-			var completions []string
-			for _, entry := range entries {
-				if entry.IsDir() {
+			var commands []string
+			for _, file := range files {
+				if file.IsDir() {
 					continue
 				}
-				// Strip extension for completion
-				name := strings.TrimSuffix(entry.Name(), filepath.Ext(entry.Name()))
-				completions = append(completions, name)
+
+				name := file.Name()
+				// Strip any extension for command completion
+				name = strings.TrimSuffix(name, filepath.Ext(name))
+				commands = append(commands, name)
 			}
 
-			return completions, cobra.ShellCompDirectiveNoFileComp
+			return commands, cobra.ShellCompDirectiveNoFileComp
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
-			files, readErr := os.ReadDir(appDir)
-			if readErr != nil {
-				return fmt.Errorf("failed to read app directory: %w", readErr)
-			}
+			// First try to find the exact file name
+			entrypoint := filepath.Join(commandDir, args[0])
+			stat, err := os.Stat(entrypoint)
 
-			for _, file := range files {
-				name := file.Name()
-				nameWithoutExt := strings.TrimSuffix(name, filepath.Ext(name))
-				if nameWithoutExt != args[0] {
-					continue
-				}
+			// If not found, try to find any file that starts with the command name
+			if os.IsNotExist(err) {
+				files, readErr := os.ReadDir(commandDir)
+				if readErr == nil {
+					for _, file := range files {
+						if file.IsDir() {
+							continue
+						}
 
-				entrypoint := filepath.Join(appDir, name)
-				// check if the file is executable
-				stat, err := os.Stat(entrypoint)
-				if err != nil {
-					return fmt.Errorf("failed to stat command entrypoint: %w", err)
-				}
+						name := file.Name()
+						nameWithoutExt := strings.TrimSuffix(name, filepath.Ext(name))
 
-				if stat.IsDir() {
-					continue
-				}
-
-				// check if the entrypoint is executable
-				if stat.Mode()&0111 == 0 {
-					if err := os.Chmod(entrypoint, 0755); err != nil {
-						return fmt.Errorf("failed to make command entrypoint executable: %w", err)
+						if nameWithoutExt == args[0] {
+							entrypoint = filepath.Join(commandDir, name)
+							stat, err = os.Stat(entrypoint)
+							break
+						}
 					}
 				}
-
-				appUrl := url.URL{
-					Path: "/term.html",
-					RawQuery: url.Values{
-						"app": []string{nameWithoutExt},
-						"arg": args[1:],
-					}.Encode(),
-				}
-
-				options := map[string]string{"url": appUrl.String()}
-				_, err = jsonrpc.SendRequest(os.Getenv("TWEETY_SOCKET"), "tabs.create", []any{options})
-				if err != nil {
-					return fmt.Errorf("failed to create tab: %w", err)
-				}
-
-				return nil
 			}
 
-			return fmt.Errorf("unknown app: %s", args[0])
+			if err != nil {
+				return fmt.Errorf("unknown command: %s", args[0])
+			}
+
+			if stat.IsDir() {
+				return fmt.Errorf("command entrypoint is a directory, expected a file: %s", entrypoint)
+			}
+
+			// check if the entrypoint is executable
+			if stat.Mode()&0111 == 0 {
+				if err := os.Chmod(entrypoint, 0755); err != nil {
+					return fmt.Errorf("failed to make command entrypoint executable: %w", err)
+				}
+			}
+
+			cmdExec := exec.Command(entrypoint, args[1:]...)
+
+			cmdExec.Stdin = os.Stdin
+			cmdExec.Stdout = os.Stdout
+			cmdExec.Stderr = os.Stderr
+
+			cmd.SilenceErrors = true
+			return cmdExec.Run()
 		},
 	}
 
