@@ -12,9 +12,13 @@ import (
 )
 
 func NewCmdOpen() *cobra.Command {
-	return &cobra.Command{
+	var flags struct {
+		arg []string
+	}
+
+	cmd := &cobra.Command{
 		Use:  "open <url|file|app>",
-		Args: cobra.ExactArgs(1),
+		Args: cobra.MinimumNArgs(1),
 		ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 			if len(args) > 0 {
 				return nil, cobra.ShellCompDirectiveDefault
@@ -72,7 +76,7 @@ func NewCmdOpen() *cobra.Command {
 					Path: "/term.html",
 					RawQuery: url.Values{
 						"app": []string{nameWithoutExt},
-						"arg": args[1:],
+						"arg": flags.arg,
 					}.Encode(),
 				}
 
@@ -113,4 +117,8 @@ func NewCmdOpen() *cobra.Command {
 			return nil
 		},
 	}
+
+	cmd.Flags().StringArrayVarP(&flags.arg, "arg", "a", []string{}, "Argument to pass to the app")
+
+	return cmd
 }
