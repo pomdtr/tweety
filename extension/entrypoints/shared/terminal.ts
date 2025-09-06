@@ -89,11 +89,6 @@ async function main() {
     };
 
     ws.onclose = async () => {
-        if (searchParams.has("reload")) {
-            globalThis.location.reload();
-            return;
-        }
-
         globalThis.close();
     }
 

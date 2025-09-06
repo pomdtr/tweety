@@ -478,6 +478,48 @@ func NewMessagingHost(logger *slog.Logger, port int, ttyMap map[string]*os.File)
 		return xtermConfig, nil
 	})
 
+	messagingHost.HandleRequest("readFile", func(input []byte) (any, error) {
+		var params struct {
+			Path string `json:"path"`
+		}
+
+		if err := json.Unmarshal(input, &params); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal readFile params: %w", err)
+		}
+
+		content, err := os.ReadFile(params.Path)
+		if err != nil {
+			return nil, fmt.Errorf("failed to read file: %w", err)
+		}
+
+		return map[string]any{
+			"content": string(content),
+		}, nil
+	})
+
+	messagingHost.HandleRequest("writeFile", func(input []byte) (any, error) {
+		var params struct {
+			Path    string `json:"path"`
+			Content string `json:"content"`
+		}
+
+		if err := json.Unmarshal(input, &params); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal writeFile params: %w", err)
+		}
+
+		f, err := os.OpenFile(params.Path, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
+		if err != nil {
+			return nil, fmt.Errorf("failed to open file for writing: %w", err)
+		}
+		defer f.Close()
+
+		if _, err := f.WriteString(params.Content); err != nil {
+			return nil, fmt.Errorf("failed to write file content: %w", err)
+		}
+
+		return map[string]any{}, nil
+	})
+
 	return messagingHost
 }
 

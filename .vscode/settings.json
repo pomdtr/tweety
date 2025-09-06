@@ -1,8 +1,5 @@
 {
     "deno.enable": false,
-    "deno.enablePaths": [
-        "scripts"
-    ],
     "json.schemas": [
         {
             "fileMatch": [

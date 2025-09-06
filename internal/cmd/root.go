@@ -92,6 +92,7 @@ func NewCmdRoot(version string) *cobra.Command {
 		NewCmdInstall(),
 		NewCmdTabs(),
 		NewCmdBookmarks(),
+		NewCmdEdit(),
 		NewCmdHistory(),
 		NewCmdWindows(),
 		NewCmdNotifications(),

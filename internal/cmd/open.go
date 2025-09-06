@@ -73,7 +73,7 @@ func NewCmdOpen() *cobra.Command {
 				}
 
 				appUrl := url.URL{
-					Path: "/term.html",
+					Path: "/terminal.html",
 					RawQuery: url.Values{
 						"app": []string{nameWithoutExt},
 						"arg": flags.arg,

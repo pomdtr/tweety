@@ -87,7 +87,7 @@ Then invoke it with `tweety copy-markdown-link` to copy the current tab's title 
 
 You can create new apps by adding executables to the `~/.config/tweety/apps` directory. Each app should be a single executable file.
 
-Each app is accessible at `chrome-extensions://<extension-id>/term.html?mode=app&app=<app-name>`, where `<app-name>` is the name of the executable file.
+Each app is accessible at `chrome-extensions://<extension-id>/terminal.html?mode=app&app=<app-name>`, where `<app-name>` is the name of the executable file.
 
 For example, I can create a file `~/.config/tweety/apps/htop.sh` with the following content:
 
@@ -97,7 +97,7 @@ For example, I can create a file `~/.config/tweety/apps/htop.sh` with the follow
 exec /opt/homebrew/bin/htop
 ```
 
-And access it at `chrome-extensions://pofgojebniiboodkmmjfbapckcnbkhpi/term.html?mode=app&app=htop` or open it in a new tab using the `tweety run htop` command.
+And access it at `chrome-extensions://pofgojebniiboodkmmjfbapckcnbkhpi/terminal.html?mode=app&app=htop` or open it in a new tab using the `tweety run htop` command.
 
 ### Configuration
 

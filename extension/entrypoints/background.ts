@@ -99,12 +99,12 @@ export default defineBackground(() => {
   async function handleCommand(commandId: string, input?: unknown) {
     if (commandId === 'openInNewTab') {
       await browser.tabs.create({
-        url: browser.runtime.getURL("/term.html"),
+        url: browser.runtime.getURL("/terminal.html"),
         active: true,
       });
     } else if (commandId === 'openInNewWindow') {
       await browser.windows.create({
-        url: browser.runtime.getURL("/term.html"),
+        url: browser.runtime.getURL("/terminal.html"),
         focused: true,
       });
     } else if (commandId.startsWith("commands:")) {
