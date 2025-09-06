@@ -132,7 +132,6 @@ export default defineBackground(() => {
         }
 
         if (!isJsonRpcResponse(res)) {
-          console.error("Received invalid JSON-RPC response:", res);
           return;
         }
 
