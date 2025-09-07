@@ -81,7 +81,20 @@ TITLE=$(echo "$CURRENT_TAB" | jq -r .title)
 printf "[%s](%s)" "$TITLE" "$URL" | pbcopy
 ```
 
-Then invoke it with `tweety copy-markdown-link` to copy the current tab's title and URL as a markdown link to your clipboard.
+Then invoke it with `tweety run copy-markdown-link` to copy the current tab's title and URL as a markdown link to your clipboard.
+
+You can also add commands to the context menu by adding a `@tweety.contexts` annotation to the top of your script:
+
+```sh
+#!/bin/sh
+
+# @tweety.title Open in archive.ph
+# @tweety.contexts ["page", "action"]
+
+TAB_URL=$(tweety tab query --active | jq -r .[0].url)
+
+tweety tab create --url "https://archive.ph/newest/$TAB_URL"
+```
 
 ### Apps
 
@@ -97,7 +110,7 @@ For example, I can create a file `~/.config/tweety/apps/htop.sh` with the follow
 exec /opt/homebrew/bin/htop
 ```
 
-And access it at `chrome-extensions://pofgojebniiboodkmmjfbapckcnbkhpi/terminal.html?mode=app&app=htop` or open it in a new tab using the `tweety run htop` command.
+And access it at `chrome-extensions://pofgojebniiboodkmmjfbapckcnbkhpi/terminal.html?mode=app&app=htop` or open it in a new tab using the `tweety open htop` command.
 
 ### Configuration
 
