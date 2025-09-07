@@ -15,21 +15,23 @@ async function readFile(filepath: string) {
 
 async function main() {
     const filepath = new URLSearchParams(window.location.search).get("file")
-    if (!filepath) {
-        throw new Error("file parameter is required")
+    let initialContent = ""
+    if (filepath) {
+        const filename = filepath.split("/").pop()!
+        globalThis.document.title = filename ? `${filename} - Tweety` : "Tweety"
+        initialContent = await readFile(filepath)
     }
 
-    const filename = filepath.split("/").pop()!
-    globalThis.document.title = filename ? `${filename} - Tweety` : "Tweety"
 
-    const initialContent = await readFile(filepath)
 
     const extensions = [basicSetup, EditorView.lineWrapping]
 
-    const lang = LanguageDescription.matchFilename(languages, filename)
-    if (lang) {
-        const langSupport = await lang.load()
-        extensions.push(langSupport)
+    if (filepath) {
+        const lang = LanguageDescription.matchFilename(languages, filepath)
+        if (lang) {
+            const langSupport = await lang.load()
+            extensions.push(langSupport)
+        }
     }
 
     // Add an update listener to send a save message on change
@@ -61,6 +63,7 @@ async function main() {
 
     // Refresh file content when tab is focused
     window.addEventListener("focus", async () => {
+        if (!filepath) return
         const newContent = await readFile(filepath)
         if (newContent !== view.state.doc.toString()) {
             view.dispatch({

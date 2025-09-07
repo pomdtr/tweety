@@ -488,7 +488,11 @@ func NewMessagingHost(logger *slog.Logger, port int, ttyMap map[string]*os.File)
 		}
 
 		content, err := os.ReadFile(params.Path)
-		if err != nil {
+		if err != nil && errors.Is(err, os.ErrNotExist) {
+			return map[string]any{
+				"content": "",
+			}, nil
+		} else if err != nil {
 			return nil, fmt.Errorf("failed to read file: %w", err)
 		}
 
