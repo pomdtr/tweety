@@ -1,8 +1,6 @@
 import { Terminal } from "@xterm/xterm";
 import { FitAddon } from "@xterm/addon-fit";
 import { AttachAddon } from "@xterm/addon-attach";
-import { SearchAddon } from '@xterm/addon-search'
-import { SearchBarAddon } from "./search"
 import { WebglAddon } from "@xterm/addon-webgl";
 import { WebLinksAddon } from "@xterm/addon-web-links";
 import { RequestCreateTTY, RequestGetXtermConfig, RequestResizeTTY, ResponseCreateTTY, ResponseGetXtermConfig } from "./rpc";
@@ -33,8 +31,14 @@ async function main() {
     let params: RequestCreateTTY["params"]
     if (searchParams.has("app")) {
         params = {
+            mode: "app",
             app: searchParams.get("app")!,
             args: searchParams.getAll("arg"),
+        }
+    } else if (searchParams.has("file")) {
+        params = {
+            mode: "editor",
+            file: searchParams.get("file")!,
         }
     }
 
@@ -58,11 +62,6 @@ async function main() {
 
     terminal.loadAddon(new WebglAddon());
     terminal.loadAddon(new WebLinksAddon());
-
-    const searchAddon = new SearchAddon();
-    const searchBarAddon = new SearchBarAddon({ searchAddon });
-    terminal.loadAddon(searchAddon);
-    terminal.loadAddon(searchBarAddon)
 
     const ws = new WebSocket(resp.result.url);
     const attachAddon = new AttachAddon(ws);
@@ -89,9 +88,10 @@ async function main() {
     };
 
     ws.onclose = async () => {
-        if (searchParams.has("reload")) {
+        const url = new URL(globalThis.location.href);
+        if (url.pathname.endsWith("/sidepanel.html")) {
             globalThis.location.reload();
-            return;
+            return
         }
 
         globalThis.close();
@@ -108,34 +108,6 @@ async function main() {
     globalThis.onfocus = () => {
         terminal.focus();
     };
-
-
-    // show the search bar on cmd+f on macOS or ctrl+f on other platforms
-    let searchbarIsVisible = false;
-    globalThis.addEventListener("keydown", (event) => {
-        console.log("Key pressed:", event.key, "Meta:", event.metaKey, "Ctrl:", event.ctrlKey);
-        if ((event.metaKey || event.ctrlKey) && event.key === "f") {
-            event.preventDefault();
-
-            if (searchbarIsVisible) {
-                searchBarAddon.close();
-                terminal.focus();
-                searchbarIsVisible = false;
-                return;
-            }
-
-            searchBarAddon.show()
-            searchbarIsVisible = true;
-            return;
-        }
-
-        if (event.key === "Escape" && searchbarIsVisible) {
-            searchBarAddon.close();
-            terminal.focus();
-            searchbarIsVisible = false;
-            return;
-        }
-    })
 
     window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", async (event) => {
         const variant = event.matches ? "dark" : "light";

@@ -14,14 +14,11 @@ func NewCmdEdit() *cobra.Command {
 		Use:  "edit <file>",
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			appUrl := url.URL{
-				Path: "/editor.html",
-				RawQuery: url.Values{
-					"file": []string{args[0]},
-				}.Encode(),
+			options := map[string]any{
+				"active": true,
+				"url":    fmt.Sprintf("/terminal.html?mode=editor&file=%s", url.QueryEscape(args[0])),
 			}
 
-			options := map[string]string{"url": appUrl.String()}
 			_, err := jsonrpc.SendRequest(os.Getenv("TWEETY_SOCKET"), "tabs.create", []any{options})
 			if err != nil {
 				return fmt.Errorf("failed to create tab: %w", err)

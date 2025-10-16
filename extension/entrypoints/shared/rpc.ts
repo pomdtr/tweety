@@ -18,10 +18,14 @@ export type RequestResizeTTY = JSONRPCRequestBase<"tty.resize", {
     rows: number;
 }>
 
-export type RequestCreateTTY = JSONRPCRequestBase<"tty.create", ({
+export type RequestCreateTTY = JSONRPCRequestBase<"tty.create", {
+    mode: "app";
     app: string;
     args: string[];
-})>
+} | {
+    mode: "editor";
+    file: string;
+}>
 
 export type RequestGetXtermConfig = JSONRPCRequestBase<"xterm.getConfig", {
     variant?: "light" | "dark";

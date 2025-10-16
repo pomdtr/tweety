@@ -117,7 +117,7 @@ func NewCmdTabsCreate() *cobra.Command {
 			if cmd.Flags().Changed("url") {
 				options["url"] = flags.URL
 			} else {
-				options["url"] = "/terminal.html"
+				options["url"] = "/term.html"
 			}
 
 			if cmd.Flags().Changed("pinned") {

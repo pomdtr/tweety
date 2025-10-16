@@ -336,8 +336,10 @@ func NewMessagingHost(logger *slog.Logger, port int, ttyMap map[string]*os.File)
 
 	messagingHost.HandleRequest("tty.create", func(input []byte) (any, error) {
 		var params struct {
+			Mode string   `json:"mode"`
 			App  string   `json:"app"`
 			Args []string `json:"args"`
+			File string   `json:"file"`
 		}
 
 		if len(input) > 0 {
@@ -348,7 +350,7 @@ func NewMessagingHost(logger *slog.Logger, port int, ttyMap map[string]*os.File)
 
 		var cmd *exec.Cmd
 
-		if params.App != "" {
+		if params.Mode == "app" && params.App != "" {
 			// First try to find the exact file name
 			entrypoint := filepath.Join(appDir, params.App)
 			stat, err := os.Stat(entrypoint)
@@ -390,6 +392,13 @@ func NewMessagingHost(logger *slog.Logger, port int, ttyMap map[string]*os.File)
 			}
 
 			cmd = exec.Command(entrypoint, params.Args...)
+		} else if params.Mode == "editor" && params.File != "" {
+			editor := k.String("editor")
+			if editor == "" {
+				editor = getDefaultEditor()
+			}
+
+			cmd = exec.Command(editor, params.File)
 		} else {
 			cmd = exec.Command(k.String("command"), k.Strings("args")...)
 		}
