@@ -22,9 +22,11 @@ export type RequestCreateTTY = JSONRPCRequestBase<"tty.create", {
     mode: "app";
     app: string;
     args: string[];
+    cwd?: string;
 } | {
     mode: "editor";
     file: string;
+    cwd?: string;
 }>
 
 export type RequestGetXtermConfig = JSONRPCRequestBase<"xterm.getConfig", {

@@ -339,6 +339,7 @@ func NewMessagingHost(logger *slog.Logger, port int, ttyMap map[string]*os.File)
 			Mode string   `json:"mode"`
 			App  string   `json:"app"`
 			Args []string `json:"args"`
+			Cwd  string   `json:"cwd"`
 			File string   `json:"file"`
 		}
 
@@ -410,7 +411,12 @@ func NewMessagingHost(logger *slog.Logger, port int, ttyMap map[string]*os.File)
 			cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", key, value))
 		}
 
-		cmd.Dir = os.Getenv("HOME")
+		if params.Cwd != "" {
+			cmd.Dir = params.Cwd
+		} else {
+			cmd.Dir = os.Getenv("HOME")
+		}
+
 		log.Println("executing command:", cmd.String())
 		tty, err := pty.Start(cmd)
 		if err != nil {
