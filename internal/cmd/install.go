@@ -4,6 +4,7 @@ import (
 	"embed"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"runtime"
 	"text/template"
@@ -20,6 +21,30 @@ var (
 	BrowserTypeChromium BrowserType = "chromium"
 	BrowserTypeGecko    BrowserType = "gecko"
 )
+
+// findExecPath reconstructs the executable path without using os.Executable()
+func findExecPath(entry string) (string, error) {
+	if filepath.IsAbs(entry) {
+		return filepath.Clean(entry), nil
+	}
+
+	// 2. If it contains a path separator, it's relative to the current directory
+	// Example: ./my-app or bin/my-app
+	if filepath.Base(entry) != entry {
+		return filepath.Abs(entry)
+	}
+
+	// 3. It's a bare name (e.g., "my-app"), so we must search the system PATH
+	// exec.LookPath mimics the shell's logic to find the binary
+	lp, err := exec.LookPath(entry)
+	if err != nil {
+		return "", fmt.Errorf("could not locate executable in PATH: %w", err)
+	}
+
+	// LookPath might return a relative path depending on the OS/Env;
+	// we convert it to absolute to be sure.
+	return filepath.Abs(lp)
+}
 
 func NewCmdInstall() *cobra.Command {
 	return &cobra.Command{
@@ -42,7 +67,7 @@ func NewCmdInstall() *cobra.Command {
 			}
 			defer f.Close()
 
-			execPath, err := os.Executable()
+			execPath, err := findExecPath(os.Args[0])
 			if err != nil {
 				return fmt.Errorf("failed to get executable path: %w", err)
 			}
