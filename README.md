@@ -83,19 +83,6 @@ printf "[%s](%s)" "$TITLE" "$URL" | pbcopy
 
 Then invoke it with `tweety run copy-markdown-link` to copy the current tab's title and URL as a markdown link to your clipboard.
 
-You can also add commands to the context menu by adding a `@tweety.contexts` annotation to the top of your script:
-
-```sh
-#!/bin/sh
-
-# @tweety.title Open in archive.ph
-# @tweety.contexts ["page", "action"]
-
-TAB_URL=$(tweety tab query --active | jq -r .[0].url)
-
-tweety tab create --url "https://archive.ph/newest/$TAB_URL"
-```
-
 ### Apps
 
 You can create new apps by adding executables to the `~/.config/tweety/apps` directory. Each app should be a single executable file.

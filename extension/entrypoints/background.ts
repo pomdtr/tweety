@@ -91,6 +91,8 @@ export default defineBackground(() => {
       openPanelOnActionClick: false
     });
 
+    setContextMenus();
+
     await getNativePort();
   });
 
@@ -107,52 +109,6 @@ export default defineBackground(() => {
         url: browser.runtime.getURL("/terminal.html"),
         focused: true,
       });
-    } else if (commandId.startsWith("commands:")) {
-      const [_, command] = commandId.split(":");
-      console.log("Running command:", command);
-      const nativePort = await getNativePort()
-      if (!nativePort) {
-        console.warn("Native host is not connected");
-        return;
-      }
-
-      const msg: JSONRPCRequest = {
-        jsonrpc: "2.0",
-        id: crypto.randomUUID(),
-        method: "commands.run",
-        params: {
-          command,
-          input
-        },
-      }
-
-      const listener = (res: unknown) => {
-        if (typeof res !== "object" || res === null) {
-          return;
-        }
-
-        if (!isJsonRpcResponse(res)) {
-          return;
-        }
-
-        if (res.id !== msg.id) {
-          return;
-        }
-
-        if (res.error) {
-          browser.notifications.create({
-            type: "basic",
-            iconUrl: browser.runtime.getURL("/icon/128.png"),
-            title: "Command Error",
-            message: res.error.message,
-          });
-        }
-
-        nativePort.onMessage.removeListener(listener);
-      }
-
-      nativePort.onMessage.addListener(listener)
-      nativePort.postMessage(msg);
     }
   }
 
@@ -176,7 +132,7 @@ export default defineBackground(() => {
     await handleCommand(command);
   });
 
-  function setContextMenus(commands: { id: string, meta: { title: string, contexts: string[], documentUrlPatterns?: string[], targetUrlPatterns?: string[] } }[]) {
+  function setContextMenus() {
     browser.contextMenus.removeAll();
 
     browser.contextMenus.create({
@@ -190,35 +146,6 @@ export default defineBackground(() => {
       title: 'Open in New Window',
       contexts: ['all'],
     });
-
-    if (commands.length === 0) {
-      return;
-    }
-
-    browser.contextMenus.create({
-      id: "runCommand",
-      title: "Run Command",
-      contexts: ['all'],
-    });
-
-    for (const command of commands) {
-      let contexts = command.meta.contexts;
-      if (import.meta.env.MANIFEST_VERSION === 2) {
-        // replace "action" with "browser_action" for MV2 compatibility
-        contexts = contexts.map(ctx => ctx === "action" ? "browser_action" : ctx);
-      }
-
-      console.log("Registering context menu for command:", command);
-      browser.contextMenus.create({
-        id: `commands:${command.id}`,
-        parentId: "runCommand",
-        title: command.meta.title,
-        // @ts-ignore
-        contexts: command.meta.contexts,
-        documentUrlPatterns: command.meta.documentUrlPatterns,
-        targetUrlPatterns: command.meta.targetUrlPatterns,
-      });
-    }
   }
 
   function registerHandlers(nativePort: Browser.runtime.Port) {
@@ -264,11 +191,6 @@ export default defineBackground(() => {
               console.error("Fetch error:", error);
               sendError({ code: -32000, message: `Fetch failed: ${(error as Error).message}` });
             }
-            break;
-          }
-          case "commands.update": {
-            console.log("Updating commands:", params[0]);
-            setContextMenus(params[0])
             break;
           }
           // Tabs methods
