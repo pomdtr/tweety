@@ -55,7 +55,6 @@ func NewCmdRoot(version string) *cobra.Command {
 
 				configBytes, err := json.MarshalIndent(map[string]interface{}{
 					"command": getDefaultShell(),
-					"editor":  getDefaultEditor(),
 				}, "", "  ")
 				if err != nil {
 					return fmt.Errorf("failed to marshal default config: %w", err)
@@ -78,6 +77,7 @@ func NewCmdRoot(version string) *cobra.Command {
 				}
 
 				k = koanf.New(".")
+				k.Load(confmapProvider, nil)
 				k.Load(f, jsonparser.Parser())
 			})
 
@@ -92,7 +92,6 @@ func NewCmdRoot(version string) *cobra.Command {
 		NewCmdInstall(),
 		NewCmdTabs(),
 		NewCmdBookmarks(),
-		NewCmdEdit(),
 		NewCmdHistory(),
 		NewCmdWindows(),
 		NewCmdNotifications(),
@@ -117,12 +116,4 @@ func getDefaultShell() string {
 		}
 	}
 	return shell
-}
-
-func getDefaultEditor() string {
-	if env := os.Getenv("EDITOR"); env != "" {
-		return env
-	}
-
-	return "vi"
 }

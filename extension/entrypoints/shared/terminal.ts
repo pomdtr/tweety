@@ -36,12 +36,6 @@ async function main() {
             args: searchParams.getAll("arg"),
             cwd: searchParams.get("cwd") || undefined,
         }
-    } else if (searchParams.has("file")) {
-        params = {
-            mode: "editor",
-            file: searchParams.get("file")!,
-            cwd: searchParams.get("cwd") || undefined,
-        }
     }
 
     const resp = await browser.runtime.sendMessage<RequestCreateTTY, ResponseCreateTTY>({

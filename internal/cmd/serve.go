@@ -393,13 +393,6 @@ func NewMessagingHost(logger *slog.Logger, port int, ttyMap map[string]*os.File)
 			}
 
 			cmd = exec.Command(entrypoint, params.Args...)
-		} else if params.Mode == "editor" && params.File != "" {
-			editor := k.String("editor")
-			if editor == "" {
-				editor = getDefaultEditor()
-			}
-
-			cmd = exec.Command(editor, params.File)
 		} else {
 			cmd = exec.Command(k.String("command"), k.Strings("args")...)
 		}
