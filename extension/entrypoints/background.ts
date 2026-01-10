@@ -87,14 +87,13 @@ export default defineBackground(() => {
   }
 
   browser.runtime.onInstalled.addListener(async () => {
-    browser.sidePanel?.setPanelBehavior({
-      openPanelOnActionClick: false
-    });
+    browser.sidePanel?.setPanelBehavior({ openPanelOnActionClick: true });
 
     setContextMenus();
 
     await getNativePort();
   });
+
 
 
   // should not be async, else side panel will not open when invoked from the keyboard shortcut

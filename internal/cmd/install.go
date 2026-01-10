@@ -135,6 +135,7 @@ func GetBrowsers() ([]Browser, error) {
 			{filepath.Join(supportDir, "Chromium", "NativeMessagingHosts"), BrowserTypeChromium},
 			{filepath.Join(supportDir, "BraveSoftware", "Brave-Browser", "NativeMessagingHosts"), BrowserTypeChromium},
 			{filepath.Join(supportDir, "Vivaldi", "NativeMessagingHosts"), BrowserTypeChromium},
+			{filepath.Join(supportDir, "net.imput.helium", "NativeMessagingHosts"), BrowserTypeChromium},
 			{filepath.Join(supportDir, "Microsoft", "Edge", "NativeMessagingHosts"), BrowserTypeChromium},
 			{filepath.Join(supportDir, "Mozilla", "NativeMessagingHosts"), BrowserTypeGecko},
 			{filepath.Join(supportDir, "zen", "NativeMessagingHosts"), BrowserTypeGecko},
@@ -147,6 +148,9 @@ func GetBrowsers() ([]Browser, error) {
 			{filepath.Join(configDir, "google-chrome", "native-messaging-hosts"), BrowserTypeChromium},
 			{filepath.Join(configDir, "chromium", "native-messaging-hosts"), BrowserTypeChromium},
 			{filepath.Join(configDir, "microsoft-edge", "native-messaging-hosts"), BrowserTypeChromium},
+			{filepath.Join(configDir, "brave", "native-messaging-hosts"), BrowserTypeChromium},
+			{filepath.Join(configDir, "vivaldi", "native-messaging-hosts"), BrowserTypeChromium},
+			{filepath.Join(configDir, "helium", "native-messaging-hosts"), BrowserTypeChromium},
 			{filepath.Join(mozillaConfigDir, "native-messaging-hosts"), BrowserTypeGecko},
 			{filepath.Join(configDir, "zen", "native-messaging-hosts"), BrowserTypeGecko},
 		}, nil
