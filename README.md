@@ -13,7 +13,7 @@
 ## Installation
 
 > [!WARNING]
-> Windows is not supported at the moment.
+> Windows is not supported at the moment (details: https://github.com/creack/pty/issues/161)
 
 Tweety is not distributed through the Chrome Web Store, as I don't think it would pass the review process. Instead, you can install it manually or using Homebrew.
 
@@ -22,7 +22,7 @@ Tweety is not distributed through the Chrome Web Store, as I don't think it woul
 First install the `tweety` cli, and the extension manifest:
 
 ```sh
-brew install --no-quarantine pomdtr/tap/tweety
+brew install pomdtr/tap/tweety
 # install the native messaging host manifest
 tweety install
 ```

@@ -3,8 +3,8 @@ module github.com/pomdtr/tweety
 go 1.24
 
 require (
+	github.com/aymanbagabas/go-pty v0.2.2
 	github.com/cli/cli/v2 v2.74.0
-	github.com/creack/pty v1.1.24
 	github.com/gorilla/websocket v1.5.3
 	github.com/knadh/koanf/parsers/json v1.0.0
 	github.com/knadh/koanf/providers/confmap v1.0.0
@@ -15,7 +15,13 @@ require (
 )
 
 require (
-	github.com/fsnotify/fsnotify v1.9.0
+	github.com/creack/pty v1.1.24 // indirect
+	github.com/u-root/u-root v0.11.0 // indirect
+	golang.org/x/crypto v0.38.0 // indirect
+)
+
+require (
+	github.com/fsnotify/fsnotify v1.9.0 // indirect
 	github.com/go-viper/mapstructure/v2 v2.2.1 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/knadh/koanf/maps v0.1.2 // indirect

@@ -15,14 +15,13 @@ import (
 	"net"
 	"net/http"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"regexp"
 	"strings"
 	"sync"
 	"time"
 
-	"github.com/creack/pty"
+	"github.com/aymanbagabas/go-pty"
 	"github.com/gorilla/websocket"
 	"github.com/pomdtr/tweety/internal/jsonrpc"
 	"github.com/spf13/cobra"
@@ -57,7 +56,7 @@ func NewCmdServe() *cobra.Command {
 				return fmt.Errorf("failed to get free port: %w", err)
 			}
 
-			ttyMap := make(map[string]*os.File)
+			ttyMap := make(map[string]pty.Pty)
 			messagingHost := NewMessagingHost(logger, port, ttyMap)
 
 			handler := NewWebSocketHandler(ttyMap)
@@ -126,7 +125,7 @@ type CommandMetadata struct {
 	TargetUrlPatterns   []string `json:"targetUrlPatterns,omitempty"`
 }
 
-func NewMessagingHost(logger *slog.Logger, port int, ttyMap map[string]*os.File) *jsonrpc.Host {
+func NewMessagingHost(logger *slog.Logger, port int, ptyMap map[string]pty.Pty) *jsonrpc.Host {
 	messagingHost := jsonrpc.NewHost(logger)
 
 	messagingHost.HandleRequest("initialize", func(input []byte) (any, error) {
@@ -198,8 +197,13 @@ func NewMessagingHost(logger *slog.Logger, port int, ttyMap map[string]*os.File)
 			}
 		}
 
-		var cmd *exec.Cmd
+		tty, err := pty.New()
+		if err != nil {
+			log.Printf("failed to create pty: %s", err)
+			return nil, fmt.Errorf("failed to create pty: %w", err)
+		}
 
+		var cmd *pty.Cmd
 		if params.Mode == "app" && params.App != "" {
 			// First try to find the exact file name
 			entrypoint := filepath.Join(appDir, params.App)
@@ -241,9 +245,9 @@ func NewMessagingHost(logger *slog.Logger, port int, ttyMap map[string]*os.File)
 				}
 			}
 
-			cmd = exec.Command(entrypoint, params.Args...)
+			cmd = tty.Command(entrypoint, params.Args...)
 		} else {
-			cmd = exec.Command(k.String("command"), k.Strings("args")...)
+			cmd = tty.Command(k.String("command"), k.Strings("args")...)
 		}
 
 		cmd.Env = os.Environ()
@@ -259,15 +263,13 @@ func NewMessagingHost(logger *slog.Logger, port int, ttyMap map[string]*os.File)
 			cmd.Dir = os.Getenv("HOME")
 		}
 
-		log.Println("executing command:", cmd.String())
-		tty, err := pty.Start(cmd)
-		if err != nil {
+		if err := cmd.Start(); err != nil {
 			log.Printf("failed to start pty: %s", err)
 			return nil, fmt.Errorf("failed to start pty: %w", err)
 		}
 
 		ttyID := strings.ToLower(rand.Text())
-		ttyMap[ttyID] = tty
+		ptyMap[ttyID] = tty
 
 		return map[string]string{
 			"url": fmt.Sprintf("ws://127.0.0.1:%d/tty/%s", port, ttyID),
@@ -278,19 +280,19 @@ func NewMessagingHost(logger *slog.Logger, port int, ttyMap map[string]*os.File)
 	messagingHost.HandleNotification("tty.resize", func(input []byte) error {
 		var requestParams struct {
 			TTY  string `json:"tty"`
-			Rows uint16 `json:"rows"`
-			Cols uint16 `json:"cols"`
+			Rows int    `json:"rows"`
+			Cols int    `json:"cols"`
 		}
 		if err := json.Unmarshal(input, &requestParams); err != nil {
 			return fmt.Errorf("failed to unmarshal resize params: %w", err)
 		}
 
-		tty, ok := ttyMap[requestParams.TTY]
+		tty, ok := ptyMap[requestParams.TTY]
 		if !ok {
 			return fmt.Errorf("invalid tty ID: %s", requestParams.TTY)
 		}
 
-		if err := pty.Setsize(tty, &pty.Winsize{Rows: requestParams.Rows, Cols: requestParams.Cols}); err != nil {
+		if err := tty.Resize(requestParams.Cols, requestParams.Rows); err != nil {
 			return fmt.Errorf("failed to set size for tty: %w", err)
 		}
 
@@ -384,25 +386,25 @@ func NewMessagingHost(logger *slog.Logger, port int, ttyMap map[string]*os.File)
 	return messagingHost
 }
 
-func NewWebSocketHandler(ttyMap map[string]*os.File) http.Handler {
+func NewWebSocketHandler(ptyMap map[string]pty.Pty) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ttyID := strings.TrimPrefix(r.URL.Path, "/tty/")
-		tty, ok := ttyMap[ttyID]
+		tty, ok := ptyMap[ttyID]
 		if !ok {
 			http.Error(w, fmt.Sprintf("invalid terminal ID: %s", ttyID), http.StatusBadRequest)
 			return
 		}
 
 		defer func() {
-			delete(ttyMap, ttyID)
+			delete(ptyMap, ttyID)
 			tty.Close()
 		}()
 
-		HandleWebsocket(tty)(w, r)
+		HandleWebsocket(ptyMap[ttyID])(w, r)
 	})
 }
 
-func HandleWebsocket(tty *os.File) http.HandlerFunc {
+func HandleWebsocket(tty pty.Pty) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		log.Print("established connection identity")
 		upgrader := getConnectionUpgrader(maxBufferSizeBytes)
