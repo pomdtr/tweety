@@ -8,7 +8,6 @@ export default defineConfig({
         name: "Tweety",
         description: "An integrated terminal for your browser",
         version: process.env.MANIFEST_VERSION || "0.0.0",
-        action: {},
         permissions: [
             "tabs",
             "nativeMessaging",
@@ -24,7 +23,8 @@ export default defineConfig({
         ],
         commands: {
             openInNewTab: {
-                description: "Open in new tab"
+                description: "Open in new tab",
+
             },
             openInNewWindow: {
                 description: "Open in new window",

@@ -84,12 +84,6 @@ async function main() {
     };
 
     ws.onclose = async () => {
-        const url = new URL(globalThis.location.href);
-        if (url.pathname.endsWith("/sidepanel.html")) {
-            globalThis.location.reload();
-            return
-        }
-
         globalThis.close();
     }
 
