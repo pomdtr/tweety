@@ -64,6 +64,10 @@ async function main() {
     terminal.loadAddon(attachAddon);
 
     terminal.open(anchor);
+    const applyBackground = () => {
+        terminal.element!.style.backgroundColor = terminal.options.theme?.background ?? "";
+    };
+    applyBackground();
     terminal.onResize(async (size) => {
         const { cols, rows } = size;
         await browser.runtime.sendMessage<RequestResizeTTY>({
@@ -114,6 +118,7 @@ async function main() {
 
 
         terminal.options.theme = resp.result.theme
+        applyBackground();
     });
 
     terminal.focus();

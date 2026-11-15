@@ -34,6 +34,13 @@ div#terminal {
     width: 100%;
 }
 
+/* xterm 6 paints the theme background on .xterm-scrollable-element (inside the
+   padding), and the viewport defaults to #000. Let .xterm's own background,
+   set from the theme in terminal.ts, show through the padding instead. */
+.xterm .xterm-viewport {
+    background-color: transparent;
+}
+
 .tooltip {
     box-sizing: border-box;
     position: fixed;
